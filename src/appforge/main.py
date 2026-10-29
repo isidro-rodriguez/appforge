@@ -1,28 +1,94 @@
-"""Entrada a la aplicación: línea de comandos y, sin argumentos, la TUI."""
+"""Entrada a la aplicación: sin subcomando abre la TUI.
 
-import argparse
-import getpass
+La TUI hace todo lo interactivo (catálogo, detalle, instalar, desinstalar,
+dry-run). La CLI solo tiene lo que no cabe en ella:
+
+- ``appforge validate``: revisa las entradas sin abrir la interfaz, para
+  autores de entradas y para la CI.
+- ``appforge --version``.
+"""
+
 import sys
-from dataclasses import dataclass
+from pathlib import Path
+from typing import Annotated, Any
 
+import typer
+import typer.rich_utils
 from rich.console import Console
 from rich.text import Text
+from typer.core import TyperCommand, TyperGroup
 
 from appforge import __version__
 from appforge.config import Config, ConfigError, load_config
-from appforge.engine import Engine, EngineError
-from appforge.entry import Entry, load_entries
-from appforge.runlog import RunLog
-from appforge.theme import RICH_THEME
+from appforge.theme import RICH_THEME, TYPER_STYLES
 
-_PREFIX = {
-    "step": "==> ",
-    "ok": "✔ ",
-    "warn": "! ",
-    "error": "✘ ",
-    "info": "  ",
-    "out": "  │ ",
+# Textos de la ayuda de Typer en español.
+_TYPER_TEXTS = {
+    "ARGUMENTS_PANEL_TITLE": "Argumentos",
+    "OPTIONS_PANEL_TITLE": "Opciones",
+    "COMMANDS_PANEL_TITLE": "Comandos",
+    "ERRORS_PANEL_TITLE": "Error",
+    "ABORTED_TEXT": "Cancelado.",
+    "RICH_HELP": "Prueba [bold]'{command_path} {help_option}'[/] para ver la ayuda.",
+    "DEFAULT_STRING": "[por defecto: {}]",
+    "REQUIRED_LONG_STRING": "[obligatorio]",
 }
+
+
+def _style_typer() -> None:
+    """Aplica a la ayuda de Typer los colores y textos de AppForge."""
+    for name, value in {**TYPER_STYLES, **_TYPER_TEXTS}.items():
+        setattr(typer.rich_utils, name, value)
+
+
+def _write_usage(command: Any, ctx: Any, formatter: Any) -> None:
+    """Escribe ``Uso: ...`` en lugar de ``Usage: ...``."""
+    usage = " ".join(command.collect_usage_pieces(ctx))
+    usage = usage.replace("[OPTIONS]", "[OPCIONES]")
+    usage = usage.replace("COMMAND [ARGS]", "COMANDO [ARGS]")
+    formatter.write_usage(ctx.command_path, usage, "Uso: ")
+
+
+def _spanish_help(option: Any) -> Any:
+    """Traduce el texto de la opción ``-h/--help``."""
+    if option is not None:
+        option.help = "Muestra esta ayuda y sale."
+    return option
+
+
+class _Group(TyperGroup):
+    """Grupo de comandos con la ayuda en español."""
+
+    def format_usage(self, ctx: Any, formatter: Any) -> None:
+        """Línea de uso en español."""
+        _write_usage(self, ctx, formatter)
+
+    def get_help_option(self, ctx: Any) -> Any:
+        """Opción de ayuda en español."""
+        return _spanish_help(super().get_help_option(ctx))
+
+
+class _Command(TyperCommand):
+    """Comando con la ayuda en español."""
+
+    def format_usage(self, ctx: Any, formatter: Any) -> None:
+        """Línea de uso en español."""
+        _write_usage(self, ctx, formatter)
+
+    def get_help_option(self, ctx: Any) -> Any:
+        """Opción de ayuda en español."""
+        return _spanish_help(super().get_help_option(ctx))
+
+
+app = typer.Typer(
+    name="appforge",
+    cls=_Group,
+    help="Recetas de configuración repetibles. Sin comando abre la TUI.",
+    add_completion=False,
+    rich_markup_mode="rich",
+    context_settings={"help_option_names": ["-h", "--help"]},
+    pretty_exceptions_enable=False,
+)
 
 
 def make_consoles() -> tuple[Console, Console]:
@@ -38,269 +104,151 @@ def make_consoles() -> tuple[Console, Console]:
     return out, err
 
 
-@dataclass
-class Cli:
-    """Estado compartido por los subcomandos."""
-
-    config: Config
-    entries: list[Entry]
-    out: Console
-    err: Console
-
-    def sink(self, kind: str, text: str) -> None:
-        """Muestra un evento del motor; los errores van a stderr.
-
-        Args:
-            kind: Tipo de evento.
-            text: Texto del evento.
-        """
-        console = self.err if kind == "error" else self.out
-        console.print(Text(_PREFIX.get(kind, "") + text, style=f"af.{kind}"))
-
-    def engine(self, entry: Entry | None = None) -> Engine:
-        """Motor que muestra la salida y, si hay entrada, la registra.
-
-        Args:
-            entry: Entrada sobre la que se va a actuar.
-
-        Returns:
-            El motor listo para usar.
-        """
-        if entry is None:
-            return Engine(self.config, self.sink)
-        runlog = RunLog(self.config)
-        return Engine(self.config, runlog.tee(self.sink, f"{entry.id}: "))
-
-    def find(self, key: str) -> Entry:
-        """Entrada con id ``key``.
-
-        Args:
-            key: Id de la entrada.
-
-        Returns:
-            La entrada.
-
-        Raises:
-            SystemExit: Si no existe.
-        """
-        for e in self.entries:
-            if e.id == key:
-                return e
-        raise SystemExit(f"No existe la entrada '{key}'. Usa 'appforge list'.")
-
-
-def _parse_sets(items: list[str]) -> dict[str, str]:
-    """Convierte ``["a=1", "b=2"]`` en un diccionario."""
-    out = {}
-    for item in items:
-        key, sep, value = item.partition("=")
-        if not sep:
-            raise SystemExit(f"--set espera nombre=valor, no '{item}'")
-        out[key] = value
-    return out
-
-
-def _prompt_values(
-    entry: Entry, given: dict[str, str], interactive: bool
-) -> dict[str, str]:
-    """Pregunta los parámetros que no se dieron con ``--set``."""
-    values = dict(given)
-    if not interactive:
-        return values  # resolve_values usará los defaults o fallará
-    for p in entry.params:
-        if p.name in values:
-            continue
-        if p.default:
-            hint = " [por defecto]" if p.secret else f" [{p.default}]"
-        else:
-            hint = ""
-        question = f"{p.prompt}{hint}: "
-        values[p.name] = getpass.getpass(question) if p.secret else input(question)
-    return values
-
-
-def _state_mark(engine: Engine, entry: Entry) -> Text:
-    """Marca de estado para ``list``."""
-    if not entry.valid:
-        return Text("⚠", style="af.invalid")
-    state = engine.is_applied(entry)
-    if state is None:
-        return Text("·", style="af.muted")
-    return Text("✔", style="af.applied") if state else Text(" ")
-
-
-def cmd_list(cli: Cli, args: argparse.Namespace) -> int:
-    """Lista las entradas con su estado.
-
-    Args:
-        cli: Estado de la CLI.
-        args: Argumentos (sin uso).
-
-    Returns:
-        Código de salida 0.
-    """
-    engine = cli.engine()
-    for e in cli.entries:
-        line = Text.assemble(
-            _state_mark(engine, e),
-            " ",
-            (f"{e.id:<20}", "af.id"),
-            " ",
-            e.name,
-            (f"  {e.category}" if e.category else "", "af.muted"),
-            (" (root)" if e.requires_root else "", "af.muted"),
-        )
-        cli.out.print(line)
-    return 0
-
-
-def cmd_show(cli: Cli, args: argparse.Namespace) -> int:
-    """Muestra parámetros, pasos y problemas de una entrada.
-
-    Args:
-        cli: Estado de la CLI.
-        args: Argumentos con ``entry``.
-
-    Returns:
-        0 si la entrada es válida, 1 si no.
-    """
-    e = cli.find(args.entry)
-    p_ = cli.out.print
-    p_(Text.assemble((e.name, "af.title"), "  ", (f"[{e.id}]", "af.id")))
-    if e.description:
-        p_(Text(f"  {e.description}"))
-    if e.category:
-        p_(Text(f"  categoría: {e.category}", style="af.muted"))
-    p_(Text(f"  root: {'sí' if e.requires_root else 'no'}", style="af.muted"))
-    if e.params:
-        p_(Text("  parámetros:", style="af.title"))
-        for p in e.params:
-            extra = (
-                " (secreto)" if p.secret else (f" = {p.default}" if p.default else "")
-            )
-            p_(Text(f"    - {p.name}: {p.prompt}{extra}"))
-    p_(Text("  pasos:", style="af.title"))
-    for i, s in enumerate(e.steps, 1):
-        dest = f" → {s.dest}" if s.dest else ""
-        p_(Text.assemble(f"    {i}. {s.title}  ", (f"({s.kind}{dest})", "af.muted")))
-    check = "sí" if e.check else "no"
-    remove = "sí" if e.remove else "no"
-    p_(Text(f"  check: {check}   remove: {remove}", style="af.muted"))
-    for problem in e.problems:
-        p_(Text(f"  ⚠ {problem}", style="af.invalid"))
-    return 0 if e.valid else 1
-
-
-def cmd_check(cli: Cli, args: argparse.Namespace) -> int:
-    """Ejecuta ``[check]`` de una entrada.
-
-    Args:
-        cli: Estado de la CLI.
-        args: Argumentos con ``entry``.
-
-    Returns:
-        0 aplicada, 1 no aplicada, 2 sin ``[check]`` o inválida.
-    """
-    e = cli.find(args.entry)
-    state = cli.engine().is_applied(e)
-    if state is None:
-        cli.out.print("sin [check]" if e.valid else "entrada inválida", markup=False)
-        return 2
-    cli.out.print(Text("aplicada", "af.applied") if state else Text("no aplicada"))
-    return 0 if state else 1
-
-
-def _ensure_root(cli: Cli, engine: Engine, entry: Entry, dry_run: bool) -> bool:
-    """Pide sudo antes de aplicar si la entrada lo necesita."""
-    if dry_run or not entry.requires_root:
-        return True
-    if engine.password_needed(entry):
-        cli.out.print("Esta entrada necesita privilegios de administrador.")
-    return engine.acquire_root()
-
-
-def cmd_apply(cli: Cli, args: argparse.Namespace) -> int:
-    """Aplica una entrada (o la simula con ``--dry-run``).
-
-    Args:
-        cli: Estado de la CLI.
-        args: Argumentos con ``entry``, ``set``, ``dry_run`` y ``no_input``.
-
-    Returns:
-        0 si se aplicó, 1 si no.
-    """
-    e = cli.find(args.entry)
-    interactive = sys.stdin.isatty() and not args.no_input
-    values = _prompt_values(e, _parse_sets(args.set), interactive)
-    engine = cli.engine(e)
-    if not _ensure_root(cli, engine, e, args.dry_run):
-        return 1
+def _load_config() -> Config:
+    """Configuración o salida con código 2 si ``config.toml`` es inválido."""
     try:
-        return 0 if engine.apply(e, values, dry_run=args.dry_run) else 1
-    except EngineError as ex:
-        engine.sink("error", str(ex))
-        return 1
+        return load_config()
+    except ConfigError as e:
+        make_consoles()[1].print(Text(f"appforge: {e}", style="af.error"))
+        raise typer.Exit(2) from None
 
 
-def cmd_remove(cli: Cli, args: argparse.Namespace) -> int:
-    """Ejecuta ``[remove]`` de una entrada.
+def _show_version(value: bool) -> None:
+    """Muestra la versión y sale (callback de ``--version``)."""
+    if value:
+        make_consoles()[0].print(f"appforge {__version__}", markup=False)
+        raise typer.Exit()
+
+
+@app.callback(invoke_without_command=True)
+def root(
+    ctx: typer.Context,
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-V",
+            help="Muestra la versión y sale.",
+            callback=_show_version,
+            is_eager=True,
+        ),
+    ] = False,
+) -> None:
+    """Recetas de configuración repetibles. Sin comando abre la TUI.
 
     Args:
-        cli: Estado de la CLI.
-        args: Argumentos con ``entry`` y ``dry_run``.
-
-    Returns:
-        0 si se eliminó, 1 si no.
+        ctx: Contexto de Typer.
+        version: ``--version`` (lo gestiona su callback).
     """
-    e = cli.find(args.entry)
-    engine = cli.engine(e)
-    if not _ensure_root(cli, engine, e, args.dry_run):
-        return 1
-    return 0 if engine.remove(e, dry_run=args.dry_run) else 1
+    if ctx.invoked_subcommand is not None:
+        return
+    config = _load_config()
+    from appforge.tui import run_tui  # Textual solo se carga si hace falta
+
+    raise typer.Exit(run_tui(config))
 
 
-_COMMANDS = {
-    "list": cmd_list,
-    "show": cmd_show,
-    "check": cmd_check,
-    "apply": cmd_apply,
-    "remove": cmd_remove,
-}
+def _print_lines(out: Console, items: list[str], kind: str, mark: str) -> None:
+    """Imprime los problemas de una entrada, sangrados."""
+    for item in items:
+        out.print(Text(f"    {mark} {item}", style=f"af.{kind}"))
 
 
-def build_parser() -> argparse.ArgumentParser:
-    """Construye el parser de argumentos.
+_VALIDATE_HELP = """Revisa las entradas sin ejecutarlas.
 
-    Returns:
-        El parser con los subcomandos.
+[bold]Errores[/]: TOML, claves y seguridad; sintaxis de bash; ficheros que faltan
+en el subdirectorio de la entrada (pasos y $APPFORGE_ENTRY_DIR/...).
+
+[bold]Avisos[/]: ficheros y parámetros sin usar, sin \\[check] o \\[remove],
+sin description, nombres repetidos y subdirectorios sin su .toml.
+
+Código de salida: 0 bien · 1 errores (o avisos con --strict) · 2 uso.
+"""
+
+
+@app.command(cls=_Command, help=_VALIDATE_HELP)
+def validate(
+    ids: Annotated[
+        list[str] | None,
+        typer.Argument(
+            metavar="ID...",
+            help="Entradas a validar (nombre del .toml). Por defecto, todas.",
+            show_default=False,
+        ),
+    ] = None,
+    entries_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--dir",
+            "-d",
+            help="Directorio de entradas. Por defecto, el de config.toml.",
+            file_okay=False,
+            metavar="DIR",
+            show_default=False,
+        ),
+    ] = None,
+    strict: Annotated[
+        bool,
+        typer.Option("--strict", "-s", help="Los avisos también hacen fallar."),
+    ] = False,
+) -> None:
+    """Revisa las entradas sin ejecutarlas.
+
+    Args:
+        ids: Ids de las entradas; vacío para todas.
+        entries_dir: Directorio a validar en lugar del configurado.
+        strict: Tratar los avisos como errores.
     """
-    ap = argparse.ArgumentParser(
-        prog="appforge", description="Lanzador de recetas de configuración"
+    from appforge.validate import validate_dir
+
+    out, err = make_consoles()
+    folder = entries_dir if entries_dir is not None else _load_config().entries_dir
+    result = validate_dir(folder.resolve())
+    reports = result.reports
+    if ids:
+        known = {r.entry.id for r in reports}
+        if unknown := [i for i in ids if i not in known]:
+            err.print(
+                Text(f"appforge: no existe la entrada: {', '.join(unknown)}"),
+                style="af.error",
+            )
+            raise typer.Exit(2)
+        reports = [r for r in reports if r.entry.id in ids]
+
+    out.print(Text(f"Entradas en {folder}", style="af.muted"))
+    for r in reports:
+        if r.errors:
+            mark, style = "✘", "af.error"
+        elif r.warnings:
+            mark, style = "!", "af.warn"
+        else:
+            mark, style = "✔", "af.ok"
+        out.print(
+            Text.assemble(
+                (mark, style), " ", (f"{r.entry.id:<20}", "af.id"), " ", r.entry.name
+            )
+        )
+        _print_lines(out, r.errors, "error", "✘")
+        _print_lines(out, r.warnings, "warn", "!")
+
+    general_errors = result.errors
+    general_warnings = result.warnings if not ids else []
+    if general_errors or general_warnings:
+        out.print(Text("Directorio", style="af.title"))
+        _print_lines(out, general_errors, "error", "✘")
+        _print_lines(out, general_warnings, "warn", "!")
+
+    errors = len(general_errors) + sum(len(r.errors) for r in reports)
+    warnings = len(general_warnings) + sum(len(r.warnings) for r in reports)
+    summary = f"entradas: {len(reports)} · errores: {errors} · avisos: {warnings}"
+    failed = errors > 0 or (strict and warnings > 0)
+    out.print(
+        Text(
+            ("✘ " if failed else "✔ ") + summary,
+            style="af.error" if failed else "af.ok",
+        )
     )
-    ap.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    sub = ap.add_subparsers(dest="cmd")
-    sub.add_parser("list", help="lista las entradas y su estado")
-    for name, help_text in (
-        ("show", "muestra una entrada"),
-        ("check", "ejecuta [check] de una entrada"),
-    ):
-        sub.add_parser(name, help=help_text).add_argument("entry")
-    a = sub.add_parser("apply", help="aplica una entrada")
-    a.add_argument("entry")
-    a.add_argument(
-        "-n",
-        "--dry-run",
-        action="store_true",
-        help="muestra qué haría sin cambiar nada",
-    )
-    a.add_argument("-s", "--set", action="append", default=[], metavar="NOMBRE=VALOR")
-    a.add_argument(
-        "--no-input", action="store_true", help="no preguntar; usar --set y defaults"
-    )
-    r = sub.add_parser("remove", help="ejecuta [remove] de una entrada")
-    r.add_argument("entry")
-    r.add_argument("-n", "--dry-run", action="store_true")
-    return ap
+    raise typer.Exit(1 if failed else 0)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -312,26 +260,15 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Código de salida del proceso.
     """
-    args = build_parser().parse_args(argv)
-    out, err = make_consoles()
+    _style_typer()
     try:
-        config = load_config()
-    except ConfigError as e:
-        err.print(Text(f"appforge: {e}", style="af.error"))
-        return 2
-
-    if args.cmd is None:
-        from appforge.tui import run_tui  # Textual solo se carga si hace falta
-
-        return run_tui(config)
-
-    entries, _ = load_entries(config.entries_dir)
-    cli = Cli(config=config, entries=entries, out=out, err=err)
-    try:
-        return _COMMANDS[args.cmd](cli, args)
-    except KeyboardInterrupt:
-        err.print("\ninterrumpido")
-        return 130
+        app(args=argv, prog_name="appforge")
+    except SystemExit as e:
+        if e.code is None or isinstance(e.code, int):
+            return e.code or 0
+        print(e.code, file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

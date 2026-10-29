@@ -73,6 +73,27 @@ STYLES = {
     "invalid": ERROR,
 }
 
+# Ayuda y errores de la CLI (constantes ``STYLE_*`` de ``typer.rich_utils``).
+TYPER_STYLES = {
+    "STYLE_OPTION": f"bold {SPARK}",
+    "STYLE_SWITCH": f"bold {SPARK}",
+    "STYLE_NEGATIVE_OPTION": f"bold {ERROR}",
+    "STYLE_NEGATIVE_SWITCH": f"bold {ERROR}",
+    "STYLE_TYPES": PRIMARY,
+    "STYLE_USAGE": f"bold {SPARK}",
+    "STYLE_USAGE_COMMAND": "bold",
+    "STYLE_HELPTEXT": MUTED,
+    "STYLE_OPTION_DEFAULT": MUTED,
+    "STYLE_REQUIRED_SHORT": ERROR,
+    "STYLE_REQUIRED_LONG": ERROR,
+    "STYLE_OPTIONS_PANEL_BORDER": ANVIL,
+    "STYLE_COMMANDS_PANEL_BORDER": ANVIL,
+    "STYLE_COMMANDS_TABLE_FIRST_COLUMN": f"bold {SPARK}",
+    "STYLE_ERRORS_PANEL_BORDER": ERROR,
+    "STYLE_ERRORS_SUGGESTION": MUTED,
+    "STYLE_ABORTED": ERROR,
+}
+
 RICH_THEME = RichTheme(
     {
         **{f"af.{name}": style for name, style in STYLES.items()},

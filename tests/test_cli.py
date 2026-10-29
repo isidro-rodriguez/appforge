@@ -1,4 +1,4 @@
-"""CLI de extremo a extremo con la entrada Ollama (siempre en dry-run)."""
+"""CLI: ``validate``, ``--version`` y arranque de la TUI."""
 
 import subprocess
 import sys
@@ -8,62 +8,134 @@ import pytest
 
 from appforge import __version__
 from appforge.main import main
+from appforge.validate import validate_dir
+
+GOOD = """
+name = "Buena"
+description = "Escribe un fichero"
+[[param]]
+name = "who"
+default = "mundo"
+[check]
+run = "test -f /tmp/x"
+[[step]]
+template = "hola.tpl"
+dest = "/tmp/x"
+[remove]
+run = "rm -f /tmp/x"
+"""
 
 
-def test_list_and_dry_run(home: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["list"]) == 0
+def test_repo_entries_are_valid(home: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["validate", "--strict"]) == 0
     out = capsys.readouterr().out
     assert "ollama" in out
-    assert "IA" in out  # categoría
-    rc = main(
-        [
-            "apply",
-            "ollama",
-            "-n",
-            "--no-input",
-            "-s",
-            "owner=isidro",
-            "-s",
-            "host=0.0.0.0:11434",
-        ]
+    assert "errores: 0 · avisos: 0" in out
+
+
+def test_good_entry(write_entry, config) -> None:
+    write_entry("buena", GOOD, {"hola.tpl": "hola $who\n"})
+    report = next(
+        r for r in validate_dir(config.entries_dir).reports if r.entry.id == "buena"
     )
-    out = capsys.readouterr().out
-    assert rc == 0, out
-    assert "+OLLAMA_HOST=0.0.0.0:11434" in out
-    assert "Dry-run completado" in out
+    assert report.errors == []
+    assert report.warnings == []
 
 
-def test_apply_writes_run_log(home: Path, config, capsys) -> None:
-    assert main(["apply", "ollama", "-n", "--no-input", "-s", "owner=isidro"]) == 0
-    log = (config.logs_dir / "appforge.log").read_text(encoding="utf-8")
-    assert "ollama: [1/7] Dependencias" in log
-    assert "Dry-run completado" in log
+def test_missing_files_and_bad_syntax(write_entry, config) -> None:
+    write_entry(
+        "rota",
+        """
+name = "Rota"
+[check]
+run = "test -f $APPFORGE_ENTRY_DIR/marca"
+[[step]]
+copy = "no-existe.conf"
+dest = "/tmp/y"
+[[step]]
+run = "if true; then echo"
+[[step]]
+script = "s.sh"
+[remove]
+run = "bash ${APPFORGE_ENTRY_DIR}/borra.sh"
+""",
+        {"s.sh": "for x in; do\n", "borra.sh": "true\n"},
+    )
+    result = validate_dir(config.entries_dir)
+    errors = "\n".join(next(r for r in result.reports if r.entry.id == "rota").errors)
+    assert "falta el fichero rota/no-existe.conf" in errors
+    assert "step #2: error de sintaxis" in errors
+    assert "s.sh: error de sintaxis" in errors
+    assert "pero no existe rota/marca" in errors
+    assert "borra.sh" not in errors  # existe
 
 
-def test_missing_param_fails(home: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["apply", "ollama", "-n", "--no-input"]) == 1
-    assert "Faltan parámetros: owner" in capsys.readouterr().err
+def test_warnings(write_entry, config) -> None:
+    write_entry(
+        "floja",
+        """
+name = "Ollama (bajo demanda)"
+[[param]]
+name = "nadie"
+default = "x"
+[[step]]
+run = "true"
+""",
+        {"sobra.txt": "x"},
+    )
+    (config.entries_dir / "huerfano").mkdir()
+    result = validate_dir(config.entries_dir)
+    warnings = "\n".join(
+        next(r for r in result.reports if r.entry.id == "floja").warnings
+    )
+    assert "fichero sin usar: floja/sobra.txt" in warnings
+    assert "parámetro sin usar: nadie" in warnings
+    assert "sin [check]" in warnings
+    assert "sin [remove]" in warnings
+    assert "sin 'description'" in warnings
+    general = "\n".join(result.warnings)
+    assert "huerfano/: subdirectorio sin huerfano.toml" in general
+    assert "nombre repetido" in general
 
 
-def test_show_check_remove(home: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["show", "ollama"]) == 0
-    out = capsys.readouterr().out
-    assert "OLLAMA_HOST" in out
-    assert "categoría: IA" in out
-    if not Path("/opt/ollama/bin/ollama").exists():
-        assert main(["check", "ollama"]) == 1
-    assert main(["remove", "ollama", "-n"]) == 0
-    assert "Dry-run completado" in capsys.readouterr().out
-    with pytest.raises(SystemExit, match="No existe la entrada"):
-        main(["show", "nada"])
-    with pytest.raises(SystemExit, match="nombre=valor"):
-        main(["apply", "ollama", "-n", "--no-input", "-s", "owner"])
+def test_exit_codes(write_entry, capsys: pytest.CaptureFixture[str]) -> None:
+    write_entry("floja", 'name = "Floja"\n[[step]]\nrun = "true"\n')
+    assert main(["validate"]) == 0  # solo avisos
+    assert main(["validate", "--strict"]) == 1
+    assert main(["validate", "ollama", "--strict"]) == 0  # filtra por id
+    assert main(["validate", "nada"]) == 2
+    assert "no existe la entrada: nada" in capsys.readouterr().err
+    write_entry("mala", 'name = "Mala"\n')
+    assert main(["validate"]) == 1
+
+
+def test_validate_other_dir(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    folder = tmp_path / "otras"
+    folder.mkdir(mode=0o755)
+    assert main(["validate", "--dir", str(folder)]) == 0
+    assert "no hay ninguna entrada" in capsys.readouterr().out
 
 
 def test_bad_config_exits_2(home: Path, capsys: pytest.CaptureFixture[str]) -> None:
     (home / "config.toml").write_text('entries_dir = "entries"\n[ui]\nsearch = 1\n')
-    assert main(["list"]) == 2
+    assert main(["validate"]) == 2
     assert "[ui].search" in capsys.readouterr().err
+
+
+def test_no_command_without_terminal(
+    home: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("TERM", "dumb")
+    assert main([]) == 2
+    assert "necesita una terminal" in capsys.readouterr().out
+
+
+def test_help_is_spanish(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["--help"]) == 0
+    out = capsys.readouterr().out
+    assert "Uso:" in out
+    assert "validate" in out
+    assert "apply" not in out
 
 
 def test_version_and_module_entry_point(home: Path) -> None:

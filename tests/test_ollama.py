@@ -156,3 +156,15 @@ def test_toggle_on_then_off(fake_install):
     assert "Servicio detenido" in log.read_text()
     time.sleep(0.5)
     assert subprocess.run(["pgrep", "-f", f"{base}/bin/ollama serve"]).returncode != 0
+
+
+def test_dry_run_is_logged(config, sink) -> None:
+    from appforge.runlog import RunLog
+
+    entries, _ = load_entries(config.entries_dir)
+    entry = next(e for e in entries if e.id == "ollama")
+    engine = Engine(config, RunLog(config).tee(sink, "ollama: "))
+    assert engine.apply(entry, VALUES, dry_run=True)
+    log = (config.logs_dir / "appforge.log").read_text(encoding="utf-8")
+    assert "ollama: [1/7] Dependencias" in log
+    assert "Dry-run completado" in log
