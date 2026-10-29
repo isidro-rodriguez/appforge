@@ -1,0 +1,55 @@
+name = "Alias de git"
+description = "Alias cortos de git (st, lg, amend...) sin tocar tu ~/.gitconfig"
+category = "Desarrollo"
+details = """
+Copia una lista de alias a `~/.config/git/appforge-aliases` y la incluye desde
+tu configuración global con `include.path`. Tu `~/.gitconfig` no se reescribe:
+solo gana una línea `include`.
+
+| Alias | Equivale a |
+|---|---|
+| `git st` | `git status -sb` |
+| `git lg` | `git log --graph --oneline --decorate --all` |
+| `git amend` | `git commit --amend --no-edit` |
+| `git unstage` | `git restore --staged` |
+
+Ejemplo sin root: no pide contraseña. Desinstalar quita el fichero y la línea.
+"""
+requires_root = false
+
+[[param]]
+name = "file"
+prompt = "Fichero de alias"
+default = "~/.config/git/appforge-aliases"
+
+[check]
+run = """
+f="${file/#\\~/$HOME}"
+test -f "$f" && git config --global --get-all include.path | grep -qxF "$f"
+"""
+
+[[step]]
+title = "Comprobar git"
+run = "command -v git >/dev/null || { echo 'git no está instalado'; exit 1; }"
+
+[[step]]
+title = "Copiar los alias"
+run = """
+f="${file/#\\~/$HOME}"
+install -Dm644 "$APPFORGE_ENTRY_DIR/aliases.gitconfig" "$f"
+"""
+
+[[step]]
+title = "Incluirlos en la configuración global"
+run = """
+f="${file/#\\~/$HOME}"
+git config --global --get-all include.path | grep -qxF "$f" \
+  || git config --global --add include.path "$f"
+"""
+
+[remove]
+run = """
+f="${file/#\\~/$HOME}"
+git config --global --fixed-value --unset-all include.path "$f" || true
+rm -f "$f"
+"""

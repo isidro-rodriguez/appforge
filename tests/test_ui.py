@@ -1,5 +1,6 @@
 """TUI con Pilot: catálogo, selección, lotes, cancelación y opciones [ui]."""
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -35,6 +36,16 @@ run = "mkdir -p {dest} && touch {dest}/{name}"
 [remove]
 run = "rm -f {dest}/{name}"
 """
+
+
+@pytest.fixture(autouse=True)
+def only_ollama(home: Path) -> None:
+    """Deja solo la entrada de referencia: los tests no dependen de los ejemplos."""
+    entries = home / "entries"
+    for toml in entries.glob("*.toml"):
+        if toml.stem != "ollama":
+            toml.unlink()
+            shutil.rmtree(entries / toml.stem, ignore_errors=True)
 
 
 @pytest.fixture
