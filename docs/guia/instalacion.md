@@ -23,8 +23,7 @@ tar -xzf appforge-<versión>-linux-x86_64.tar.gz -C ~/.local/opt
 ~/.local/opt/appforge/appforge
 ```
 
-El binario se compila en Debian 12, así que funciona en Debian 12, 13 y
-distribuciones más nuevas. Busca `config.toml` **junto a sí mismo**: la carpeta entera
+El binario se compila para la versión estable actual de Debian (13, *trixie*). Busca `config.toml` **junto a sí mismo**: la carpeta entera
 es portable.
 
 ## Desde el código

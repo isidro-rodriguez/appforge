@@ -35,8 +35,8 @@ Además de la carpeta, crea en `dist/`:
 
 ## Publicación automática
 
-El workflow `.github/workflows/release.yml` construye el paquete en **Debian 12**
-(glibc 2.36), extrae el `.tar.gz`, prueba el binario (`--version` y
+El workflow `.github/workflows/release.yml` construye el paquete en un contenedor de
+**Debian 13** (la estable actual), extrae el `.tar.gz`, prueba el binario (`--version` y
 `validate --strict`) y:
 
 | Disparador | Resultado |
@@ -75,7 +75,7 @@ Los iconos en otros tamaños están en `src/appforge/resources/`
 
 | Tema | Detalle |
 |---|---|
-| glibc | El binario enlaza con la glibc del sistema donde se construye: compila en la distro más antigua donde vaya a ejecutarse (la CI usa Debian 12) |
+| glibc | El binario enlaza con la glibc del sistema donde se construye: por eso la CI compila en Debian 13 y no en `ubuntu-latest` |
 | Textual | Importa sus widgets de forma perezosa; por eso el build usa `--collect-submodules textual` y `--collect-data textual` |
 | Intermedios | En `build/` (ignorado por git) |
 | Sin binario | `uv run appforge` con `APPFORGE_HOME` apuntando a la carpeta con `config.toml` |

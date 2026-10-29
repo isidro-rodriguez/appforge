@@ -18,8 +18,8 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   subdirectorios sin su `.toml`. La CI lo ejecuta con `--strict`.
 - Paquete `appforge-<versión>-linux-x86_64.tar.gz` (binario, `config.toml` y
   entradas de ejemplo, con su `.sha256`) publicado en una Release de GitHub con cada
-  etiqueta `vX.Y.Z`; se compila en Debian 12 para que funcione en Debian 12 y
-  posteriores. `scripts/build.py --archive` lo genera en local.
+  etiqueta `vX.Y.Z`; se compila en Debian 13, la estable actual.
+  `scripts/build.py --archive` lo genera en local.
 - Entrada de ejemplo `git-alias` (sin root).
 - Capturas de la línea de comandos en la documentación.
 

@@ -179,7 +179,8 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 ## Releases
 
 - `.github/workflows/release.yml` builds the `.tar.gz` (binary, `config.toml`,
-  `entries/`) on Debian 12 for glibc compatibility and smoke-tests it.
+  `entries/`) in a container of the current Debian stable (13, trixie), the only
+  supported target, and smoke-tests it. Do not add older releases.
 - A `vX.Y.Z` tag publishes a GitHub Release; the tag must match `pyproject.toml`.
   Manual runs only upload a workflow artifact.
 

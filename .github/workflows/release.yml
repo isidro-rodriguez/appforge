@@ -20,9 +20,9 @@ jobs:
   build:
     name: Empaquetar (linux-x86_64)
     runs-on: ubuntu-latest
-    # El binario enlaza con la glibc de donde se construye: Debian 12 (glibc 2.36)
-    # da un binario que funciona en Debian 12, 13 y distros más nuevas.
-    container: debian:bookworm-slim
+    # Objetivo: Debian estable actual. Se compila en su contenedor porque el
+    # binario enlaza con la glibc de donde se construye (ubuntu-latest es más nueva).
+    container: debian:trixie-slim
     steps:
       - name: Dependencias del sistema (objdump para PyInstaller, git, tar)
         run: |
