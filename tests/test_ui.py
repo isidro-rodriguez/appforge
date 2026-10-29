@@ -1,110 +1,207 @@
-"""CLI y TUI de extremo a extremo con la entrada Ollama (siempre en dry-run)."""
+"""TUI con Pilot: catálogo, selección, lotes, cancelación y opciones [ui]."""
 
 from pathlib import Path
 
-from textual.widgets import Input, ListView, RichLog
+import pytest
+from textual.widgets import Input, ListView, ProgressBar, RichLog
 
-from appforge.main import main
-from appforge.tui import AppForgeApp, EntryItem, RunScreen
+from appforge.config import Config, load_config
+from appforge.tui import (
+    AppForgeApp,
+    AppRow,
+    CategoryRow,
+    ConfirmScreen,
+    ParamsScreen,
+    ProgressScreen,
+)
 
-
-def test_cli_list_and_dry_run(home, capsys):
-    assert main(["list"]) == 0
-    assert "ollama" in capsys.readouterr().out
-    rc = main(
-        [
-            "apply",
-            "ollama",
-            "-n",
-            "--no-input",
-            "-s",
-            "owner=isidro",
-            "-s",
-            "host=0.0.0.0:11434",
-        ]
-    )
-    out = capsys.readouterr().out
-    assert rc == 0, out
-    assert "+OLLAMA_HOST=0.0.0.0:11434" in out and "Dry-run completado" in out
+SIZE = (100, 30)
 
 
-def test_cli_missing_param_fails(home, capsys):
-    assert main(["apply", "ollama", "-n", "--no-input"]) == 1
-    assert "Faltan parámetros: owner" in capsys.readouterr().err
+def demo_entry(name: str, category: str, dest: Path, run: str = "true") -> str:
+    return f"""
+name = "{name}"
+category = "{category}"
+[check]
+run = "test -f {dest}/{name}"
+[[step]]
+title = "Paso de {name}"
+run = "{run}"
+[[step]]
+title = "Marca"
+run = "mkdir -p {dest} && touch {dest}/{name}"
+[remove]
+run = "rm -f {dest}/{name}"
+"""
 
 
-async def test_tui_dry_run_flow(config):
+@pytest.fixture
+def demo(config: Config, write_entry, tmp_path: Path) -> Path:
+    """Dos entradas sin root que escriben en ``tmp_path/out``."""
+    dest = tmp_path / "out"
+    write_entry("alpha", demo_entry("alpha", "Herramientas", dest))
+    write_entry("beta", demo_entry("beta", "Juegos", dest))
+    return dest
+
+
+def with_ui(home: Path, **ui: bool) -> Config:
+    lines = "\n".join(f"{k} = {'true' if v else 'false'}" for k, v in ui.items())
+    (home / "config.toml").write_text(f'entries_dir = "entries"\n[ui]\n{lines}\n')
+    return load_config(home)
+
+
+async def settle(app: AppForgeApp, pilot) -> None:
+    await pilot.pause()
+    await app.workers.wait_for_complete()
+    await pilot.pause()
+
+
+async def wait_for(pilot, condition, tries: int = 100) -> None:
+    for _ in range(tries):
+        if condition():
+            return
+        await pilot.pause(0.05)
+    raise AssertionError("la condición no se cumplió a tiempo")
+
+
+def rows(app: AppForgeApp) -> list[str]:
+    return [r.entry.id for r in app.query(AppRow)]
+
+
+def highlight(app: AppForgeApp, entry_id: str) -> None:
+    app.query_one("#apps", ListView).index = rows(app).index(entry_id)
+
+
+def log_text(screen: ProgressScreen) -> str:
+    return "\n".join(line.text for line in screen.query_one(RichLog).lines)
+
+
+async def test_catalog_without_ui_options(config: Config) -> None:
     app = AppForgeApp(config)
-    async with app.run_test(size=(80, 24)) as pilot:
-        await pilot.pause()
-        await app.workers.wait_for_complete()
-        await pilot.pause()
-        items = list(app.query(EntryItem))
-        assert [i.entry.id for i in items] == ["ollama"]
-        assert (
-            items[0].state is False and items[0].checked
-        )  # check corrido: no aplicada
+    async with app.run_test(size=SIZE) as pilot:
+        await settle(app, pilot)
+        assert rows(app) == ["ollama"]
+        assert app.checked == {"ollama"}
+        assert not app.query("#search")
+        assert not app.query("#categories")
+        assert app.check_action("focus_search", ()) is False
+        await pilot.press("slash")  # sin buscador no hace nada
 
-        await pilot.press("d")  # dry-run → pide parámetros
-        await pilot.pause()
-        owner = app.screen.query_one("#p_owner", Input)
-        owner.value = "isidro"
+
+async def test_dry_run_flow_keeps_selection(config: Config) -> None:
+    app = AppForgeApp(config)
+    async with app.run_test(size=SIZE) as pilot:
+        await settle(app, pilot)
+        await pilot.press("space")
+        assert app.marked == {"ollama"}
+        await pilot.press("d")
+        await wait_for(pilot, lambda: isinstance(app.screen, ParamsScreen))
+        app.screen.query_one("#p_owner", Input).value = "isidro"
         await pilot.click("#ok")
-        for _ in range(20):
-            await pilot.pause(0.05)
-            if isinstance(app.screen, RunScreen):
-                break
-        assert isinstance(app.screen, RunScreen), app.screen
-        for _ in range(50):
-            await pilot.pause(0.1)
-            if not app.screen.running:
-                break
-        log = app.screen.query_one(RichLog)
-        text = "\n".join(line.text for line in log.lines)
-        assert "Dry-run completado" in text, text
+        await wait_for(pilot, lambda: isinstance(app.screen, ProgressScreen))
+        screen = app.screen
+        assert isinstance(screen, ProgressScreen)
+        await wait_for(pilot, lambda: not screen.running)
+        assert "Dry-run completado" in log_text(screen)
+        assert "[tpl ] +OLLAMA_MODELS=/opt/ollama/models" in log_text(screen)
+        assert screen.query_one(ProgressBar).percentage == 1
         await pilot.press("escape")
-        await pilot.pause()
-        assert isinstance(app.screen.query_one(ListView), ListView)
+        await wait_for(pilot, lambda: not isinstance(app.screen, ProgressScreen))
+        assert app.marked == {"ollama"}  # un dry-run no consume la selección
     assert not Path("/opt/ollama/ollama.env").exists()
 
 
-async def test_tui_cancel_params(config):
+async def test_batch_install_and_uninstall(config: Config, demo: Path) -> None:
     app = AppForgeApp(config)
-    async with app.run_test() as pilot:
+    async with app.run_test(size=SIZE) as pilot:
+        await settle(app, pilot)
+        assert rows(app) == ["alpha", "beta", "ollama"]
+        await pilot.press("space", "down", "space")
+        assert app.marked == {"alpha", "beta"}
+        await pilot.press("i")
+        await wait_for(pilot, lambda: isinstance(app.screen, ConfirmScreen))
+        await pilot.press("y")
+        await wait_for(pilot, lambda: isinstance(app.screen, ProgressScreen))
+        screen = app.screen
+        assert isinstance(screen, ProgressScreen)
+        # Mientras corre, los atajos del catálogo no se ven ni actúan.
+        assert app.check_action("run", ("apply", False)) is False
+        await wait_for(pilot, lambda: not screen.running)
+        assert screen.done == {"alpha", "beta"}
+        assert (demo / "alpha").exists()
+        assert (demo / "beta").exists()
+        await pilot.press("escape")
+        await settle(app, pilot)
+        assert app.marked == set()
+        assert app.states["alpha"] is True
+
+        highlight(app, "alpha")
+        await pilot.press("u")
+        await wait_for(pilot, lambda: isinstance(app.screen, ConfirmScreen))
+        await pilot.press("y")
+        await wait_for(pilot, lambda: isinstance(app.screen, ProgressScreen))
+        screen = app.screen
+        assert isinstance(screen, ProgressScreen)
+        await wait_for(pilot, lambda: not screen.running)
+        assert not (demo / "alpha").exists()
+
+
+async def test_cancel_stops_running_command(
+    config: Config, write_entry, tmp_path: Path
+) -> None:
+    write_entry("slow", demo_entry("slow", "Lento", tmp_path / "out", run="sleep 30"))
+    app = AppForgeApp(config)
+    async with app.run_test(size=SIZE) as pilot:
+        await settle(app, pilot)
+        highlight(app, "slow")
         await pilot.pause()
-        await pilot.press("a")
+        await pilot.press("i")
+        await wait_for(pilot, lambda: isinstance(app.screen, ConfirmScreen))
+        await pilot.press("y")
+        await wait_for(pilot, lambda: isinstance(app.screen, ProgressScreen))
+        screen = app.screen
+        assert isinstance(screen, ProgressScreen)
+        await wait_for(pilot, lambda: "slow: [1/2]" in log_text(screen))
+        await pilot.pause(0.3)
+        await pilot.press("ctrl+c")
+        await wait_for(pilot, lambda: not screen.running, tries=60)
+        assert screen.done == set()
+        assert "Cancelado por el usuario" in log_text(screen)
+        assert not (tmp_path / "out" / "slow").exists()
+
+
+async def test_search_and_categories(home: Path, demo: Path) -> None:
+    config = with_ui(home, search=True, categories=True)
+    app = AppForgeApp(config)
+    async with app.run_test(size=SIZE) as pilot:
+        await settle(app, pilot)
+        cats = [(c.category, c.count) for c in app.query(CategoryRow)]
+        assert cats == [("Todas", 3), ("Herramientas", 1), ("IA", 1), ("Juegos", 1)]
+
+        await pilot.press("slash")
+        assert app.focused is app.query_one("#search", Input)
+        await pilot.press(*"oll")
         await pilot.pause()
+        assert rows(app) == ["ollama"]
+        await pilot.press("escape")
+        assert app.focused is app.query_one("#apps", ListView)
+
+        app.query_one("#search", Input).value = ""
+        await pilot.pause()
+        categories = app.query_one("#categories", ListView)
+        categories.focus()
+        await pilot.press("down", "down", "down")  # Juegos
+        await pilot.pause()
+        assert app.category == "Juegos"
+        assert rows(app) == ["beta"]
+
+
+async def test_cancel_params_does_nothing(config: Config) -> None:
+    app = AppForgeApp(config)
+    async with app.run_test(size=SIZE) as pilot:
+        await settle(app, pilot)
+        await pilot.press("i")
+        await wait_for(pilot, lambda: isinstance(app.screen, ParamsScreen))
         await pilot.press("escape")
         await pilot.pause()
-        assert not isinstance(app.screen, RunScreen)
-
-
-def test_version_and_module_entry_point(home) -> None:
-    import subprocess
-    import sys
-
-    from appforge import __version__
-
-    r = subprocess.run(
-        [sys.executable, "-m", "appforge", "--version"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert r.returncode == 0
-    assert __version__ in r.stdout
-
-
-def test_cli_show_check_remove(home, capsys) -> None:
-    import pytest
-
-    assert main(["show", "ollama"]) == 0
-    assert "OLLAMA_HOST" in capsys.readouterr().out
-    if not Path("/opt/ollama/bin/ollama").exists():
-        assert main(["check", "ollama"]) == 1
-    assert main(["remove", "ollama", "-n"]) == 0
-    assert "Dry-run completado" in capsys.readouterr().out
-    with pytest.raises(SystemExit, match="No existe la entrada"):
-        main(["show", "nada"])
-    with pytest.raises(SystemExit, match="nombre=valor"):
-        main(["apply", "ollama", "-n", "--no-input", "-s", "owner"])
+        assert not isinstance(app.screen, (ParamsScreen, ProgressScreen))

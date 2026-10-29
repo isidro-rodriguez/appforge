@@ -7,6 +7,29 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-29
+
+### Added
+
+- Icono de AppForge optimizado en `src/appforge/resources/` (32–512 px) y copiado junto
+  al binario por `scripts/build.py`, para usarlo en un lanzador de escritorio.
+- Tema común para TUI y CLI sacado de los colores del icono (`theme.py`).
+- Nueva TUI: catálogo con casillas y selección múltiple, panel de detalle con las
+  seleccionadas, instalación y desinstalación por lotes y pantalla de progreso con barra,
+  registro en vivo y cancelación con `ctrl+c`.
+- Buscador y panel de categorías opcionales (`[ui]` en `config.toml`) y clave `category`
+  en las entradas.
+- Registro de ejecuciones en `~/.local/state/appforge/logs/appforge.log` con rotación
+  diaria (`acodo.logger`).
+- Icono de la entrada `ollama` incluido.
+
+### Changed
+
+- La CLI usa Rich con el tema de AppForge (respeta `NO_COLOR`).
+- Los pasos se ejecutan en un grupo de procesos propio para que cancelar termine también
+  sus subprocesos.
+- `Enter` en la lista marca la entrada en lugar de aplicarla; `i` instala.
+
 ## [0.1.0] - 2026-10-29
 
 ### Added

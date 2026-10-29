@@ -7,8 +7,10 @@
 | `config.py` | Localiza el directorio base y lee `config.toml` |
 | `entry.py` | Carga y valida entradas; nunca lanza excepción, acumula `problems` |
 | `engine.py` | Ejecuta `[check]`, pasos y `[remove]`; root, copias, dry-run |
-| `main.py` | CLI (`argparse`); sin subcomando abre la TUI |
-| `tui.py` | TUI Textual: menú, formulario de parámetros, log en vivo |
+| `runlog.py` | Registro en fichero con rotación diaria (`acodo.logger`) |
+| `theme.py` | Paleta del icono y temas de Textual y Rich |
+| `main.py` | CLI (`argparse` + Rich); sin subcomando abre la TUI |
+| `tui.py` | TUI Textual: catálogo, lotes, progreso ([interfaz](interfaz.md)) |
 
 El motor no imprime nada: envía eventos `sink(kind, text)` (`step`, `out`, `info`, `ok`,
 `warn`, `error`) que la CLI pinta en la consola y la TUI en un `RichLog`.
@@ -24,7 +26,13 @@ El motor no imprime nada: envía eventos `sink(kind, text)` (`step`, `out`, `inf
 ```toml
 entries_dir = "entries"                           # relativo al directorio base
 # backups_dir = "~/.local/state/appforge/backups" # por defecto ($XDG_STATE_HOME)
+
+[ui]
+search = false       # buscador
+categories = false   # panel de categorías
 ```
+
+Claves desconocidas o de tipo incorrecto hacen que AppForge no arranque (código 2).
 
 ## Flujo de `apply`
 
@@ -35,6 +43,27 @@ entries_dir = "entries"                           # relativo al directorio base
 4. Se informa del estado actual (`[check]`).
 5. Pasos en orden; el primero que falla detiene todo e indica cuál.
 6. Se vuelve a ejecutar `[check]`: si falla, se avisa de que no quedó aplicada.
+
+## Cancelación
+
+`Engine.cancel()` (ctrl+c en la TUI) termina el comando en curso y no empieza más pasos.
+Para que la señal llegue a todo lo que lanza el paso, el código se ejecuta así:
+
+```bash
+set -m                       # el subshell tiene su propio grupo de procesos
+( <código del paso> ) &
+trap 'kill -TERM -- "-$hijo"' TERM INT
+wait "$hijo"                 # wait sí se interrumpe por la señal
+```
+
+Con `requires_root` la señal se envía a `sudo`, que la reenvía al comando. El código de
+salida del paso se conserva. La entrada cancelada puede quedar a medias, igual que si
+falla un paso.
+
+## Registro
+
+La CLI y la TUI escriben cada evento en `~/.local/state/appforge/logs/appforge.log`
+(rotación diaria, 7 días) con el id de la entrada delante. Ver [interfaz](interfaz.md).
 
 ## Estado
 

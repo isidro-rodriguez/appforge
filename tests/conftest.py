@@ -39,8 +39,6 @@ def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     base.mkdir()
     shutil.copy(ROOT / "config.toml", base / "config.toml")
     shutil.copytree(ROOT / "entries", base / "entries")
-    # El icono lo aporta el usuario; para probar basta un PNG cualquiera.
-    (base / "entries" / "ollama" / "ollama.png").write_bytes(b"\x89PNG\r\n\x1a\nfake")
     secure(base)
     monkeypatch.setenv("APPFORGE_HOME", str(base))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))

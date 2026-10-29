@@ -86,3 +86,29 @@ def test_config_errors(tmp_path: Path) -> None:
     (tmp_path / "config.toml").write_text("entries_dir = ")
     with pytest.raises(ConfigError, match="TOML inválido"):
         load_config(tmp_path)
+
+
+def test_category_is_read(config, write_entry) -> None:
+    write_entry("c", f'name="c"\ncategory = " Juegos "\n{STEP}')
+    assert get_entry(config, "c").category == "Juegos"
+    write_entry("c", f'name="c"\ncategory = 3\n{STEP}')
+    assert any(
+        "'category' debe ser texto" in p for p in get_entry(config, "c").problems
+    )
+
+
+def test_ui_options(tmp_path: Path) -> None:
+    (tmp_path / "entries").mkdir()
+    cfg = tmp_path / "config.toml"
+    cfg.write_text('entries_dir = "entries"\n')
+    assert not load_config(tmp_path).ui.search
+    cfg.write_text('entries_dir = "entries"\n[ui]\nsearch = true\ncategories = true\n')
+    ui = load_config(tmp_path).ui
+    assert ui.search
+    assert ui.categories
+    cfg.write_text('entries_dir = "entries"\n[ui]\nfoo = true\n')
+    with pytest.raises(ConfigError, match="desconocidas en \\[ui\\]"):
+        load_config(tmp_path)
+    cfg.write_text('entries_dir = "entries"\nui = 1\n')
+    with pytest.raises(ConfigError, match="tabla \\[ui\\]"):
+        load_config(tmp_path)

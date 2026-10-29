@@ -15,7 +15,16 @@ from typing import Any
 
 STEP_KINDS = ("run", "template", "copy", "script")
 FILE_KINDS = ("template", "copy", "script")
-TOP_KEYS = {"name", "description", "requires_root", "param", "check", "step", "remove"}
+TOP_KEYS = {
+    "name",
+    "description",
+    "category",
+    "requires_root",
+    "param",
+    "check",
+    "step",
+    "remove",
+}
 PARAM_KEYS = {"name", "prompt", "default", "secret"}
 STEP_KEYS = {"title", "dest", "mode", *STEP_KINDS}
 IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -61,7 +70,8 @@ class Step:
 
     Attributes:
         title: Texto que se muestra al ejecutarlo.
-        kind: ``run``, ``template``, ``copy`` o ``script``.
+        kind: ``run``, ``template``, ``copy`` o ``script`` (``remove`` para el
+            paso sintético de :meth:`Engine.remove`).
         value: Comando (``run``) o fichero relativo al subdirectorio.
         dest: Ruta absoluta de destino (``template`` y ``copy``).
         mode: Permisos del destino, o ``None`` para el valor por defecto.
@@ -83,6 +93,7 @@ class Entry:
         path: Ruta del fichero TOML.
         name: Nombre que se muestra en el menú.
         description: Descripción de una línea.
+        category: Categoría para el panel de categorías; vacía si no tiene.
         requires_root: Si los pasos se ejecutan con privilegios.
         params: Parámetros que se piden antes de aplicar.
         check: Comando que indica si ya está aplicada (código 0).
@@ -95,6 +106,7 @@ class Entry:
     path: Path
     name: str
     description: str = ""
+    category: str = ""
     requires_root: bool = False
     params: list[Param] = field(default_factory=list)
     check: str | None = None
@@ -368,6 +380,7 @@ def load_entry(path: Path) -> Entry:
     parser.unknown(data, TOP_KEYS, "entrada")
     entry.name = parser.text(data, "name", "entrada", required=True) or path.stem
     entry.description = parser.text(data, "description", "entrada") or ""
+    entry.category = (parser.text(data, "category", "entrada") or "").strip()
     entry.requires_root = parser.flag(data, "requires_root", "entrada")
     entry.params = parser.params(data.get("param"))
     entry.check = parser.run_table(data.get("check"), "check")

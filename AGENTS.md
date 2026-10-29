@@ -28,6 +28,7 @@ Full format reference: [docs/entradas.md](docs/entradas.md). Reference example:
 ```toml
 name = "Nombre en el menú"
 description = "Una línea"
+category = "Desarrollo"        # optional; groups entries in the categories panel
 requires_root = true
 
 [[param]]
@@ -83,7 +84,9 @@ Extra variables in `run`/`script`: `APPFORGE_ENTRY`, `APPFORGE_ENTRY_DIR`,
     them.
 11. **Scope:** no conditionals or loops in TOML. If you need logic, write a `script`
     step and keep it idempotent with `set -euo pipefail`.
-12. **Do not modify** the engine, CLI, TUI or the entry format to fit a new entry. If
+12. **Category:** reuse an existing `category` when one fits (`uv run appforge list`
+    shows them) instead of creating near-duplicates.
+13. **Do not modify** the engine, CLI, TUI or the entry format to fit a new entry. If
     the format falls short, stop and propose the change.
 
 ## Verification

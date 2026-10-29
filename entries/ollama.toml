@@ -1,5 +1,6 @@
 name = "Ollama (bajo demanda)"
 description = "Ollama en /opt/ollama, sin servicio de arranque; lanzador on/off con notificación"
+category = "IA"
 requires_root = true
 
 # Supuesto del motor: los parámetros llegan a los pasos `run` como variables

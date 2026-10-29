@@ -12,6 +12,7 @@ import shutil
 import string
 import subprocess
 import tempfile
+import threading
 import time
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
@@ -23,6 +24,8 @@ from appforge.config import Config
 from appforge.entry import Entry, Step
 
 type Sink = Callable[[str, str], None]
+# (número de paso, total, paso) justo antes de ejecutarlo.
+type Progress = Callable[[int, int, Step], None]
 
 MASK = "••••••"
 SUDO_ENV = "APPFORGE_SUDO"
@@ -91,6 +94,27 @@ def resolve_values(entry: Entry, given: dict[str, str]) -> dict[str, str]:
     return values
 
 
+def _wrap_cancellable(script: str) -> list[str]:
+    """Envuelve ``script`` para que SIGTERM mate a todos sus procesos.
+
+    bash no atiende una señal hasta que termina el comando en primer plano, así
+    que el código va en un subshell en segundo plano con su propio grupo de
+    procesos (``set -m``) y el script principal espera con ``wait``, que sí se
+    interrumpe. El código de salida del subshell se conserva.
+    """
+    return [
+        "set -m",
+        "(",
+        script,
+        ") &",
+        "__af_child=$!",
+        "trap 'kill -TERM -- \"-$__af_child\" 2>/dev/null' TERM INT",
+        'wait "$__af_child"; __af_rc=$?',
+        'wait "$__af_child" 2>/dev/null',
+        'exit "$__af_rc"',
+    ]
+
+
 @contextmanager
 def _temp_file(data: bytes) -> Generator[Path]:
     """Fichero temporal 0600 con ``data``, borrado al salir."""
@@ -120,6 +144,7 @@ class Runner:
         self.sink = sink
         self.secrets = [s for s in secrets if s]
         self.sudo = default_sudo() if sudo is None else sudo
+        self.proc: subprocess.Popen[str] | None = None
 
     def mask(self, text: str) -> str:
         """Sustituye los secretos de ``text`` por ``MASK``.
@@ -168,21 +193,22 @@ class Runner:
         lines = [f"export {k}={shlex.quote(v)}" for k, v in env.items()]
         if cwd.is_dir():
             lines.append(f"cd {shlex.quote(str(cwd))}")
-        lines.append(script)
+        lines.extend(_wrap_cancellable(script))
         with _temp_file(("\n".join(lines) + "\n").encode()) as tmp:
             argv = [*self._prefix(privileged), "bash", str(tmp)]
             if capture:
-                try:
-                    return subprocess.run(
-                        argv,
-                        stdin=subprocess.DEVNULL,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        timeout=timeout,
-                        check=False,
-                    ).returncode
-                except subprocess.TimeoutExpired:
-                    return 124
+                with subprocess.Popen(
+                    argv,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                ) as proc:
+                    try:
+                        return proc.wait(timeout=timeout)
+                    except subprocess.TimeoutExpired:
+                        proc.terminate()  # el trap mata también a los hijos
+                        proc.wait()
+                        return 124
             with subprocess.Popen(
                 argv,
                 stdin=subprocess.DEVNULL,
@@ -192,10 +218,20 @@ class Runner:
                 bufsize=1,
                 errors="replace",
             ) as proc:
-                assert proc.stdout is not None
-                for line in proc.stdout:
-                    self.sink("out", self.mask(line.rstrip("\n")))
-                return proc.wait()
+                self.proc = proc
+                try:
+                    assert proc.stdout is not None
+                    for line in proc.stdout:
+                        self.sink("out", self.mask(line.rstrip("\n")))
+                    return proc.wait()
+                finally:
+                    self.proc = None
+
+    def terminate(self) -> None:
+        """Termina el comando en curso, si lo hay (sudo reenvía la señal)."""
+        proc = self.proc
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
 
     def exists(self, path: Path, privileged: bool) -> bool:
         """``True`` si ``path`` existe, mirando con sudo si hace falta."""
@@ -294,6 +330,36 @@ class Engine:
         self.config = config
         self.sink = sink
         self.sudo = sudo
+        self.on_step: Progress | None = None
+        self._cancel = threading.Event()
+        self._active: Runner | None = None
+
+    # -- cancelación ----------------------------------------------------- #
+    def cancel(self) -> None:
+        """Pide detener la ejecución en curso.
+
+        Termina el comando que se esté ejecutando y no empieza más pasos. Se
+        puede llamar desde otro hilo.
+        """
+        self._cancel.set()
+        if self._active is not None:
+            self._active.terminate()
+
+    @property
+    def cancelled(self) -> bool:
+        """``True`` si se ha pedido cancelar."""
+        return self._cancel.is_set()
+
+    def _stop_if_cancelled(self) -> bool:
+        """Informa y devuelve ``True`` si hay que dejar de ejecutar pasos."""
+        if self.cancelled:
+            self.sink("warn", "Cancelado por el usuario")
+        return self.cancelled
+
+    def _notify_step(self, index: int, total: int, step: Step) -> None:
+        """Avisa a ``on_step`` (barra de progreso de la TUI)."""
+        if self.on_step is not None:
+            self.on_step(index, total, step)
 
     # -- privilegios ----------------------------------------------------- #
     def _sudo_bypassed(self) -> bool:
@@ -349,7 +415,8 @@ class Engine:
     def _runner(self, entry: Entry, values: dict[str, str]) -> Runner:
         """Runner que enmascara los parámetros secretos."""
         secrets = [values.get(p.name, "") for p in entry.params if p.secret]
-        return Runner(self.sink, secrets, self.sudo)
+        self._active = Runner(self.sink, secrets, self.sudo)
+        return self._active
 
     # -- check ----------------------------------------------------------- #
     def is_applied(self, entry: Entry, timeout: float = 15) -> bool | None:
@@ -556,12 +623,17 @@ class Engine:
 
         total = len(entry.steps)
         for i, step in enumerate(entry.steps, 1):
+            if self._stop_if_cancelled():
+                return False
+            self._notify_step(i, total, step)
             self.sink("step", f"[{i}/{total}] {step.title}{tag}")
             try:
                 ok = self._run_step(entry, step, values, runner, dry_run, stamp)
             except EngineError as e:
                 self.sink("error", str(e))
                 ok = False
+            if not ok and self._stop_if_cancelled():
+                return False
             if not ok:
                 self.sink(
                     "error",
@@ -595,11 +667,17 @@ class Engine:
         if not entry.remove:
             self.sink("error", "Esta entrada no define [remove]")
             return False
+        if self._stop_if_cancelled():
+            return False
         values = {p.name: p.default or "" for p in entry.params}
         runner = self._runner(entry, {})
         env = self._env(entry, values, dry_run)
+        self._notify_step(
+            1, 1, Step(title="Eliminar", kind="remove", value=entry.remove)
+        )
         self.sink("step", "Eliminar" + (" [dry-run]" if dry_run else ""))
         if not self._shell_step(entry, entry.remove, env, runner, dry_run, "[remove]"):
+            self._stop_if_cancelled()
             return False
         if dry_run:
             self.sink("ok", "Dry-run completado: no se ha cambiado nada")

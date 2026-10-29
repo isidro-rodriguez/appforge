@@ -2,18 +2,33 @@
 
 import sys
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from acodo.utils import get_env, to_path
 
 APP_NAME = "appforge"
 CONFIG_FILE = "config.toml"
-_CONFIG_KEYS = {"entries_dir", "backups_dir"}
+_CONFIG_KEYS = {"entries_dir", "backups_dir", "ui"}
+_UI_KEYS = {"search", "categories"}
 
 
 class ConfigError(Exception):
     """Error al localizar o leer ``config.toml``."""
+
+
+@dataclass(frozen=True)
+class UiConfig:
+    """Opciones de la TUI (tabla ``[ui]`` de ``config.toml``).
+
+    Attributes:
+        search: Mostrar el buscador.
+        categories: Mostrar el panel de categorías.
+    """
+
+    search: bool = False
+    categories: bool = False
 
 
 @dataclass(frozen=True)
@@ -24,11 +39,15 @@ class Config:
         base_dir: Directorio donde viven el binario y ``config.toml``.
         entries_dir: Directorio de entradas, ya resuelto a ruta absoluta.
         backups_dir: Destino de las copias de seguridad.
+        logs_dir: Destino del registro de ejecuciones.
+        ui: Opciones de la TUI.
     """
 
     base_dir: Path
     entries_dir: Path
     backups_dir: Path
+    ui: UiConfig = field(default_factory=UiConfig)
+    logs_dir: Path = field(default_factory=lambda: state_dir() / "logs")
 
 
 def base_dir() -> Path:
@@ -49,14 +68,23 @@ def base_dir() -> Path:
     return Path.cwd()
 
 
-def default_backups_dir() -> Path:
-    """Devuelve ``$XDG_STATE_HOME/appforge/backups`` (o ``~/.local/state/...``).
+def state_dir() -> Path:
+    """Devuelve ``$XDG_STATE_HOME/appforge`` (o ``~/.local/state/appforge``).
 
     Returns:
-        Ruta del directorio de copias de seguridad por defecto.
+        Directorio de estado de la aplicación (copias y registro).
     """
     state = get_env("XDG_STATE_HOME", to_path) or Path.home() / ".local" / "state"
-    return state / APP_NAME / "backups"
+    return state / APP_NAME
+
+
+def default_backups_dir() -> Path:
+    """Devuelve el directorio de copias de seguridad por defecto.
+
+    Returns:
+        ``state_dir() / "backups"``.
+    """
+    return state_dir() / "backups"
 
 
 def load_config(base: Path | None = None) -> Config:
@@ -93,4 +121,20 @@ def load_config(base: Path | None = None) -> Config:
     if not entries.is_dir():
         raise ConfigError(f"El directorio de entradas no existe: {entries}")
     backups = to_path(data.get("backups_dir")) or default_backups_dir()
-    return Config(base_dir=base, entries_dir=entries, backups_dir=backups)
+    ui = _load_ui(data.get("ui", {}), path)
+    return Config(base_dir=base, entries_dir=entries, backups_dir=backups, ui=ui)
+
+
+def _load_ui(raw: Any, path: Path) -> UiConfig:
+    """Valida la tabla ``[ui]``."""
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{path}: 'ui' debe ser una tabla [ui]")
+    unknown = set(raw) - _UI_KEYS
+    if unknown:
+        raise ConfigError(
+            f"{path}: claves desconocidas en [ui]: {', '.join(sorted(unknown))}"
+        )
+    for key, value in raw.items():
+        if not isinstance(value, bool):
+            raise ConfigError(f"{path}: [ui].{key} debe ser true/false")
+    return UiConfig(**raw)

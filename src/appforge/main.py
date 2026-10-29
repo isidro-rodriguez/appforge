@@ -3,13 +3,18 @@
 import argparse
 import getpass
 import sys
+from dataclasses import dataclass
+
+from rich.console import Console
+from rich.text import Text
 
 from appforge import __version__
-from appforge.config import ConfigError, load_config
+from appforge.config import Config, ConfigError, load_config
 from appforge.engine import Engine, EngineError
 from appforge.entry import Entry, load_entries
+from appforge.runlog import RunLog
+from appforge.theme import RICH_THEME
 
-_COLORS = {"step": "1;36", "ok": "1;32", "warn": "1;33", "error": "1;31", "info": "2"}
 _PREFIX = {
     "step": "==> ",
     "ok": "✔ ",
@@ -20,28 +25,68 @@ _PREFIX = {
 }
 
 
-class _ConsoleSink:
-    """Imprime la salida del motor con prefijos y, en terminal, colores."""
+def make_consoles() -> tuple[Console, Console]:
+    """Consolas de Rich con el tema de AppForge para stdout y stderr.
 
-    def __init__(self, color: bool) -> None:
-        """Crea el sink; ``color`` activa las secuencias ANSI."""
-        self.color = color
+    Respetan ``NO_COLOR`` y desactivan el color fuera de una terminal.
 
-    def __call__(self, kind: str, text: str) -> None:
-        """Imprime una línea; los errores van a stderr."""
-        line = _PREFIX.get(kind, "") + text
-        code = _COLORS.get(kind)
-        if self.color and code:
-            line = f"\033[{code}m{line}\033[0m"
-        print(line, file=sys.stderr if kind == "error" else sys.stdout, flush=True)
+    Returns:
+        ``(salida, errores)``.
+    """
+    out = Console(theme=RICH_THEME, highlight=False, soft_wrap=True)
+    err = Console(theme=RICH_THEME, highlight=False, soft_wrap=True, stderr=True)
+    return out, err
 
 
-def _find(entries: list[Entry], key: str) -> Entry:
-    """Entrada con id ``key`` o salida con error."""
-    for e in entries:
-        if e.id == key:
-            return e
-    raise SystemExit(f"No existe la entrada '{key}'. Usa 'appforge list'.")
+@dataclass
+class Cli:
+    """Estado compartido por los subcomandos."""
+
+    config: Config
+    entries: list[Entry]
+    out: Console
+    err: Console
+
+    def sink(self, kind: str, text: str) -> None:
+        """Muestra un evento del motor; los errores van a stderr.
+
+        Args:
+            kind: Tipo de evento.
+            text: Texto del evento.
+        """
+        console = self.err if kind == "error" else self.out
+        console.print(Text(_PREFIX.get(kind, "") + text, style=f"af.{kind}"))
+
+    def engine(self, entry: Entry | None = None) -> Engine:
+        """Motor que muestra la salida y, si hay entrada, la registra.
+
+        Args:
+            entry: Entrada sobre la que se va a actuar.
+
+        Returns:
+            El motor listo para usar.
+        """
+        if entry is None:
+            return Engine(self.config, self.sink)
+        runlog = RunLog(self.config)
+        return Engine(self.config, runlog.tee(self.sink, f"{entry.id}: "))
+
+    def find(self, key: str) -> Entry:
+        """Entrada con id ``key``.
+
+        Args:
+            key: Id de la entrada.
+
+        Returns:
+            La entrada.
+
+        Raises:
+            SystemExit: Si no existe.
+        """
+        for e in self.entries:
+            if e.id == key:
+                return e
+        raise SystemExit(f"No existe la entrada '{key}'. Usa 'appforge list'.")
 
 
 def _parse_sets(items: list[str]) -> dict[str, str]:
@@ -74,110 +119,121 @@ def _prompt_values(
     return values
 
 
-def _state_mark(engine: Engine, entry: Entry) -> str:
+def _state_mark(engine: Engine, entry: Entry) -> Text:
     """Marca de estado para ``list``."""
     if not entry.valid:
-        return "⚠"
+        return Text("⚠", style="af.invalid")
     state = engine.is_applied(entry)
-    return {True: "✔", False: " ", None: "·"}[state]
+    if state is None:
+        return Text("·", style="af.muted")
+    return Text("✔", style="af.applied") if state else Text(" ")
 
 
-def cmd_list(engine: Engine, entries: list[Entry], args: argparse.Namespace) -> int:
+def cmd_list(cli: Cli, args: argparse.Namespace) -> int:
     """Lista las entradas con su estado.
 
     Args:
-        engine: Motor.
-        entries: Entradas cargadas.
+        cli: Estado de la CLI.
         args: Argumentos (sin uso).
 
     Returns:
         Código de salida 0.
     """
-    for e in entries:
-        root = " (root)" if e.requires_root else ""
-        print(f"{_state_mark(engine, e)} {e.id:<20} {e.name}{root}")
+    engine = cli.engine()
+    for e in cli.entries:
+        line = Text.assemble(
+            _state_mark(engine, e),
+            " ",
+            (f"{e.id:<20}", "af.id"),
+            " ",
+            e.name,
+            (f"  {e.category}" if e.category else "", "af.muted"),
+            (" (root)" if e.requires_root else "", "af.muted"),
+        )
+        cli.out.print(line)
     return 0
 
 
-def cmd_show(engine: Engine, entries: list[Entry], args: argparse.Namespace) -> int:
+def cmd_show(cli: Cli, args: argparse.Namespace) -> int:
     """Muestra parámetros, pasos y problemas de una entrada.
 
     Args:
-        engine: Motor (sin uso).
-        entries: Entradas cargadas.
+        cli: Estado de la CLI.
         args: Argumentos con ``entry``.
 
     Returns:
         0 si la entrada es válida, 1 si no.
     """
-    e = _find(entries, args.entry)
-    print(f"{e.name}  [{e.id}]")
+    e = cli.find(args.entry)
+    p_ = cli.out.print
+    p_(Text.assemble((e.name, "af.title"), "  ", (f"[{e.id}]", "af.id")))
     if e.description:
-        print(f"  {e.description}")
-    print(f"  root: {'sí' if e.requires_root else 'no'}")
+        p_(Text(f"  {e.description}"))
+    if e.category:
+        p_(Text(f"  categoría: {e.category}", style="af.muted"))
+    p_(Text(f"  root: {'sí' if e.requires_root else 'no'}", style="af.muted"))
     if e.params:
-        print("  parámetros:")
+        p_(Text("  parámetros:", style="af.title"))
         for p in e.params:
             extra = (
                 " (secreto)" if p.secret else (f" = {p.default}" if p.default else "")
             )
-            print(f"    - {p.name}: {p.prompt}{extra}")
-    print("  pasos:")
+            p_(Text(f"    - {p.name}: {p.prompt}{extra}"))
+    p_(Text("  pasos:", style="af.title"))
     for i, s in enumerate(e.steps, 1):
         dest = f" → {s.dest}" if s.dest else ""
-        print(f"    {i}. {s.title}  ({s.kind}{dest})")
-    print(
-        f"  check: {'sí' if e.check else 'no'}   remove: {'sí' if e.remove else 'no'}"
-    )
+        p_(Text.assemble(f"    {i}. {s.title}  ", (f"({s.kind}{dest})", "af.muted")))
+    check = "sí" if e.check else "no"
+    remove = "sí" if e.remove else "no"
+    p_(Text(f"  check: {check}   remove: {remove}", style="af.muted"))
     for problem in e.problems:
-        print(f"  ⚠ {problem}")
+        p_(Text(f"  ⚠ {problem}", style="af.invalid"))
     return 0 if e.valid else 1
 
 
-def cmd_check(engine: Engine, entries: list[Entry], args: argparse.Namespace) -> int:
+def cmd_check(cli: Cli, args: argparse.Namespace) -> int:
     """Ejecuta ``[check]`` de una entrada.
 
     Args:
-        engine: Motor.
-        entries: Entradas cargadas.
+        cli: Estado de la CLI.
         args: Argumentos con ``entry``.
 
     Returns:
         0 aplicada, 1 no aplicada, 2 sin ``[check]`` o inválida.
     """
-    e = _find(entries, args.entry)
-    state = engine.is_applied(e)
+    e = cli.find(args.entry)
+    state = cli.engine().is_applied(e)
     if state is None:
-        print("sin [check]" if e.valid else "entrada inválida")
+        cli.out.print("sin [check]" if e.valid else "entrada inválida", markup=False)
         return 2
-    print("aplicada" if state else "no aplicada")
+    cli.out.print(Text("aplicada", "af.applied") if state else Text("no aplicada"))
     return 0 if state else 1
 
 
-def _ensure_root(engine: Engine, entry: Entry, dry_run: bool) -> bool:
+def _ensure_root(cli: Cli, engine: Engine, entry: Entry, dry_run: bool) -> bool:
     """Pide sudo antes de aplicar si la entrada lo necesita."""
     if dry_run or not entry.requires_root:
         return True
     if engine.password_needed(entry):
-        print("Esta entrada necesita privilegios de administrador.")
+        cli.out.print("Esta entrada necesita privilegios de administrador.")
     return engine.acquire_root()
 
 
-def cmd_apply(engine: Engine, entries: list[Entry], args: argparse.Namespace) -> int:
+def cmd_apply(cli: Cli, args: argparse.Namespace) -> int:
     """Aplica una entrada (o la simula con ``--dry-run``).
 
     Args:
-        engine: Motor.
-        entries: Entradas cargadas.
+        cli: Estado de la CLI.
         args: Argumentos con ``entry``, ``set``, ``dry_run`` y ``no_input``.
 
     Returns:
         0 si se aplicó, 1 si no.
     """
-    e = _find(entries, args.entry)
+    e = cli.find(args.entry)
     interactive = sys.stdin.isatty() and not args.no_input
     values = _prompt_values(e, _parse_sets(args.set), interactive)
-    if not _ensure_root(engine, e, args.dry_run):
+    engine = cli.engine(e)
+    if not _ensure_root(cli, engine, e, args.dry_run):
         return 1
     try:
         return 0 if engine.apply(e, values, dry_run=args.dry_run) else 1
@@ -186,19 +242,19 @@ def cmd_apply(engine: Engine, entries: list[Entry], args: argparse.Namespace) ->
         return 1
 
 
-def cmd_remove(engine: Engine, entries: list[Entry], args: argparse.Namespace) -> int:
+def cmd_remove(cli: Cli, args: argparse.Namespace) -> int:
     """Ejecuta ``[remove]`` de una entrada.
 
     Args:
-        engine: Motor.
-        entries: Entradas cargadas.
+        cli: Estado de la CLI.
         args: Argumentos con ``entry`` y ``dry_run``.
 
     Returns:
         0 si se eliminó, 1 si no.
     """
-    e = _find(entries, args.entry)
-    if not _ensure_root(engine, e, args.dry_run):
+    e = cli.find(args.entry)
+    engine = cli.engine(e)
+    if not _ensure_root(cli, engine, e, args.dry_run):
         return 1
     return 0 if engine.remove(e, dry_run=args.dry_run) else 1
 
@@ -257,10 +313,11 @@ def main(argv: list[str] | None = None) -> int:
         Código de salida del proceso.
     """
     args = build_parser().parse_args(argv)
+    out, err = make_consoles()
     try:
         config = load_config()
     except ConfigError as e:
-        print(f"appforge: {e}", file=sys.stderr)
+        err.print(Text(f"appforge: {e}", style="af.error"))
         return 2
 
     if args.cmd is None:
@@ -268,12 +325,12 @@ def main(argv: list[str] | None = None) -> int:
 
         return run_tui(config)
 
-    engine = Engine(config, _ConsoleSink(sys.stdout.isatty()))
     entries, _ = load_entries(config.entries_dir)
+    cli = Cli(config=config, entries=entries, out=out, err=err)
     try:
-        return _COMMANDS[args.cmd](engine, entries, args)
+        return _COMMANDS[args.cmd](cli, args)
     except KeyboardInterrupt:
-        print("\ninterrumpido", file=sys.stderr)
+        err.print("\ninterrumpido")
         return 130
 
 

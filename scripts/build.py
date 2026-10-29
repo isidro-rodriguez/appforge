@@ -1,7 +1,8 @@
 """Construye el binario de AppForge con PyInstaller ``--onefile``.
 
-Deja en ``dist/appforge/`` el binario, ``config.toml`` y ``entries/``, listo
-para copiar a cualquier sitio. Los intermedios van a ``build/``.
+Deja en ``dist/appforge/`` el binario, ``config.toml``, ``entries/`` y el icono
+(``appforge.png``, para un lanzador de escritorio), listo para copiar a
+cualquier sitio. Los intermedios van a ``build/``.
 
 Uso:
     poe build
@@ -16,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
 OUT = ROOT / "dist" / "appforge"
+ICON = ROOT / "src" / "appforge" / "resources" / "appforge-256.png"
 
 
 def _secure(path: Path) -> None:
@@ -63,6 +65,7 @@ def main() -> None:
     shutil.copy2(BUILD / "bin" / "appforge", OUT / "appforge")
     shutil.copy2(ROOT / "config.toml", OUT / "config.toml")
     shutil.copytree(ROOT / "entries", OUT / "entries")
+    shutil.copy2(ICON, OUT / "appforge.png")
     _secure(OUT)
     print(f"Listo: {OUT}")
 

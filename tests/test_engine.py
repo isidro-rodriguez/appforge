@@ -142,3 +142,31 @@ def test_privileged_prefix_is_used(
     assert any(c.startswith("bash ") for c in calls)  # pasos run
     assert any(c.startswith("install -D -m 0600") for c in calls)
     assert (dest / "saludo.txt").exists()
+
+
+def test_on_step_reports_progress(config, sink, demo) -> None:
+    e = demo()
+    eng = Engine(config, sink)
+    seen: list[tuple[int, int, str]] = []
+    eng.on_step = lambda i, total, step: seen.append((i, total, step.kind))
+    assert eng.apply(e, {"token": "x"}, dry_run=True)
+    assert seen == [(1, 3, "run"), (2, 3, "template"), (3, 3, "copy")]
+
+
+def test_cancel_terminates_and_stops(config, sink, demo, dest: Path) -> None:
+    import threading
+
+    e = demo(
+        f'[[step]]\ntitle = "Lento"\nrun = "sleep 30"\n'
+        f'[[step]]\ntitle = "Nunca"\nrun = "touch {dest}/nunca"'
+    )
+    eng = Engine(config, sink)
+    eng.on_step = lambda i, total, step: (
+        threading.Timer(0.3, eng.cancel).start() if step.title == "Lento" else None
+    )
+    start = __import__("time").monotonic()
+    assert not eng.apply(e, {"token": "x"})
+    assert __import__("time").monotonic() - start < 10
+    assert "Cancelado por el usuario" in sink.text("warn")
+    assert not (dest / "nunca").exists()
+    assert eng.cancelled

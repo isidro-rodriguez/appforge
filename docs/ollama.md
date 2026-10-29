@@ -11,7 +11,7 @@ de arranque, con un lanzador de escritorio que actúa de interruptor on/off.
 | `/opt/ollama/models/` | Modelos (`OLLAMA_MODELS`), propiedad del usuario `owner` |
 | `/opt/ollama/ollama.env` | Variables de optimización (plantilla) |
 | `/opt/ollama/ollama-toggle.sh` | Switcher on/off |
-| `/opt/ollama/ollama.png` | Icono (lo aportas tú en `entries/ollama/`) |
+| `/opt/ollama/ollama.png` | Icono (`entries/ollama/ollama.png`, 256 px) |
 | `/usr/local/share/applications/ollama.desktop` | Lanzador |
 
 ## Switcher

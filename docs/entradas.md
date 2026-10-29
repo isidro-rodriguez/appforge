@@ -22,6 +22,7 @@ entries/
 |---|---|---|---|
 | `name` | texto | sí | Nombre en el menú |
 | `description` | texto | no | Una línea que se muestra en el detalle |
+| `category` | texto | no | Agrupa la entrada en el panel de categorías (`[ui].categories`) |
 | `requires_root` | bool | no (`false`) | Los pasos y `[remove]` se ejecutan con `sudo` |
 
 ### `[[param]]`
@@ -89,6 +90,7 @@ El directorio de trabajo es `entries/<id>/` si existe.
 ```toml
 name = "Alias de git"
 description = "Configura alias globales de git"
+category = "Desarrollo"
 
 [[param]]
 name = "editor"

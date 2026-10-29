@@ -1,3 +1,7 @@
 # Junto al binario. Rutas relativas a este directorio.
 entries_dir = "entries"
-# backups_dir = "~/.local/state/appforge/backups"   # valor por defecto
+# backups_dir = "~/.local/state/appforge/backups"   # por defecto ($XDG_STATE_HOME)
+
+[ui]
+search = false       # buscador sobre la lista de aplicaciones
+categories = false   # panel de categorías (clave `category` de cada entrada)

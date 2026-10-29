@@ -42,8 +42,11 @@ Linux only (bash, sudo, `install`).
 │   ├── config.py           # Base dir and config.toml
 │   ├── engine.py           # Execution: check, steps, remove, sudo, backups, dry-run
 │   ├── entry.py            # Entry model and validation (never raises)
-│   ├── main.py             # CLI entry point (argparse); no subcommand -> TUI
-│   ├── tui.py              # Textual app
+│   ├── main.py             # CLI entry point (argparse + Rich); no subcommand -> TUI
+│   ├── runlog.py           # Run log file (acodo.logger, daily rotation)
+│   ├── theme.py            # Palette from the icon; Textual and Rich themes
+│   ├── tui.py              # Textual app (catalog, batches, progress)
+│   ├── resources/          # Optimized icons (appforge-<size>.png)
 │   └── py.typed
 ├── tests/                  # pytest
 └── uv.lock
@@ -69,6 +72,15 @@ Linux only (bash, sudo, `install`).
 - Scope limit: four step kinds, no conditionals, loops or inter-entry dependencies.
   Push complex logic into an entry `script`. Ask before extending the format.
 - The TUI imports Textual lazily from `main.py` so the CLI starts fast.
+- Colors live only in `theme.py` (taken from the icon). TUI CSS uses theme variables
+  (`$accent`, `$primary`, …) or `STYLES`; the CLI uses the `af.*` Rich styles. Do not
+  hard-code colors elsewhere.
+- Steps run inside `_wrap_cancellable` (subshell in its own process group) so
+  `Engine.cancel()` kills the whole command tree. Keep it when touching `Runner.shell`.
+- Catalog bindings must not act on other screens: add new main-screen actions to
+  `_MAIN_ACTIONS` in `tui.py`.
+- The TUI mirrors `docs/interfaz.md`; update both together. `[ui]` options in
+  `config.toml` are validated in `config.py`; unknown keys are an error.
 
 ## Tools and canonical commands
 
@@ -105,11 +117,11 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 
 - `pytest` with `--import-mode=importlib`: tests cannot import `conftest`; share helpers
   through fixtures (`home`, `config`, `write_entry`, `sink`).
-- The `home` fixture copies the real `config.toml` and `entries/` into `tmp_path`, adds
-  a fake icon, sets `APPFORGE_HOME`, `XDG_STATE_HOME` and `APPFORGE_SUDO=""`.
+- The `home` fixture copies the real `config.toml` and `entries/` into `tmp_path` and sets `APPFORGE_HOME`, `XDG_STATE_HOME` and `APPFORGE_SUDO=""`.
 - Tests must never touch real system paths. Use dry-run for real entries and
   `tmp_path` destinations for engine tests.
-- TUI tests use `App.run_test()` and Pilot at 80×24.
+- TUI tests use `App.run_test()` and Pilot at 100×30; `demo_entry()` in
+  `tests/test_ui.py` builds non-root entries that write under `tmp_path`.
 - Linux only (CI runs on `ubuntu-latest`).
 
 ## Agent workflow
