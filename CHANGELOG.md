@@ -7,6 +7,8 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-29
+
 ### Changed
 
 - Se aceptan las entradas cuyo propietario es quien ejecutó `sudo` (`SUDO_UID`),

@@ -1,6 +1,6 @@
 [project]
 name = "appforge"
-version = "0.6.0"
+version = "0.6.1"
 description = "Lanzador de recetas de configuración con menú de consola"
 readme = "README.md"
 requires-python = ">=3.13"
