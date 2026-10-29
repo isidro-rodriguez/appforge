@@ -40,7 +40,7 @@ from textual.widgets import (
 
 from appforge import __version__
 from appforge.config import Config
-from appforge.engine import Engine, EngineError, resolve_values
+from appforge.engine import Engine, EngineError, invoking_user, resolve_values
 from appforge.entry import Entry, Step, load_entries
 from appforge.runlog import RunLog, step_tag
 from appforge.theme import (
@@ -1110,7 +1110,11 @@ class AppForgeApp(App[None]):
         if not dry_run:
             verb = _VERBS[(action, False)][0]
             names = "\n".join(f"  • {escape(e.name)}" for e in entries)
-            question = f"¿{verb} {len(entries)} entrada(s)?\n\n{names}"
+            user = invoking_user()[0]
+            question = (
+                f"¿{verb} {len(entries)} entrada(s)?\n\n{names}\n\n"
+                f"Usuario (APPFORGE_USER): {escape(user)}"
+            )
             if not await self.push_screen_wait(ConfirmScreen(question)):
                 return
 

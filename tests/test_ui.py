@@ -109,7 +109,7 @@ async def test_dry_run_flow_keeps_selection(config: Config) -> None:
         assert app.marked == {"ollama"}
         await pilot.press("d")
         await wait_for(pilot, lambda: isinstance(app.screen, ParamsScreen))
-        app.screen.query_one("#p_owner", Input).value = "usuario"
+        app.screen.query_one("#p_kv_cache", Input).value = "q4_0"
         await pilot.click("#ok")
         await wait_for(pilot, lambda: isinstance(app.screen, ProgressScreen))
         screen = app.screen
@@ -117,6 +117,7 @@ async def test_dry_run_flow_keeps_selection(config: Config) -> None:
         await wait_for(pilot, lambda: not screen.running)
         assert "Dry-run completado" in log_text(screen)
         assert "[tpl ] +OLLAMA_MODELS=/opt/ollama/models" in log_text(screen)
+        assert "[tpl ] +OLLAMA_KV_CACHE_TYPE=q4_0" in log_text(screen)
         assert screen.query_one(ProgressBar).percentage == 1
         await pilot.press("escape")
         await wait_for(pilot, lambda: not isinstance(app.screen, ProgressScreen))
@@ -263,7 +264,7 @@ def test_entry_markdown_lists_everything(config: Config) -> None:
     md = entry_markdown(entries[0], False)
     assert md.startswith("# Ollama (bajo demanda)")
     assert "### Ajustes de rendimiento" in md  # clave details
-    assert "| `owner` | Usuario que ejecutará Ollama" in md
+    assert "| `arch` | Arquitectura (amd64 | arm64) | `amd64` |" in md
     assert "**4. Variables de entorno (optimización)** · `template`" in md
     assert "Genera `/opt/ollama/ollama.env` desde `ollama/ollama.env.tpl`" in md
     assert "## Comprobación" in md

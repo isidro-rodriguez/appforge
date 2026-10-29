@@ -7,7 +7,8 @@ Instala [Ollama](https://ollama.com) para ejecutar modelos de lenguaje en local,
 
 ### Qué deja instalado
 
-- Binario y librerías en `/opt/ollama`, modelos en `/opt/ollama/models`.
+- Binario y librerías en `/opt/ollama`; modelos en `/opt/ollama/models`, propiedad
+  del usuario que ejecutó `sudo appforge`.
 - Un lanzador **Ollama** en el menú de aplicaciones que hace de interruptor:
   la primera pulsación arranca `ollama serve` y la siguiente lo detiene. Cada
   cambio se anuncia con una notificación del escritorio.
@@ -27,12 +28,8 @@ Pulsa el lanzador y, cuando aparezca «Servicio activo», usa `ollama run <model
 o cualquier cliente que apunte a `OLLAMA_HOST`. Desinstalar conserva los modelos.
 """
 
-# Supuesto del motor: los parámetros llegan a los pasos `run` como variables
-# de entorno ($owner, $arch...) y a las plantillas vía string.Template.
-
-[[param]]
-name = "owner"
-prompt = "Usuario que ejecutará Ollama (dueño de /opt/ollama/models)"
+# Los parámetros llegan a los pasos `run` como variables de entorno ($arch...)
+# y a las plantillas vía string.Template. $APPFORGE_USER es quien llamó a sudo.
 
 [[param]]
 name = "arch"
@@ -83,8 +80,8 @@ test -x /opt/ollama/bin/ollama
 """
 
 [[step]]
-title = "Permisos de la carpeta de modelos"
-run = "chown -R \"$owner\": /opt/ollama/models"
+title = "Carpeta de modelos para el usuario que llamó a sudo"
+run = "chown -R \"$APPFORGE_USER\": /opt/ollama/models"
 
 [[step]]
 title = "Variables de entorno (optimización)"

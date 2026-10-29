@@ -10,6 +10,7 @@ su manera. ``kind`` es uno de ``step``, ``out``, ``info``, ``ok``, ``warn`` o
 
 import difflib
 import os
+import pwd
 import shlex
 import string
 import subprocess
@@ -18,6 +19,8 @@ import threading
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from pathlib import Path
+
+from acodo.utils import get_env
 
 from appforge.config import Config
 from appforge.entry import Entry, Step
@@ -36,6 +39,25 @@ class EngineError(Exception):
 
 def _discard(kind: str, text: str) -> None:
     """Sink que descarta la salida."""
+
+
+def invoking_user() -> tuple[str, str]:
+    """Usuario que lanzó AppForge con ``sudo`` y su directorio personal.
+
+    Se toma de ``SUDO_USER``. Sin ``sudo`` (sesión de root) es el usuario del
+    propio proceso.
+
+    Returns:
+        ``(nombre, home)``.
+    """
+    name = get_env("SUDO_USER", default=None)
+    if name:
+        try:
+            return name, pwd.getpwnam(name).pw_dir
+        except KeyError:
+            pass  # usuario inexistente: se usa el del proceso
+    me = pwd.getpwuid(os.getuid())
+    return me.pw_name, me.pw_dir
 
 
 def backup_path(dest: Path) -> Path:
@@ -274,15 +296,20 @@ class Runner:
 class Engine:
     """Aplica, comprueba y elimina entradas."""
 
-    def __init__(self, config: Config, sink: Sink) -> None:
+    def __init__(
+        self, config: Config, sink: Sink, user: tuple[str, str] | None = None
+    ) -> None:
         """Crea el motor.
 
         Args:
             config: Configuración de la aplicación.
             sink: Destino de la salida.
+            user: ``(nombre, home)`` del usuario que llamó a sudo; ``None`` usa
+                :func:`invoking_user`.
         """
         self.config = config
         self.sink = sink
+        self.user = user or invoking_user()
         self.on_step: Progress | None = None
         self._cancel = threading.Event()
         self._active: Runner | None = None
@@ -315,11 +342,19 @@ class Engine:
             self.on_step(index, total, step)
 
     # -- entorno --------------------------------------------------------- #
-    @staticmethod
-    def _env(entry: Entry, values: dict[str, str], dry_run: bool) -> dict[str, str]:
+    @property
+    def user_vars(self) -> dict[str, str]:
+        """``APPFORGE_USER`` y ``APPFORGE_USER_HOME``: quien llamó a sudo."""
+        name, home = self.user
+        return {"APPFORGE_USER": name, "APPFORGE_USER_HOME": home}
+
+    def _env(
+        self, entry: Entry, values: dict[str, str], dry_run: bool
+    ) -> dict[str, str]:
         """Variables que reciben los pasos."""
         return {
             **values,
+            **self.user_vars,
             "APPFORGE_ENTRY": entry.id,
             "APPFORGE_ENTRY_DIR": str(entry.files_dir),
             "APPFORGE_DRY_RUN": "1" if dry_run else "0",
@@ -424,7 +459,7 @@ class Engine:
         """Ejecuta un paso ``template`` o ``copy``."""
         assert step.dest is not None
         dest = Path(step.dest)
-        new = self.render(entry, step, values)
+        new = self.render(entry, step, {**self.user_vars, **values})
         old = runner.read(dest)
         mode = step.mode
         if mode is None:

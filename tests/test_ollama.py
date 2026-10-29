@@ -12,7 +12,7 @@ import pytest
 from appforge.engine import Engine, EngineError, resolve_values
 from appforge.entry import load_entries
 
-VALUES = {"owner": "usuario"}
+VALUES: dict[str, str] = {}
 
 
 def ollama(config):
@@ -24,7 +24,6 @@ def test_entry_is_valid(config):
     e = ollama(config)
     assert e.problems == []
     assert [p.name for p in e.params] == [
-        "owner",
         "arch",
         "host",
         "keep_alive",
@@ -50,9 +49,15 @@ def test_missing_icon_is_reported(config):
     assert any("ollama.png" in p for p in e.problems)
 
 
-def test_owner_is_required(config):
+def test_unknown_param_is_rejected(config):
     with pytest.raises(EngineError, match="owner"):
-        resolve_values(ollama(config), {})
+        resolve_values(ollama(config), {"owner": "usuario"})
+
+
+def test_models_belong_to_the_sudo_user(config, sink):
+    e = ollama(config)
+    assert Engine(config, sink).apply(e, {}, dry_run=True), sink.text()
+    assert '# chown -R "$APPFORGE_USER": /opt/ollama/models' in sink.text()
 
 
 def test_dry_run_renders_env_and_changes_nothing(config, sink):

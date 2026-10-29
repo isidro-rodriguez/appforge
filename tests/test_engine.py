@@ -1,5 +1,6 @@
 """Motor con entradas que escriben solo en directorios temporales."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -157,3 +158,41 @@ def test_cancel_terminates_and_stops(config, sink, demo, dest: Path) -> None:
     assert "Cancelado por el usuario" in sink.text("warn")
     assert not (dest / "nunca").exists()
     assert eng.cancelled
+
+
+def test_steps_and_templates_get_the_sudo_user(
+    config, sink, write_entry, tmp_path: Path
+) -> None:
+    out = tmp_path / "user"
+    write_entry(
+        "quien",
+        f"""
+name = "Quién"
+[[step]]
+run = "echo user=$APPFORGE_USER home=$APPFORGE_USER_HOME"
+[[step]]
+template = "quien.tpl"
+dest = "{out}/quien.conf"
+""",
+        {"quien.tpl": "owner=$APPFORGE_USER\nhome=$APPFORGE_USER_HOME\n"},
+    )
+    e = get_entry(config, "quien")
+    assert e.valid, e.problems
+    eng = Engine(config, sink, user=("ana", "/home/ana"))
+    assert eng.apply(e, {}), sink.text()
+    assert "user=ana home=/home/ana" in sink.text("out")
+    assert (out / "quien.conf").read_text() == "owner=ana\nhome=/home/ana\n"
+
+
+def test_invoking_user_comes_from_sudo(monkeypatch: pytest.MonkeyPatch) -> None:
+    import pwd
+
+    from appforge.engine import invoking_user
+
+    me = pwd.getpwuid(os.getuid())
+    monkeypatch.setenv("SUDO_USER", me.pw_name)
+    assert invoking_user() == (me.pw_name, me.pw_dir)
+    monkeypatch.setenv("SUDO_USER", "no-existe-este-usuario")
+    assert invoking_user() == (me.pw_name, me.pw_dir)  # el del proceso
+    monkeypatch.delenv("SUDO_USER")
+    assert invoking_user() == (me.pw_name, me.pw_dir)

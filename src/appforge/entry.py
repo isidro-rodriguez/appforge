@@ -45,6 +45,8 @@ RESERVED = {
     "ENV",
 }
 RESERVED_PREFIX = "APPFORGE_"
+# Variables que el motor da a los pasos y a las plantillas, además de los parámetros.
+USER_VARS = ("APPFORGE_USER", "APPFORGE_USER_HOME")
 
 
 @dataclass(frozen=True)
@@ -339,7 +341,8 @@ class _Parser:
             self.problems.append(
                 f"{where}: plantilla con '$' mal formado (usa $$ para un $ literal)"
             )
-        missing = set(tpl.get_identifiers()) - {p.name for p in self.entry.params}
+        known = {p.name for p in self.entry.params} | set(USER_VARS)
+        missing = set(tpl.get_identifiers()) - known
         if missing:
             self.problems.append(
                 f"{where}: la plantilla usa parámetros inexistentes: "
