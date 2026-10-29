@@ -196,7 +196,12 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
   `entries/`) in a container of the current Debian stable (13, trixie), the only
   supported target, and smoke-tests it. Do not add older releases.
 - A `vX.Y.Z` tag publishes a GitHub Release; the tag must match `pyproject.toml`.
-  Manual runs only upload a workflow artifact.
+  Manual runs only upload a workflow artifact, unless `publish=true` on `main`: then
+  the workflow creates the tag from `pyproject.toml` and the Release. Release notes
+  come from that version's `CHANGELOG.md` section.
+- Release flow for agents (this session cannot push tags): bump version + CHANGELOG,
+  push to `main`, wait for CI, then `gh workflow run release.yml --ref main -f
+  publish=true`.
 
 ## Definition of done
 

@@ -43,13 +43,15 @@ El workflow `.github/workflows/release.yml` construye el paquete en un contenedo
 |---|---|
 | Etiqueta `vX.Y.Z` | Crea la Release `vX.Y.Z` con el `.tar.gz` y su `.sha256` |
 | *Run workflow* (manual) | Deja el paquete como artefacto de la ejecución |
+| *Run workflow* con **publish** en `main` | Crea la etiqueta `vX.Y.Z` (versión de `pyproject.toml`) sobre ese commit y su Release |
 
 La etiqueta debe coincidir con `version` de `pyproject.toml`; si no, el workflow
-falla antes de construir. Para publicar una versión:
+falla antes de construir. Las notas de la Release salen de la sección de esa versión
+en `CHANGELOG.md`. Para publicar una versión, una de las dos:
 
 ```bash
-git tag v0.4.0          # la versión de pyproject.toml
-git push origin v0.4.0
+git tag v0.6.1 && git push origin v0.6.1                     # etiqueta propia
+gh workflow run release.yml --ref main -f publish=true       # la crea el workflow
 ```
 
 Los iconos en otros tamaños están en `src/appforge/resources/`
