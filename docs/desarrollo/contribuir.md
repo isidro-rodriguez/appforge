@@ -16,11 +16,13 @@ uv run pre-commit install      # comprobaciones antes de cada commit y push
 
 ## Ejecutar desde el código
 
-Desde el código, AppForge busca `config.toml` en el **directorio de trabajo**. La TUI
-solo funciona como superusuario, así que usa el ejecutable del entorno con `sudo`:
+Desde el código, AppForge busca `config.toml` en el **directorio de trabajo** y
+registra en `logs/`. La TUI solo funciona como superusuario: sin root, `uv run
+appforge` pide la contraseña de `sudo` y se relanza (el binario del paquete, en
+cambio, sale con un error).
 
 ```bash
-sudo .venv/bin/appforge                        # TUI con las recetas de entries/
+uv run appforge                               # TUI con las recetas de entries/ (pide sudo)
 uv run appforge validate --strict             # sin sudo: solo lee ficheros
 ```
 
@@ -44,7 +46,7 @@ Con [Poe the Poet](https://poethepoet.natn.io/) instalado globalmente hay atajos
 |---|---|
 | `poe check` | Formato, lint, tipos y tests |
 | `poe fix` | `ruff format` + `ruff check --fix` |
-| `poe build` | Binario en `dist/appforge/` |
+| `poe build` | Binario y `.deb` en `dist/` (en Debian) |
 | `poe screenshots` | Capturas de la TUI para esta web |
 | `poe docs` | Vista previa de la web |
 | `poe backup` | `git bundle` del repositorio |

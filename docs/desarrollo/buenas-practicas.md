@@ -36,7 +36,13 @@ copia del anterior.
 ## Seguro
 
 - **Nada de `curl … | bash`.** Descarga a un fichero con `curl -fsSL`, verifica la
-  suma si el proyecto la publica y luego ejecuta.
+  suma y luego ejecuta.
+- **Versiones fijas y verificadas.** Si la URL incluye la versión y el proyecto
+  publica a menudo, pon la versión en un parámetro con `link` a sus releases (el
+  usuario elige; tú no tienes que actualizar la receta) y verifica el SHA-256 con las
+  sumas oficiales de esa versión. Sin suma publicada, la receta falla: nunca instales
+  sin verificar. Ejemplos: `entries/ollama/install-ollama.sh`,
+  `entries/fonts/nerd-font.sh`.
 - **Secretos**: `secret = true`, sin `default`. Si acaban en un fichero, `mode = "0600"`.
 - **Rutas**: todo lo que instala una receta, bajo un prefijo (`/opt/<app>`) siempre
   que se pueda; `[remove]` queda simple.

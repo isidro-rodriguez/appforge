@@ -37,6 +37,15 @@ Valores que se piden antes de aplicar. No se guardan en disco.
 | `prompt` | texto | no (`name`) | Pregunta |
 | `default` | escalar | no | Sin default, el parámetro es obligatorio |
 | `secret` | bool | no (`false`) | Entrada oculta; el valor se enmascara (`••••••`) en toda la salida |
+| `link` | URL http(s) | no | Página donde elegir el valor (p. ej. las versiones publicadas). La TUI la muestra bajo la pregunta y en la página de detalle |
+
+```toml
+[[param]]
+name = "version"
+prompt = "Versión de Ollama (etiqueta de GitHub)"
+default = "v0.40.13"
+link = "https://github.com/ollama/ollama/releases"
+```
 
 ### `[check]`
 

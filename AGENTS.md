@@ -39,6 +39,7 @@ name = "owner"                 # available as $owner in run/script and templates
 prompt = "Usuario propietario"
 default = "usuario"            # omit to make it mandatory
 secret = false                 # true: hidden input, masked output
+link = "https://…/releases"    # optional: where to pick the value (shown in the TUI)
 
 [check]                        # exit 0 = applied; runs with param defaults
 run = "test -x /opt/x/bin/x"
@@ -75,8 +76,13 @@ Everything runs as root. When an entry writes files that belong to the user (the
    runs as root; there is no `requires_root` key.
 3. **Target Debian.** Use `apt-get` with `DEBIAN_FRONTEND=noninteractive`. Do not
    abstract the package manager.
-4. **No `curl | bash`.** Download to a file, verify when the upstream publishes a
-   checksum, then run. Use HTTPS and `curl -fsSL`.
+4. **No `curl | bash`.** Download to a file, verify, then run. Use HTTPS and
+   `curl -fsSL`.
+4b. **Pinned, verified downloads.** When the download URL contains the version and
+   upstream releases often, expose it as a `version` param with a sensible default
+   and `link` to the upstream releases page, and verify the SHA-256 against the
+   official checksum file of that version. No published checksum → fail, never
+   install unverified (see `entries/ollama/install-ollama.sh`).
 5. **Files over heredocs.** Config files go in `entries/<id>/` as `template` or `copy`
    steps, so the dry-run shows a diff and backups are made.
 6. **Templates:** only declared params (`$name`); write `$$` for a literal `$` (shell

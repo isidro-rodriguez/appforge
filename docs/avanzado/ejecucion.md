@@ -78,8 +78,8 @@ Como ante un fallo, una receta cancelada puede quedar a medias.
 
 ## Registro
 
-Cada evento de la TUI se añade a `logs/appforge.log`, junto al binario, con fecha,
-nivel e id de la receta:
+Cada evento de la TUI se añade a `/var/log/appforge/appforge.log` con fecha, nivel e
+id de la receta:
 
 ```text
 2026-10-29 18:10:03 INFO       ollama [tpl ] [4/7] Variables de entorno (optimización)
@@ -89,3 +89,21 @@ nivel e id de la receta:
 ```
 
 El fichero rota a medianoche y se guardan 7 días. En la TUI, ++l++ lo abre.
+
+## Fallos parciales
+
+AppForge no deshace los pasos ya hechos: un *rollback* genérico de paquetes,
+servicios y ficheros sería más frágil que reaplicar. Lo que sí garantiza:
+
+| Situación | Estado tras el fallo | ¿Reaplicar? | Recuperación |
+|---|---|---|---|
+| Falla antes de modificar (receta inválida, parámetro que falta) | Nada cambia | Sí, tras corregir | — |
+| Falla un paso `run` o `script` | Pasos anteriores hechos; el resto, no. El registro dice cuál y su salida | Sí: los pasos deben ser repetibles | Corregir la causa y reaplicar |
+| Falla la copia `.backup` | El fichero original no se toca: el paso falla antes de escribir | Sí | — |
+| Falla la escritura de un fichero (`install`) | El destino puede quedar a medias; el anterior está en `<fichero>.backup` | Sí, reescribe el fichero entero | Copiar el `.backup` si hace falta |
+| Disco lleno | Como el caso anterior, en el paso que falle | Sí, tras liberar espacio | `.backup` y registro |
+| ++ctrl+c++ o señal | Se mata el comando en curso y todo lo que lanzó; no empiezan más pasos | Sí | Como un fallo en ese paso |
+| Todo termina pero `[check]` falla | Pasos hechos, resultado no verificado (aviso en el registro) | Sí | Revisar la receta o el sistema |
+
+`[check]` informa del estado real cada vez que se pinta el catálogo y antes y después
+de aplicar, así que una receta a medias aparece como no aplicada.

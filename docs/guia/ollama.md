@@ -21,7 +21,7 @@ enciendes. Un lanzador del escritorio hace de interruptor.
 
 | Ruta | Contenido |
 |---|---|
-| `/opt/ollama/bin/`, `lib/` | Binario y librerías del tarball oficial |
+| `/opt/ollama/bin/`, `lib/` | Binario y librerías de la versión elegida, verificados con su `sha256sum.txt` oficial |
 | `/opt/ollama/models/` | Modelos (`OLLAMA_MODELS`), propiedad del usuario que ejecutó `sudo appforge` |
 | `/opt/ollama/ollama.env` | Variables de rendimiento (plantilla) |
 | `/opt/ollama/ollama-toggle.sh` | Interruptor on/off |
@@ -36,6 +36,7 @@ notifica con `notify-send`. Su log está en `~/.local/state/ollama/serve.log`.
 
 | Parámetro | Por defecto | Uso |
 |---|---|---|
+| `version` | `v0.40.13` | Versión de Ollama; el formulario enlaza a sus [Releases](https://github.com/ollama/ollama/releases). Si ya está instalada, no se descarga otra vez |
 | `arch` | `amd64` | `amd64` o `arm64` |
 | `host` | `127.0.0.1:11434` | `OLLAMA_HOST` |
 | `keep_alive` | `30m` | `OLLAMA_KEEP_ALIVE` (`-1` = siempre cargado) |

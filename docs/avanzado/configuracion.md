@@ -2,13 +2,17 @@
 
 ## Dónde está
 
-AppForge lee `config.toml` del directorio del binario, el `appforge/` que
-descomprimiste. Todas las rutas relativas se resuelven desde ahí.
+AppForge lee `/etc/appforge/config.toml`. Las rutas relativas se resuelven desde
+`/etc/appforge/`. Es un fichero de configuración del paquete: al actualizar, `apt`
+conserva tus cambios (y pregunta si el paquete también lo cambió).
+
+Se edita como superusuario (`sudo editor /etc/appforge/config.toml`). AppForge se
+niega a arrancar si es un enlace simbólico o si lo pueden modificar otros usuarios.
 
 ## `config.toml`
 
 ```toml title="config.toml"
-# Relativo al directorio del binario.
+# Relativo a /etc/appforge.
 entries_dir = "entries"
 
 [ui]
@@ -18,7 +22,7 @@ categories = false   # panel de categorías
 
 | Clave | Tipo | Por defecto | Descripción |
 |---|---|---|---|
-| `entries_dir` | ruta | — (obligatoria) | Directorio de recetas, relativo al del binario. Debe existir |
+| `entries_dir` | ruta | — (obligatoria) | Directorio de recetas, relativo a `/etc/appforge`. Debe existir |
 | `[ui] search` | bool | `false` | Muestra el buscador (++slash++) |
 | `[ui] categories` | bool | `false` | Muestra el panel de categorías |
 
@@ -51,7 +55,7 @@ AppForge no guarda estado propio: si una receta está aplicada lo dice siempre s
 | Ruta | Contenido |
 |---|---|
 | `<fichero>.backup`, junto al original | Copia de un fichero antes de que `template` o `copy` lo sobrescriba. Mismos permisos que el original; si ya había una, se reemplaza |
-| `logs/appforge.log`, junto al binario | Registro de todas las ejecuciones, copias incluidas; rota cada día y guarda 7 |
+| `/var/log/appforge/appforge.log` | Registro de todas las ejecuciones, copias incluidas; rota cada día y guarda 7. Se borra al purgar el paquete |
 
 ## Colores
 

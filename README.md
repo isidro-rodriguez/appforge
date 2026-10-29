@@ -6,20 +6,24 @@ Menú de consola que centraliza recetas de configuración repetibles: cada opci�
 fichero TOML que instala y configura una aplicación (ejemplos incluidos: Ollama bajo
 demanda y fuentes adicionales). Para **Debian 13**.
 
+> AppForge no es un sandbox: cada receta es código que se ejecuta como `root`.
+> Revisa las que no hayas escrito antes de aplicarlas.
+
 ## 🚀 Uso
 
-Descarga `appforge-<versión>-linux-x86_64.tar.gz` de
-[Releases](https://github.com/isidro-rodriguez/appforge/releases), descomprímelo y
-ábrelo como superusuario:
+Descarga `appforge_<versión>_amd64.deb` de
+[Releases](https://github.com/isidro-rodriguez/appforge/releases) e instálalo:
 
 ```bash
-tar -xzf appforge-<versión>-linux-x86_64.tar.gz
-sudo ./appforge/appforge                    # TUI: espacio marca, i instala, d dry-run, v detalle
-./appforge/appforge validate --strict       # revisa las recetas (sin sudo)
+sudo apt install ./appforge_<versión>_amd64.deb
+sudo appforge                    # TUI: espacio marca, i instala, d dry-run, v detalle
+appforge validate --strict       # revisa las recetas (sin sudo)
+man appforge
 ```
 
-Trae el binario, `config.toml` y `entries/` con recetas de ejemplo: úsalas, cámbialas o
-añade las tuyas. El buscador y las categorías se activan en `config.toml` (`[ui]`).
+Las recetas de ejemplo y las tuyas van en `/etc/appforge/entries/`; la configuración,
+en `/etc/appforge/config.toml`. También aparece **AppForge** en el menú de
+aplicaciones.
 
 ## 📚 Documentación
 
@@ -35,7 +39,7 @@ git clone https://github.com/isidro-rodriguez/appforge.git
 cd appforge
 uv sync
 uv run ruff format . && uv run ruff check . && uv run ty check && uv run pytest
-uv run python scripts/build.py --archive   # binario y .tar.gz en dist/
+uv run python scripts/build.py             # binario y .deb en dist/ (en Debian)
 ```
 
 Más en [Contribuir](https://isidro-rodriguez.github.io/appforge/desarrollo/contribuir/),

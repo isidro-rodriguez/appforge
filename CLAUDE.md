@@ -14,16 +14,17 @@ entries (`entries/*.toml`), follow [AGENTS.md](AGENTS.md) instead.
 
 ## What AppForge is
 
-A console launcher: one binary, a `config.toml` next to it pointing to an `entries/`
-directory, one TOML per menu option. Each entry declares params, a `[check]`, ordered
+A console launcher shipped as a `.deb`: binary in `/opt/appforge` (`/usr/bin/appforge`
+links to it), `/etc/appforge/config.toml` pointing to `/etc/appforge/entries/`, one TOML
+per menu option. Each entry declares params, a `[check]`, ordered
 steps (`run`, `script`, `template`, `copy`) and an optional `[remove]`. Target: current
-Debian stable (13). It **only runs as root**: no sudo handling, no unprivileged cases.
+Debian stable (13). It **only runs as root**: no sudo handling in the engine, no unprivileged cases.
 
 ## Structure
 
 ```text
 .
-├── .github/                # CI, docs (Pages), release (.tar.gz) and Dependabot
+├── .github/                # CI, docs (Pages), release (.deb) and Dependabot
 ├── .pre-commit-config.yaml # pre-commit/pre-push hooks (ruff, ty, pytest)
 ├── AGENTS.md               # Guide for agents adding entries
 ├── CLAUDE.md               # This file
@@ -31,21 +32,22 @@ Debian stable (13). It **only runs as root**: no sudo handling, no unprivileged 
 ├── config.toml             # entries_dir = "entries"
 ├── docs/                   # Zensical site (Spanish): guia/, avanzado/, desarrollo/
 ├── docs_templates/         # Zensical overrides (favicons, mkdocstrings in Spanish)
-├── entries/                # Menu entries shipped as examples; ollama.toml is the reference
+├── entries/                # Example entries (→ /etc/appforge/entries); ollama.toml is the reference
+├── packaging/              # appforge.1 (man), appforge.desktop, postrm
 ├── pyproject.toml          # Deps, build (uv_build), ruff, ty, pytest, poe
 ├── README.md               # Minimal overview
 ├── scripts/
 │   ├── backup.py           # git bundle
-│   ├── build.py            # PyInstaller --onefile -> dist/appforge/ (--archive: .tar.gz)
+│   ├── build.py            # PyInstaller --onefile + dist/appforge_<v>_<arch>.deb
 │   └── screenshots.py      # TUI and CLI SVG screenshots for the docs
 ├── src/appforge/
 │   ├── __init__.py         # __version__ via importlib.metadata
 │   ├── __main__.py         # python -m appforge
-│   ├── config.py           # Base dir (binary dir, or cwd from source) and config.toml
+│   ├── config.py           # Base dir (/etc/appforge packaged, cwd from source), config.toml
 │   ├── engine.py           # Execution: check, steps, remove, .backup copies, dry-run
 │   ├── entry.py            # Entry model and validation (never raises)
 │   ├── main.py             # CLI entry point (Typer): validate, --version; no command -> TUI
-│   ├── runlog.py           # Run log <base>/logs/appforge.log (acodo.logger, daily)
+│   ├── runlog.py           # Run log (/var/log/appforge or <cwd>/logs; acodo.logger)
 │   ├── theme.py            # Palette from the icon; Textual and Rich themes
 │   ├── tui.py              # Textual app (catalog, detail page, batches, progress)
 │   ├── validate.py         # `appforge validate`: whole-directory checks, never runs entries
@@ -67,20 +69,23 @@ Debian stable (13). It **only runs as root**: no sudo handling, no unprivileged 
   `export` lines, never through `argv` or the process environment.
 - Secret values are masked (`MASK`) in every sink event, including dry-run diffs.
 - `[check]` always runs with param defaults.
-- **Root only.** `main._require_root()` stops the TUI with a clear error (exit 2)
-  unless `main.is_root()`. `validate` only reads files, so it does not require root;
+- **Root only.** `main._require_root()` stops the packaged TUI with a clear error
+  (exit 2) unless `main.is_root()`; from source with a TTY it re-execs itself with
+  `sudo` (`main.sudo_command()`). `validate` only reads files, so it does not require root;
   nor do `--help`/`--version`. Everything runs with the process privileges: do not reintroduce sudo, `requires_root` or
   unprivileged code paths.
 - Steps and templates get `APPFORGE_USER` / `APPFORGE_USER_HOME` from
   `engine.invoking_user()` (`SUDO_USER`, else the process user); `entry.USER_VARS`
   lists them for template validation. Entries use them for user-owned files instead
   of asking for a user name.
-- Configuration is only `config.toml` next to the binary (cwd when run from source):
-  no environment variables, no extra directories. Multiple entry directories may come
+- Configuration is only `/etc/appforge/config.toml` when packaged (cwd when run from
+  source); logs go to `/var/log/appforge` (`<cwd>/logs` from source). No environment
+  variables, no extra directories. `config.toml` is rejected if it is a symlink or
+  insecure. Multiple entry directories may come
   later; do not add them (or mention them in docs) until asked.
 - Before overwriting a file, copy it to `<dest>.backup` in the same directory with the
   original's mode, replacing any previous backup; the sink event lands in the run log
-  (`<base>/logs/appforge.log`). Identical content means "sin cambios", no backup.
+  (`Config.logs_dir`). Identical content means "sin cambios", no backup.
 - Security checks in `entry.py` (owner in `trusted_uids()` = root, process user or
   `SUDO_UID`; group/other writable, symlinks, `..`, reserved param names) are part of
   the contract. Do not relax them without asking.
@@ -115,7 +120,7 @@ uv run ruff check .
 uv run ty check
 uv run pytest
 uv run appforge validate --strict             # repo entries: no errors or warnings (no root needed)
-uv run python scripts/build.py --archive      # binary in dist/appforge/ + .tar.gz
+uv run python scripts/build.py                # binary + .deb in dist/ (needs dpkg-deb)
 uv run python scripts/screenshots.py          # docs screenshots (SVG)
 uv run --group docs zensical build            # docs site in site/
 ```
@@ -152,7 +157,7 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 - TUI tests use `App.run_test()` and Pilot at 100×30; `demo_entry()` in
   `tests/test_ui.py` builds non-root entries that write under `tmp_path`, and an
   autouse fixture keeps only `ollama` from the repo entries.
-- Every repo entry has a dry-run test (`tests/test_ollama.py`, `tests/test_git_alias.py`).
+- Every repo entry has a dry-run test (`tests/test_ollama.py`, `tests/test_fonts.py`).
 - Linux only (CI runs on `ubuntu-latest`).
 
 ## Agent workflow
@@ -186,15 +191,18 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 - **No personal data** in docs, examples, tests or screenshots: use placeholders
   (`usuario`, `$USER`). The only exception is the repository URL
   (`github.com/isidro-rodriguez/appforge` and its Pages site).
-- User docs (`guia/`, `avanzado/`, README usage) describe the packaged binary run with
-  `sudo`. `uv` and running from source belong to `desarrollo/` only.
+- User docs (`guia/`, `avanzado/`, README usage) describe the installed `.deb`
+  (`sudo appforge`, paths under `/etc/appforge` and `/var/log/appforge`). `uv` and running from source belong to `desarrollo/` only.
 - Anchors keep accents (`#página-de-detalle`), like GitHub.
 
 ## Releases
 
-- `.github/workflows/release.yml` builds the `.tar.gz` (binary, `config.toml`,
-  `entries/`) in a container of the current Debian stable (13, trixie), the only
-  supported target, and smoke-tests it. Do not add older releases.
+- `.github/workflows/release.yml` builds the `.deb` in a container of the current
+  Debian stable (13, trixie), the only supported target, tests it in a clean Debian 13
+  (install, man, desktop file, permissions, reinstall with a modified conffile,
+  remove, purge) and publishes it with `SHA256SUMS` and a build provenance
+  attestation. Do not add older releases. The man page and launcher live in
+  `packaging/`; keep `packaging/appforge.1` in sync with the CLI.
 - A `vX.Y.Z` tag publishes a GitHub Release; the tag must match `pyproject.toml`.
   Manual runs only upload a workflow artifact, unless `publish=true` on `main`: then
   the workflow creates the tag from `pyproject.toml` and the Release. Release notes

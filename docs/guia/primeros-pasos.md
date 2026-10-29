@@ -1,32 +1,38 @@
 # Primeros pasos
 
-## 1. Descarga y descomprime
+## 1. Instala el paquete
 
-Descarga `appforge-<versión>-linux-x86_64.tar.gz` de
-[Releases](https://github.com/isidro-rodriguez/appforge/releases) y descomprímelo
-donde quieras:
+Descarga `appforge_<versión>_amd64.deb` de
+[Releases](https://github.com/isidro-rodriguez/appforge/releases) e instálalo:
 
 ```bash
-tar -xzf appforge-<versión>-linux-x86_64.tar.gz
+sudo apt install ./appforge_<versión>_amd64.deb
 ```
 
-```text
-appforge/
-├── appforge        # el programa
-├── config.toml     # configuración
-└── entries/        # recetas: las de ejemplo y las que añadas
-```
+| Ruta | Qué es |
+|---|---|
+| `/etc/appforge/config.toml` | Configuración |
+| `/etc/appforge/entries/` | Recetas: las de ejemplo y las que añadas |
+| `/var/log/appforge/appforge.log` | Registro de ejecuciones |
+| `/opt/appforge/appforge` | El programa (`/usr/bin/appforge` enlaza a él) |
 
 Las recetas de ejemplo ([Ollama](ollama.md) y [fuentes](fuentes.md)) son eso, ejemplos:
-úsalas, cámbialas, bórralas o escribe [las tuyas](../desarrollo/nueva-entrada.md).
+úsalas, cámbialas, bórralas o escribe [las tuyas](../desarrollo/nueva-entrada.md). Al
+actualizar el paquete, `apt` respeta lo que hayas cambiado en `/etc/appforge`.
+
+Para comprobar que el paquete procede del proyecto, mira
+[Seguridad](../avanzado/seguridad.md#verificar-el-paquete).
 
 ## 2. Abre el catálogo
 
 AppForge solo funciona como superusuario:
 
 ```bash
-sudo ./appforge/appforge
+sudo appforge
 ```
+
+También está en el menú de aplicaciones (**AppForge**): abre una terminal y `sudo`
+pide ahí la contraseña.
 
 El resto del recorrido usa la receta de Ollama. Ningún paso cambia nada en tu sistema
 hasta el de instalar, y ese es opcional.
@@ -67,7 +73,8 @@ Pulsa ++d++ (*dry-run*). AppForge te pide los parámetros de la receta:
 <figcaption>Los campos vacíos usan el valor por defecto que se ve en gris.</figcaption>
 </figure>
 
-Cambia el valor que quieras (vacío = el de por defecto) y acepta. La pantalla de progreso enseña cada
+Cambia el valor que quieras (vacío = el de por defecto) y acepta. Bajo la versión
+aparece un enlace (↗) a las versiones publicadas por el proyecto. La pantalla de progreso enseña cada
 comando que se ejecutaría (precedido de `#`) y el **diff** de cada fichero
 que se escribiría. Al terminar, ++esc++ vuelve al catálogo.
 

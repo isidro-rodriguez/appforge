@@ -44,7 +44,9 @@ destino, la comprobación y la eliminación. ++esc++, ++q++ o ++v++ vuelven.
 ## Antes de ejecutar
 
 1. **Parámetros**: una ventana por receta que los tenga. ++enter++ pasa al siguiente
-   campo; en el último, acepta. ++esc++ cancela todo el lote.
+   campo; en el último, acepta. ++esc++ cancela todo el lote. Si un parámetro tiene
+   enlace (↗, p. ej. a las versiones publicadas), aparece bajo su pregunta para consultarlo
+   antes de elegir.
 2. **Confirmación** (no en *dry-run*): lista de lo que se va a hacer. ++y++ / ++s++
    para sí, ++n++ / ++esc++ para no.
 
