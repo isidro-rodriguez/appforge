@@ -7,6 +7,27 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-29
+
+### Added
+
+- Entrada `fonts`: fuentes de Microsoft, Ubuntu, Fira Code y JetBrainsMono Nerd Font
+  para todos los usuarios. Añade `contrib`/`non-free` a APT solo si faltan, en un
+  fichero propio, y verifica la Nerd Font con su `SHA-256.txt`. Probada de principio
+  a fin en Debian 13.
+- Variables `APPFORGE_USER` y `APPFORGE_USER_HOME` (quien ejecutó `sudo appforge`) en
+  los pasos, `[check]`, `[remove]` y las plantillas, para los ficheros que deben ser
+  del usuario. La confirmación de la TUI muestra ese usuario.
+
+### Changed
+
+- La entrada `ollama` ya no pide `owner`: la carpeta de modelos es del usuario que
+  ejecutó `sudo appforge`.
+
+### Removed
+
+- Entrada de ejemplo `git-alias`.
+
 ## [0.5.0] - 2026-10-29
 
 ### Changed
