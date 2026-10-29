@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from textual.widgets import Input, ListView, ProgressBar, RichLog
+from textual.widgets import Input, Label, ListView, ProgressBar, RichLog
 
 from appforge.config import Config, load_config
 from appforge.tui import (
@@ -205,3 +205,20 @@ async def test_cancel_params_does_nothing(config: Config) -> None:
         await pilot.press("escape")
         await pilot.pause()
         assert not isinstance(app.screen, (ParamsScreen, ProgressScreen))
+
+
+async def test_repaint_before_rows_are_composed(home: Path, demo: Path) -> None:
+    """Regresión: repintar justo tras reconstruir la lista reventaba (NoMatches).
+
+    Pasaba al borrar en el buscador mientras terminaba un ``[check]``.
+    """
+    config = with_ui(home, search=True)
+    app = AppForgeApp(config)
+    async with app.run_test(size=SIZE) as pilot:
+        await settle(app, pilot)
+        app.search_text = "al"
+        app._fill_apps()  # filas nuevas, aún sin componer
+        app._repaint()  # lo que hace _set_state al terminar un check
+        await pilot.pause()
+        assert rows(app) == ["alpha"]
+        assert app.query(AppRow).first().query_one(".tag", Label).visual

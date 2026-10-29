@@ -22,6 +22,7 @@ from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.css.query import NoMatches
 from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
@@ -174,6 +175,7 @@ class AppRow(ListItem):
         """Crea la fila para ``entry``."""
         super().__init__()
         self.entry = entry
+        self._view: tuple[bool, State, bool] = (False, None, False)
 
     def compose(self) -> ComposeResult:
         """Compone casilla, nombre y etiqueta."""
@@ -182,21 +184,39 @@ class AppRow(ListItem):
             yield Label(escape(self.entry.name), classes="name")
             yield Label("", classes="tag")
 
+    def on_mount(self) -> None:
+        """Pinta el último estado recibido antes de estar montada."""
+        self._paint()
+
     def render_state(self, marked: bool, state: State, checked: bool) -> None:
         """Pinta la casilla y la etiqueta.
+
+        Se puede llamar antes de que la fila haya compuesto sus etiquetas (justo
+        después de reconstruir la lista): el estado se guarda y se pinta al
+        montarse.
 
         Args:
             marked: Si la entrada está seleccionada.
             state: Resultado de ``[check]``.
             checked: ``False`` mientras ``[check]`` no ha terminado.
         """
-        box = (
+        self._view = (marked, state, checked)
+        self._paint()
+
+    def _paint(self) -> None:
+        """Aplica ``_view`` si las etiquetas ya existen."""
+        marked, state, checked = self._view
+        try:
+            box_label = self.query_one(".box", Label)
+            tag_label = self.query_one(".tag", Label)
+        except NoMatches:
+            return  # aún sin componer: on_mount lo pintará
+        box_label.update(
             Text(" ✔ ", style=f"bold {BACKGROUND} on {SUCCESS}")
             if marked
             else Text("   ", style=f"on {ANVIL_DARK}")
         )
-        self.query_one(".box", Label).update(box)
-        self.query_one(".tag", Label).update(_tag(self.entry, state, checked))
+        tag_label.update(_tag(self.entry, state, checked))
 
 
 def _tag(entry: Entry, state: State, checked: bool) -> Text:
@@ -784,13 +804,16 @@ class AppForgeApp(App[None]):
     def _fill_apps(self) -> None:
         """Reconstruye la lista conservando la entrada resaltada."""
         apps = self.query_one("#apps", ListView)
+        visible = self.visible_entries()
+        ids = [e.id for e in visible]
+        if ids == [row.entry.id for row in self.query(AppRow)]:
+            self._repaint()  # mismo resultado: no hace falta reconstruir
+            return
         current = self.current_entry()
         keep = current.id if current else None
         apps.clear()
-        visible = self.visible_entries()
         for e in visible:
             apps.append(AppRow(e))
-        ids = [e.id for e in visible]
         apps.index = ids.index(keep) if keep in ids else (0 if ids else None)
         self.call_after_refresh(self._repaint)
 
@@ -860,8 +883,11 @@ class AppForgeApp(App[None]):
 
     @on(Input.Changed, "#search")
     def search_changed(self, event: Input.Changed) -> None:
-        """Filtra mientras se escribe."""
-        self.search_text = event.value.strip()
+        """Filtra mientras se escribe (solo si el filtro cambia)."""
+        text = event.value.strip()
+        if text == self.search_text:
+            return
+        self.search_text = text
         self._fill_apps()
 
     @on(Input.Submitted, "#search")
