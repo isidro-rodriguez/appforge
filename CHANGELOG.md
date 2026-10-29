@@ -7,6 +7,32 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-29
+
+### Changed
+
+- AppForge **solo se ejecuta como superusuario**: la TUI y `validate` salen con un
+  error claro (y el comando con `sudo` para repetirlo) si no. `--help` y `--version`
+  funcionan para cualquiera.
+- Todo (pasos, `[check]` y `[remove]`) se ejecuta como `root`: desaparecen el manejo
+  de `sudo`, la petición de contraseña a mitad de lote y las etiquetas `root`/`user`
+  del catálogo.
+- La copia de seguridad de un fichero que `template` o `copy` sobrescribe se guarda
+  junto al original como `<fichero>.backup`, con sus mismos permisos, y reemplaza la
+  copia anterior. Queda anotada en el registro.
+- El registro de ejecuciones está en `logs/appforge.log`, junto al binario.
+- La entrada de ejemplo `git-alias` configura los alias para todo el sistema
+  (`/etc/gitconfig`).
+- Documentación de usuario centrada en el binario empaquetado; `uv` y la ejecución
+  desde el código pasan a la sección de desarrollo. Empaquetado se mueve allí.
+
+### Removed
+
+- Clave `requires_root` de las entradas (ahora es una clave desconocida).
+  **Incompatible.**
+- Clave `backups_dir` de `config.toml` y variables de entorno `APPFORGE_HOME`,
+  `APPFORGE_SUDO` y `XDG_STATE_HOME`: `config.toml` se lee siempre junto al binario.
+
 ## [0.4.0] - 2026-10-29
 
 ### Added
