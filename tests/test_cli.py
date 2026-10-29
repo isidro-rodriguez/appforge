@@ -26,6 +26,35 @@ run = "rm -f /tmp/x"
 """
 
 
+@pytest.fixture(autouse=True)
+def as_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    """La CLI exige superusuario; aquí se simula."""
+    monkeypatch.setattr("appforge.main.is_root", lambda: True)
+
+
+@pytest.mark.parametrize("argv", [[], ["validate"]])
+def test_requires_superuser(
+    home: Path,
+    argv: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr("appforge.main.is_root", lambda: False)
+    assert main(argv) == 2
+    err = capsys.readouterr().err
+    assert "hay que ejecutarlo como superusuario" in err
+    assert "sudo " in err
+
+
+def test_help_and_version_without_root(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr("appforge.main.is_root", lambda: False)
+    assert main(["--version"]) == 0
+    assert main(["validate", "--help"]) == 0
+    assert "superusuario" not in capsys.readouterr().err
+
+
 def test_repo_entries_are_valid(home: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["validate", "--strict"]) == 0
     out = capsys.readouterr().out

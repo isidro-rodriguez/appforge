@@ -1,6 +1,5 @@
 """Motor con entradas que escriben solo en directorios temporales."""
 
-import os
 from pathlib import Path
 
 import pytest
@@ -94,22 +93,27 @@ def test_reapply_is_idempotent_and_backs_up(config, sink, demo, dest: Path) -> N
     sink.events.clear()
     assert eng.apply(e, {"token": "a"})
     assert sink.text().count("sin cambios") == 2
-    assert not config.backups_dir.exists()
+    backup = dest / "saludo.txt.backup"
+    assert not backup.exists()
 
     (dest / "saludo.txt").write_text("editado a mano\n")
-    sink.events.clear()
+    (dest / "saludo.txt").chmod(0o600)
     assert eng.apply(e, {"token": "a"})
-    backups = list(config.backups_dir.rglob("saludo.txt"))
-    assert len(backups) == 1
-    assert backups[0].read_text() == "editado a mano\n"
-    assert backups[0].stat().st_mode & 0o777 == 0o600
+    assert backup.read_text() == "editado a mano\n"
+    assert backup.stat().st_mode & 0o777 == 0o600  # los permisos del original
+    assert f"copia de seguridad: {backup}" in sink.text("info")
+
+    (dest / "saludo.txt").write_text("otra edición\n")
+    assert eng.apply(e, {"token": "a"})
+    assert backup.read_text() == "otra edición\n"  # la copia anterior se sobrescribe
+    assert list(dest.rglob("*.backup")) == [backup]  # una sola copia
 
 
 def test_dry_run_shows_diff_and_writes_nothing(config, sink, demo, dest: Path) -> None:
     e = demo()
     assert Engine(config, sink).apply(e, {"token": "zzz"}, dry_run=True)
     out = sink.text()
-    assert "$ echo usuario=$who" in out  # se muestra, no se ejecuta
+    assert "# echo usuario=$who" in out  # se muestra, no se ejecuta
     assert "+hola mundo, cuesta $5, token=" + MASK in out
     assert "zzz" not in out
     assert not dest.exists()
@@ -125,23 +129,6 @@ def test_failing_step_stops(config, sink, demo, dest: Path) -> None:
     assert "código 7" in sink.text("error")
     assert "Detenido en el paso 4/5" in sink.text("error")
     assert not (dest / "nunca").exists()
-
-
-def test_privileged_prefix_is_used(
-    config, sink, demo, dest: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    marker = tmp_path / "prefijo.log"
-    wrapper = tmp_path / "fake-sudo"
-    wrapper.write_text(f'#!/bin/sh\necho "$@" >> {marker}\nexec "$@"\n')
-    wrapper.chmod(0o755)
-    monkeypatch.setenv("APPFORGE_SUDO", str(wrapper))
-    monkeypatch.setattr(os, "geteuid", lambda: 1000)  # simular usuario normal
-    e = demo(header="requires_root = true\n")
-    assert Engine(config, sink).apply(e, {"token": "x"}), sink.text()
-    calls = marker.read_text().splitlines()
-    assert any(c.startswith("bash ") for c in calls)  # pasos run
-    assert any(c.startswith("install -D -m 0600") for c in calls)
-    assert (dest / "saludo.txt").exists()
 
 
 def test_on_step_reports_progress(config, sink, demo) -> None:

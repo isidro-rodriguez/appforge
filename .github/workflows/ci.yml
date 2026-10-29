@@ -49,11 +49,13 @@ jobs:
       - name: Comprobación de tipos (ty)
         run: uv run ty check --error-on-warning
 
-      - name: Validar las entradas del repositorio
-        run: uv run appforge validate --strict
-
       - name: Tests (pytest + cobertura)
         run: uv run pytest --cov=src --cov-report=xml --cov-report=term-missing
+
+      - name: Validar las entradas (como superusuario, igual que en uso real)
+        run: |
+          sudo chown -R root:root entries
+          sudo .venv/bin/appforge validate --strict
 
       - name: Subir cobertura a Codecov
         if: matrix.os == 'ubuntu-latest'

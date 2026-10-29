@@ -1,24 +1,23 @@
 """Ejecución de entradas: check, pasos, eliminación, copias y dry-run.
 
-Toda la salida pasa por un ``sink(kind, text)`` para que la CLI y la TUI la
-muestren a su manera. ``kind`` es uno de ``step``, ``out``, ``info``, ``ok``,
-``warn`` o ``error``.
+AppForge solo se ejecuta como superusuario, así que todo corre con los
+privilegios del propio proceso: no hay sudo ni casos sin root.
+
+Toda la salida pasa por un ``sink(kind, text)`` para que la TUI la muestre a
+su manera. ``kind`` es uno de ``step``, ``out``, ``info``, ``ok``, ``warn`` o
+``error``.
 """
 
 import difflib
 import os
 import shlex
-import shutil
 import string
 import subprocess
 import tempfile
 import threading
-import time
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from pathlib import Path
-
-from acodo.utils import get_env
 
 from appforge.config import Config
 from appforge.entry import Entry, Step
@@ -28,7 +27,7 @@ type Sink = Callable[[str, str], None]
 type Progress = Callable[[int, int, Step], None]
 
 MASK = "••••••"
-SUDO_ENV = "APPFORGE_SUDO"
+BACKUP_SUFFIX = ".backup"
 
 
 class EngineError(Exception):
@@ -39,22 +38,20 @@ def _discard(kind: str, text: str) -> None:
     """Sink que descarta la salida."""
 
 
-def default_sudo() -> list[str]:
-    """Prefijo para los comandos privilegiados.
+def backup_path(dest: Path) -> Path:
+    """Ruta de la copia de seguridad de ``dest``: el mismo fichero con ``.backup``.
 
-    La variable ``APPFORGE_SUDO`` lo sustituye; vacía significa «sin prefijo»
-    y se usa en los tests.
+    Args:
+        dest: Fichero que se va a sobrescribir.
 
     Returns:
-        El prefijo como lista de argumentos.
+        ``<dest>.backup`` en el mismo directorio.
+
+    Examples:
+        >>> backup_path(Path("/etc/ssh/sshd_config.d/50-appforge.conf"))
+        PosixPath('/etc/ssh/sshd_config.d/50-appforge.conf.backup')
     """
-    env = get_env(SUDO_ENV, default=None)
-    return ["sudo", "-n"] if env is None else shlex.split(env)
-
-
-def sudo_overridden() -> bool:
-    """``True`` si ``APPFORGE_SUDO`` sustituye a sudo."""
-    return SUDO_ENV in os.environ
+    return dest.with_name(dest.name + BACKUP_SUFFIX)
 
 
 def resolve_values(entry: Entry, given: dict[str, str]) -> dict[str, str]:
@@ -129,21 +126,17 @@ def _temp_file(data: bytes) -> Generator[Path]:
 
 
 class Runner:
-    """Ejecuta comandos y escribe ficheros, con o sin privilegios."""
+    """Ejecuta comandos y escribe ficheros."""
 
-    def __init__(
-        self, sink: Sink, secrets: list[str], sudo: list[str] | None = None
-    ) -> None:
+    def __init__(self, sink: Sink, secrets: list[str]) -> None:
         """Crea el ejecutor.
 
         Args:
             sink: Destino de la salida.
             secrets: Valores que se enmascaran en toda la salida.
-            sudo: Prefijo privilegiado; ``None`` usa :func:`default_sudo`.
         """
         self.sink = sink
         self.secrets = [s for s in secrets if s]
-        self.sudo = default_sudo() if sudo is None else sudo
         self.proc: subprocess.Popen[str] | None = None
 
     def mask(self, text: str) -> str:
@@ -159,16 +152,11 @@ class Runner:
             text = text.replace(secret, MASK)
         return text
 
-    def _prefix(self, privileged: bool) -> list[str]:
-        """Prefijo sudo, vacío si no hace falta."""
-        return list(self.sudo) if privileged and os.geteuid() != 0 else []
-
     def shell(
         self,
         script: str,
         env: dict[str, str],
         cwd: Path,
-        privileged: bool,
         *,
         capture: bool = False,
         timeout: float | None = None,
@@ -176,14 +164,12 @@ class Runner:
         """Ejecuta ``script`` con bash.
 
         Las variables viajan dentro de un fichero temporal 0600, no en
-        ``argv`` ni en el entorno (sudo lo limpia), así los secretos no se ven
-        en ``ps``.
+        ``argv`` ni en el entorno, así los secretos no se ven en ``ps``.
 
         Args:
             script: Código bash.
             env: Variables a exportar antes del script.
             cwd: Directorio de trabajo, si existe.
-            privileged: Ejecutar con el prefijo sudo.
             capture: Descartar la salida en lugar de enviarla al sink.
             timeout: Segundos máximos (solo con ``capture``).
 
@@ -195,7 +181,7 @@ class Runner:
             lines.append(f"cd {shlex.quote(str(cwd))}")
         lines.extend(_wrap_cancellable(script))
         with _temp_file(("\n".join(lines) + "\n").encode()) as tmp:
-            argv = [*self._prefix(privileged), "bash", str(tmp)]
+            argv = ["bash", str(tmp)]
             if capture:
                 with subprocess.Popen(
                     argv,
@@ -228,74 +214,45 @@ class Runner:
                     self.proc = None
 
     def terminate(self) -> None:
-        """Termina el comando en curso, si lo hay (sudo reenvía la señal)."""
+        """Termina el comando en curso, si lo hay."""
         proc = self.proc
         if proc is not None and proc.poll() is None:
             proc.terminate()
 
-    def exists(self, path: Path, privileged: bool) -> bool:
-        """``True`` si ``path`` existe, mirando con sudo si hace falta."""
-        if path.exists():
-            return True
-        prefix = self._prefix(privileged)
-        if not prefix:
-            return False
-        argv = [*prefix, "test", "-e", str(path)]
-        return (
-            subprocess.run(argv, stdin=subprocess.DEVNULL, check=False).returncode == 0
-        )
-
-    def read(self, path: Path, privileged: bool) -> bytes | None:
-        """Lee ``path``, con sudo si no es legible.
+    @staticmethod
+    def read(path: Path) -> bytes | None:
+        """Lee ``path``.
 
         Args:
             path: Fichero a leer.
-            privileged: Permitir sudo.
 
         Returns:
             El contenido, o ``None`` si no existe.
 
         Raises:
-            PermissionError: Si no es legible y no se permite sudo.
-            EngineError: Si sudo tampoco puede leerlo.
+            EngineError: Si existe pero no se puede leer.
         """
-        prefix = self._prefix(privileged)
         try:
             return path.read_bytes()
         except FileNotFoundError:
             return None
-        except PermissionError:
-            if not prefix:
-                raise
-        r = subprocess.run(
-            [*prefix, "cat", "--", str(path)],
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            check=False,
-        )
-        if r.returncode == 0:
-            return r.stdout
-        if not self.exists(path, privileged):
-            return None
-        raise EngineError(
-            f"No se pudo leer {path}: {r.stderr.decode(errors='replace')}"
-        )
+        except OSError as e:
+            raise EngineError(f"No se pudo leer {path}: {e.strerror}") from e
 
-    def install(self, data: bytes, dest: Path, mode: int, privileged: bool) -> None:
+    @staticmethod
+    def install(data: bytes, dest: Path, mode: int) -> None:
         """Escribe ``data`` en ``dest`` con ``install -D``.
 
         Args:
             data: Contenido.
             dest: Destino absoluto; se crean los directorios padre.
             mode: Permisos del fichero.
-            privileged: Usar sudo.
 
         Raises:
             EngineError: Si ``install`` falla.
         """
         with _temp_file(data) as tmp:
             argv = [
-                *self._prefix(privileged),
                 "install",
                 "-D",
                 "-m",
@@ -317,19 +274,15 @@ class Runner:
 class Engine:
     """Aplica, comprueba y elimina entradas."""
 
-    def __init__(
-        self, config: Config, sink: Sink, sudo: list[str] | None = None
-    ) -> None:
+    def __init__(self, config: Config, sink: Sink) -> None:
         """Crea el motor.
 
         Args:
             config: Configuración de la aplicación.
             sink: Destino de la salida.
-            sudo: Prefijo privilegiado; ``None`` usa :func:`default_sudo`.
         """
         self.config = config
         self.sink = sink
-        self.sudo = sudo
         self.on_step: Progress | None = None
         self._cancel = threading.Event()
         self._active: Runner | None = None
@@ -361,46 +314,6 @@ class Engine:
         if self.on_step is not None:
             self.on_step(index, total, step)
 
-    # -- privilegios ----------------------------------------------------- #
-    def _sudo_bypassed(self) -> bool:
-        """``True`` si no hay sudo real (root, o prefijo sustituido)."""
-        return os.geteuid() == 0 or self.sudo is not None or sudo_overridden()
-
-    def password_needed(self, entry: Entry) -> bool:
-        """Indica si hay que pedir la contraseña de sudo antes de aplicar.
-
-        Args:
-            entry: Entrada a aplicar.
-
-        Returns:
-            ``False`` si no necesita root, ya somos root o la credencial de
-            sudo sigue en caché.
-        """
-        if not entry.requires_root or self._sudo_bypassed():
-            return False
-        if shutil.which("sudo") is None:
-            return False  # acquire_root informará del error
-        r = subprocess.run(
-            ["sudo", "-n", "true"],
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            check=False,
-        )
-        return r.returncode != 0
-
-    def acquire_root(self) -> bool:
-        """Pide la contraseña de sudo una vez (``sudo -v``, interactivo).
-
-        Returns:
-            ``True`` si hay privilegios disponibles.
-        """
-        if self._sudo_bypassed():
-            return True
-        if shutil.which("sudo") is None:
-            self.sink("error", "Esta entrada necesita root y no hay sudo instalado")
-            return False
-        return subprocess.run(["sudo", "-v"], check=False).returncode == 0
-
     # -- entorno --------------------------------------------------------- #
     @staticmethod
     def _env(entry: Entry, values: dict[str, str], dry_run: bool) -> dict[str, str]:
@@ -415,15 +328,15 @@ class Engine:
     def _runner(self, entry: Entry, values: dict[str, str]) -> Runner:
         """Runner que enmascara los parámetros secretos."""
         secrets = [values.get(p.name, "") for p in entry.params if p.secret]
-        self._active = Runner(self.sink, secrets, self.sudo)
+        self._active = Runner(self.sink, secrets)
         return self._active
 
     # -- check ----------------------------------------------------------- #
     def is_applied(self, entry: Entry, timeout: float = 15) -> bool | None:
         """Ejecuta ``[check]``.
 
-        Se ejecuta sin privilegios (para no pedir contraseña al pintar el
-        menú) y con los valores por defecto de los parámetros.
+        Se ejecuta con los valores por defecto de los parámetros (al pintar el
+        catálogo no hay otros).
 
         Args:
             entry: Entrada a comprobar.
@@ -436,12 +349,11 @@ class Engine:
         if not entry.check or not entry.valid:
             return None
         values = {p.name: p.default or "" for p in entry.params}
-        runner = Runner(_discard, [], self.sudo)
+        runner = Runner(_discard, [])
         rc = runner.shell(
             entry.check,
             self._env(entry, values, False),
             entry.files_dir,
-            privileged=False,
             capture=True,
             timeout=timeout,
         )
@@ -472,14 +384,18 @@ class Engine:
         except (KeyError, ValueError) as e:
             raise EngineError(f"Plantilla {step.value}: {e}") from e
 
-    def _backup(self, entry: Entry, dest: Path, old: bytes, stamp: str) -> Path:
-        """Guarda ``old`` en el directorio de copias (0600)."""
-        rel = dest.relative_to(dest.anchor)
-        target = self.config.backups_dir / entry.id / stamp / rel
-        target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-        with os.fdopen(fd, "wb") as f:
-            f.write(old)
+    @staticmethod
+    def _backup(dest: Path, old: bytes) -> Path:
+        """Guarda ``old`` en ``<dest>.backup`` con los permisos del original.
+
+        Si ya hay una copia anterior se sobrescribe.
+        """
+        target = backup_path(dest)
+        try:
+            mode = dest.stat().st_mode & 0o7777
+        except OSError:
+            mode = 0o600
+        Runner.install(old, target, mode)
         return target
 
     def _show_diff(
@@ -504,18 +420,12 @@ class Engine:
         values: dict[str, str],
         runner: Runner,
         dry_run: bool,
-        stamp: str,
     ) -> bool:
         """Ejecuta un paso ``template`` o ``copy``."""
         assert step.dest is not None
         dest = Path(step.dest)
-        priv = entry.requires_root
         new = self.render(entry, step, values)
-        try:
-            old = runner.read(dest, priv and not dry_run)
-        except PermissionError:
-            old = None
-            self.sink("warn", f"{dest}: no legible sin root, no puedo comparar")
+        old = runner.read(dest)
         mode = step.mode
         if mode is None:
             try:
@@ -526,19 +436,19 @@ class Engine:
         if old == new:
             self.sink("info", f"{dest}: sin cambios")
             if not dry_run:
-                runner.install(new, dest, mode, priv)  # asegura el modo
+                runner.install(new, dest, mode)  # asegura el modo
             return True
         if dry_run:
-            action = "crear" if old is None else "modificar (con copia de seguridad)"
+            action = (
+                "crear" if old is None else f"modificar (copia en {backup_path(dest)})"
+            )
             self.sink("info", f"{action} {dest} (modo {mode:04o}, {len(new)} bytes)")
             if old is not None or step.kind == "template":
                 self._show_diff(runner, dest, old, new)
             return True
         if old is not None:
-            self.sink(
-                "info", f"copia de seguridad: {self._backup(entry, dest, old, stamp)}"
-            )
-        runner.install(new, dest, mode, priv)
+            self.sink("info", f"copia de seguridad: {self._backup(dest, old)}")
+        runner.install(new, dest, mode)
         self.sink("info", f"escrito {dest} ({mode:04o})")
         return True
 
@@ -552,13 +462,11 @@ class Engine:
         label: str,
     ) -> bool:
         """Ejecuta (o muestra, en dry-run) código bash."""
-        priv = entry.requires_root
         if dry_run:
-            sign = "#" if priv else "$"
             for line in script.strip().splitlines():
-                self.sink("out", runner.mask(f"{sign} {line}"))
+                self.sink("out", runner.mask(f"# {line}"))
             return True
-        rc = runner.shell(script, env, entry.files_dir, priv)
+        rc = runner.shell(script, env, entry.files_dir)
         if rc != 0:
             self.sink("error", f"{label} terminó con código {rc}")
             return False
@@ -571,11 +479,10 @@ class Engine:
         values: dict[str, str],
         runner: Runner,
         dry_run: bool,
-        stamp: str,
     ) -> bool:
         """Despacha un paso según su tipo."""
         if step.kind in ("template", "copy"):
-            return self._file_step(entry, step, values, runner, dry_run, stamp)
+            return self._file_step(entry, step, values, runner, dry_run)
         env = self._env(entry, values, dry_run)
         script = step.value
         if step.kind == "script":
@@ -612,7 +519,6 @@ class Engine:
             return False
         values = resolve_values(entry, values)
         runner = self._runner(entry, values)
-        stamp = time.strftime("%Y%m%d-%H%M%S")
         tag = " [dry-run]" if dry_run else ""
 
         state = self.is_applied(entry)
@@ -628,7 +534,7 @@ class Engine:
             self._notify_step(i, total, step)
             self.sink("step", f"[{i}/{total}] {step.title}{tag}")
             try:
-                ok = self._run_step(entry, step, values, runner, dry_run, stamp)
+                ok = self._run_step(entry, step, values, runner, dry_run)
             except EngineError as e:
                 self.sink("error", str(e))
                 ok = False

@@ -253,7 +253,7 @@ def _tag(entry: Entry, state: State, checked: bool) -> Text:
         return Text("…", style=STYLES["muted"])
     if state:
         return Text("aplicada", style=STYLES["applied"])
-    return Text("root" if entry.requires_root else "user", style=STYLES["muted"])
+    return Text("·", style=STYLES["muted"])  # no aplicada
 
 
 class CategoryRow(ListItem):
@@ -293,7 +293,6 @@ def describe(entry: Entry, state: State, checked: bool = True) -> Group:
         text, style = "comprobando…", "muted"
     grid.add_row("Estado", Text(text, style=STYLES[style]))
     grid.add_row("Categoría", entry.category or "—")
-    grid.add_row("Root", "sí" if entry.requires_root else "no")
     grid.add_row("Parámetros", ", ".join(p.name for p in entry.params) or "—")
     kinds = ", ".join(sorted({s.kind for s in entry.steps}))
     grid.add_row("Pasos", f"{len(entry.steps)} ({kinds})" if kinds else "0")
@@ -447,9 +446,8 @@ def entry_markdown(entry: Entry, state: State, checked: bool = True) -> str:
     if entry.description:
         parts.append(entry.description)
     parts.append(
-        "| Estado | Categoría | Root | Fichero |\n|---|---|---|---|\n"
-        f"| {status} | {entry.category or '—'} | "
-        f"{'sí' if entry.requires_root else 'no'} | `{entry.path.name}` |"
+        "| Estado | Categoría | Fichero |\n|---|---|---|\n"
+        f"| {status} | {entry.category or '—'} | `{entry.path.name}` |"
     )
     if entry.problems:
         parts.append("## Problemas")
@@ -1090,7 +1088,7 @@ class AppForgeApp(App[None]):
 
     @work(exclusive=True, group="flow")
     async def run_flow(self, action: str, dry_run: bool) -> None:
-        """Parámetros, confirmación, sudo y pantalla de progreso.
+        """Parámetros, confirmación y pantalla de progreso.
 
         Args:
             action: ``apply`` o ``remove``.
@@ -1115,9 +1113,6 @@ class AppForgeApp(App[None]):
             question = f"¿{verb} {len(entries)} entrada(s)?\n\n{names}"
             if not await self.push_screen_wait(ConfirmScreen(question)):
                 return
-            needs_root = next((e for e in entries if e.requires_root), None)
-            if needs_root is not None and not self._get_root(needs_root):
-                return
 
         done = await self.push_screen_wait(ProgressScreen(self.config, plan))
         if not dry_run:
@@ -1137,29 +1132,6 @@ class AppForgeApp(App[None]):
             else:
                 out.append(e)
         return out
-
-    def _get_root(self, entry: Entry) -> bool:
-        """Obtiene privilegios suspendiendo la TUI para pedir la contraseña."""
-        engine = Engine(self.config, lambda _k, t: self.notify(t, severity="error"))
-        if not engine.password_needed(entry):
-            return engine.acquire_root()
-        try:
-            with self.suspend():
-                print("\nAppForge necesita privilegios de administrador.")
-                ok = engine.acquire_root()
-        except Exception:  # SuspendNotSupported fuera de una terminal real
-            self.notify(
-                "No puedo pedir la contraseña aquí. Ejecuta 'sudo -v' antes de abrir "
-                "AppForge.",
-                severity="error",
-                timeout=10,
-            )
-            return False
-        if not ok:
-            self.notify(
-                "No se obtuvieron privilegios de administrador", severity="error"
-            )
-        return ok
 
 
 def run_tui(config: Config) -> int:

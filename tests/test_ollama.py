@@ -23,7 +23,6 @@ def ollama(config):
 def test_entry_is_valid(config):
     e = ollama(config)
     assert e.problems == []
-    assert e.requires_root
     assert [p.name for p in e.params] == [
         "owner",
         "arch",

@@ -26,7 +26,6 @@ Se escriben en `/opt/ollama/ollama.env` y los aplica el interruptor:
 Pulsa el lanzador y, cuando aparezca «Servicio activo», usa `ollama run <modelo>`
 o cualquier cliente que apunte a `OLLAMA_HOST`. Desinstalar conserva los modelos.
 """
-requires_root = true
 
 # Supuesto del motor: los parámetros llegan a los pasos `run` como variables
 # de entorno ($owner, $arch...) y a las plantillas vía string.Template.

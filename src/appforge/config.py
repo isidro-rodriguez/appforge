@@ -6,11 +6,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from acodo.utils import get_env, to_path
+from acodo.utils import to_path
 
 APP_NAME = "appforge"
 CONFIG_FILE = "config.toml"
-_CONFIG_KEYS = {"entries_dir", "backups_dir", "ui"}
+_CONFIG_KEYS = {"entries_dir", "ui"}
+LOGS_DIR = "logs"
 _UI_KEYS = {"search", "categories"}
 
 
@@ -38,53 +39,31 @@ class Config:
     Attributes:
         base_dir: Directorio donde viven el binario y ``config.toml``.
         entries_dir: Directorio de entradas, ya resuelto a ruta absoluta.
-        backups_dir: Destino de las copias de seguridad.
-        logs_dir: Destino del registro de ejecuciones.
         ui: Opciones de la TUI.
     """
 
     base_dir: Path
     entries_dir: Path
-    backups_dir: Path
     ui: UiConfig = field(default_factory=UiConfig)
-    logs_dir: Path = field(default_factory=lambda: state_dir() / "logs")
+
+    @property
+    def logs_dir(self) -> Path:
+        """Directorio del registro de ejecuciones: ``<base_dir>/logs``."""
+        return self.base_dir / LOGS_DIR
 
 
 def base_dir() -> Path:
     """Devuelve el directorio donde se busca ``config.toml``.
 
-    Orden de prioridad: variable ``APPFORGE_HOME``, directorio del binario
-    cuando se ejecuta empaquetado con PyInstaller (``sys.frozen``) y, por
-    último, el directorio de trabajo.
+    Empaquetado con PyInstaller (``sys.frozen``) es el directorio del binario;
+    desde el código, el directorio de trabajo.
 
     Returns:
         Ruta absoluta del directorio base.
     """
-    env = get_env("APPFORGE_HOME", to_path)
-    if env is not None:
-        return env.resolve()
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
     return Path.cwd()
-
-
-def state_dir() -> Path:
-    """Devuelve ``$XDG_STATE_HOME/appforge`` (o ``~/.local/state/appforge``).
-
-    Returns:
-        Directorio de estado de la aplicación (copias y registro).
-    """
-    state = get_env("XDG_STATE_HOME", to_path) or Path.home() / ".local" / "state"
-    return state / APP_NAME
-
-
-def default_backups_dir() -> Path:
-    """Devuelve el directorio de copias de seguridad por defecto.
-
-    Returns:
-        ``state_dir() / "backups"``.
-    """
-    return state_dir() / "backups"
 
 
 def load_config(base: Path | None = None) -> Config:
@@ -120,9 +99,8 @@ def load_config(base: Path | None = None) -> Config:
     entries = (base / entries_raw).resolve()
     if not entries.is_dir():
         raise ConfigError(f"El directorio de entradas no existe: {entries}")
-    backups = to_path(data.get("backups_dir")) or default_backups_dir()
     ui = _load_ui(data.get("ui", {}), path)
-    return Config(base_dir=base, entries_dir=entries, backups_dir=backups, ui=ui)
+    return Config(base_dir=base, entries_dir=entries, ui=ui)
 
 
 def _load_ui(raw: Any, path: Path) -> UiConfig:

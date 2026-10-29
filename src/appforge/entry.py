@@ -20,7 +20,6 @@ TOP_KEYS = {
     "description",
     "details",
     "category",
-    "requires_root",
     "param",
     "check",
     "step",
@@ -96,7 +95,6 @@ class Entry:
         description: Descripción de una línea.
         details: Descripción larga en Markdown para la página de detalle.
         category: Categoría para el panel de categorías; vacía si no tiene.
-        requires_root: Si los pasos se ejecutan con privilegios.
         params: Parámetros que se piden antes de aplicar.
         check: Comando que indica si ya está aplicada (código 0).
         steps: Pasos en orden.
@@ -110,7 +108,6 @@ class Entry:
     description: str = ""
     details: str = ""
     category: str = ""
-    requires_root: bool = False
     params: list[Param] = field(default_factory=list)
     check: str | None = None
     steps: list[Step] = field(default_factory=list)
@@ -385,7 +382,6 @@ def load_entry(path: Path) -> Entry:
     entry.description = parser.text(data, "description", "entrada") or ""
     entry.details = (parser.text(data, "details", "entrada") or "").strip()
     entry.category = (parser.text(data, "category", "entrada") or "").strip()
-    entry.requires_root = parser.flag(data, "requires_root", "entrada")
     entry.params = parser.params(data.get("param"))
     entry.check = parser.run_table(data.get("check"), "check")
     entry.remove = parser.run_table(data.get("remove"), "remove")

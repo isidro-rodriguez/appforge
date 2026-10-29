@@ -6,8 +6,12 @@ dry-run). La CLI solo tiene lo que no cabe en ella:
 - ``appforge validate``: revisa las entradas sin abrir la interfaz, para
   autores de entradas y para la CI.
 - ``appforge --version``.
+
+Todo salvo ``--help`` y ``--version`` exige ser superusuario.
 """
 
+import os
+import shlex
 import sys
 from pathlib import Path
 from typing import Annotated, Any
@@ -104,6 +108,27 @@ def make_consoles() -> tuple[Console, Console]:
     return out, err
 
 
+def is_root() -> bool:
+    """``True`` si el proceso se ejecuta como superusuario."""
+    return os.geteuid() == 0
+
+
+def _require_root() -> None:
+    """Sale con código 2 y un mensaje claro si no se es superusuario."""
+    if is_root():
+        return
+    command = shlex.join(sys.argv)
+    make_consoles()[1].print(
+        Text.assemble(
+            ("appforge: ", "af.error"),
+            ("hay que ejecutarlo como superusuario.", "af.error"),
+            "\n  Prueba: ",
+            (f"sudo {command}", "af.id"),
+        )
+    )
+    raise typer.Exit(2)
+
+
 def _load_config() -> Config:
     """Configuración o salida con código 2 si ``config.toml`` es inválido."""
     try:
@@ -142,6 +167,7 @@ def root(
     """
     if ctx.invoked_subcommand is not None:
         return
+    _require_root()
     config = _load_config()
     from appforge.tui import run_tui  # Textual solo se carga si hace falta
 
@@ -201,6 +227,7 @@ def validate(
     """
     from appforge.validate import validate_dir
 
+    _require_root()
     out, err = make_consoles()
     folder = entries_dir if entries_dir is not None else _load_config().entries_dir
     result = validate_dir(folder.resolve())

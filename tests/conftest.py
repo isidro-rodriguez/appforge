@@ -42,10 +42,10 @@ def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (base / "config.toml").write_text('entries_dir = "entries"\n', encoding="utf-8")
     shutil.copytree(ROOT / "entries", base / "entries")
     secure(base)
-    monkeypatch.setenv("APPFORGE_HOME", str(base))
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    # Sin sudo real en los tests: el prefijo privilegiado queda vacío.
-    monkeypatch.setenv("APPFORGE_SUDO", "")
+    # Desde el código, config.toml se busca en el directorio de trabajo.
+    monkeypatch.chdir(base)
+    # La app exige superusuario; los tests corren como usuario normal.
+    monkeypatch.setattr("appforge.main.is_root", lambda: True)
     return base
 
 

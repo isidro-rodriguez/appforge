@@ -242,17 +242,27 @@ def _capture_cli(base: Path) -> None:
     out.save_svg(str(OUT / "cli-validate.svg"), title="appforge validate", theme=theme)  # type: ignore[arg-type]
 
 
+def _show_installed_paths(base: Path) -> None:
+    """Muestra las rutas temporales como en una instalación en ``/opt/appforge``."""
+    from appforge import tui
+
+    def short(path: Path) -> str:
+        text = str(path)
+        for name in ("ui", "plain"):
+            prefix = str(base / name)
+            if text.startswith(prefix + os.sep):
+                return "/opt/appforge" + text[len(prefix) :]
+        return text
+
+    tui._home_short = short  # type: ignore[assignment]
+
+
 def main() -> None:
     """Genera todas las capturas en ``docs/assets/images/screenshots/``."""
     OUT.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="appforge-shots-") as tmp:
         base = Path(tmp)
-        # HOME falso: las rutas se muestran como ~/.local/state/... sin datos reales.
-        os.environ.update(
-            HOME=str(base),
-            APPFORGE_SUDO="",
-            XDG_STATE_HOME=str(base / ".local" / "state"),
-        )
+        _show_installed_paths(base)
         asyncio.run(_capture(base))
         _capture_cli(base)
     for svg in sorted(OUT.glob("*.svg")):

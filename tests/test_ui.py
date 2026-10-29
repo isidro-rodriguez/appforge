@@ -267,4 +267,4 @@ def test_entry_markdown_lists_everything(config: Config) -> None:
     assert "**4. Variables de entorno (optimización)** · `template`" in md
     assert "Genera `/opt/ollama/ollama.env` desde `ollama/ollama.env.tpl`" in md
     assert "## Comprobación" in md
-    assert "| no aplicada | IA | sí | `ollama.toml` |" in md
+    assert "| no aplicada | IA | `ollama.toml` |" in md
