@@ -1,0 +1,73 @@
+name = "Fuentes adicionales"
+description = "Fuentes de Microsoft, Ubuntu, Fira Code y JetBrainsMono Nerd Font"
+category = "Escritorio"
+details = """
+Instala para todos los usuarios:
+
+| Fuente | Origen |
+|---|---|
+| Microsoft core fonts (Arial, Times New Roman, Verdana…) | Paquete `ttf-mscorefonts-installer` (contrib) |
+| Ubuntu | Paquete `fonts-ubuntu` |
+| Fira Code | Paquete `fonts-firacode` |
+| JetBrainsMono Nerd Font | [Nerd Fonts](https://www.nerdfonts.com) en GitHub, en `/usr/local/share/fonts/nerd-fonts/` |
+
+### Antes de instalar
+
+- Las fuentes de Microsoft se descargan de sus servidores al instalar y su licencia
+  (EULA) **se acepta automáticamente**.
+- Si `contrib` o `non-free` no están en tus fuentes de APT, se añaden en
+  `/etc/apt/sources.list.d/appforge-fonts.sources` (no se toca `debian.sources`).
+- La versión de Nerd Fonts es un parámetro. Si la versión publica `SHA-256.txt`, la
+  descarga se verifica.
+
+Desinstalar quita los paquetes, la Nerd Font y el fichero de fuentes de APT.
+"""
+
+[[param]]
+name = "nerd_version"
+prompt = "Versión de Nerd Fonts (etiqueta de GitHub)"
+default = "v3.4.0"
+
+[check]
+run = """
+for p in ttf-mscorefonts-installer fonts-ubuntu fonts-firacode; do
+  dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q 'ok installed' || exit 1
+done
+fc-list | grep -q 'JetBrainsMono Nerd Font'
+"""
+
+[[step]]
+title = "Herramientas (curl, xz, fontconfig)"
+run = "DEBIAN_FRONTEND=noninteractive apt-get install -y curl xz-utils fontconfig"
+
+[[step]]
+title = "Componentes contrib y non-free de APT (si faltan)"
+script = "apt-components.sh"
+
+[[step]]
+title = "Aceptar la licencia de las fuentes de Microsoft"
+run = "echo 'ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true' | debconf-set-selections"
+
+[[step]]
+title = "Fuentes de Microsoft, Ubuntu y Fira Code"
+run = "DEBIAN_FRONTEND=noninteractive apt-get install -y ttf-mscorefonts-installer fonts-ubuntu fonts-firacode"
+
+[[step]]
+title = "JetBrainsMono Nerd Font"
+script = "nerd-font.sh"
+
+[[step]]
+title = "Actualizar la caché de fuentes"
+run = "fc-cache -f"
+
+[remove]
+run = """
+DEBIAN_FRONTEND=noninteractive apt-get remove -y ttf-mscorefonts-installer fonts-ubuntu fonts-firacode || true
+rm -rf /usr/local/share/fonts/nerd-fonts/JetBrainsMono
+rmdir --ignore-fail-on-non-empty /usr/local/share/fonts/nerd-fonts 2>/dev/null || true
+if [ -f /etc/apt/sources.list.d/appforge-fonts.sources ]; then
+  rm -f /etc/apt/sources.list.d/appforge-fonts.sources
+  apt-get update || true
+fi
+fc-cache -f
+"""
