@@ -1,6 +1,6 @@
 """Copia de seguridad del repositorio con `git bundle`.
 
-Crea en la raíz `<proyecto>-<AAAA-MM-DD_HH-MM-SS>.bundle` con todas las ramas y
+Crea en la raíz `<proyecto>_<AAAA-MM-DD_HH-MM-SS>.bundle` con todas las ramas y
 etiquetas. El nombre del proyecto se lee de `pyproject.toml`.
 
 Uso:
