@@ -109,7 +109,7 @@ async def test_dry_run_flow_keeps_selection(config: Config) -> None:
         assert app.marked == {"ollama"}
         await pilot.press("d")
         await wait_for(pilot, lambda: isinstance(app.screen, ParamsScreen))
-        app.screen.query_one("#p_owner", Input).value = "isidro"
+        app.screen.query_one("#p_owner", Input).value = "usuario"
         await pilot.click("#ok")
         await wait_for(pilot, lambda: isinstance(app.screen, ProgressScreen))
         screen = app.screen

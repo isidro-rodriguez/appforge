@@ -14,7 +14,7 @@ Así una misma instalación puede tener varios juegos de recetas:
 
 ```bash
 APPFORGE_HOME=~/recetas/portatil appforge
-APPFORGE_HOME=~/recetas/servidor appforge list
+APPFORGE_HOME=~/recetas/servidor appforge validate
 ```
 
 ## `config.toml`

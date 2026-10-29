@@ -38,7 +38,7 @@ requires_root = true
 [[param]]
 name = "owner"                 # available as $owner in run/script and templates
 prompt = "Usuario propietario"
-default = "isidro"             # omit to make it mandatory
+default = "usuario"            # omit to make it mandatory
 secret = false                 # true: hidden input, masked output
 
 [check]                        # exit 0 = applied; runs WITHOUT root, with defaults
@@ -88,8 +88,8 @@ Extra variables in `run`/`script`: `APPFORGE_ENTRY`, `APPFORGE_ENTRY_DIR`,
     them.
 11. **Scope:** no conditionals or loops in TOML. If you need logic, write a `script`
     step and keep it idempotent with `set -euo pipefail`.
-12. **Category:** reuse an existing `category` when one fits (`uv run appforge list`
-    shows them) instead of creating near-duplicates.
+12. **Category:** reuse an existing `category` when one fits
+    (`grep -h '^category' entries/*.toml | sort -u`) instead of creating near-duplicates.
 13. **Do not modify** the engine, CLI, TUI or the entry format to fit a new entry. If
     the format falls short, stop and propose the change.
 
@@ -99,23 +99,26 @@ Run from the repository root:
 
 ```bash
 chmod -R go-w entries
-uv run appforge show <id>                    # must list no problems (exit 0)
-uv run appforge apply <id> -n --no-input -s param=value ...   # dry-run
-uv run appforge check <id>                   # 1 = not applied yet
+uv run appforge validate --strict <id>       # no errors and no warnings (exit 0)
+uv run pytest tests/test_<id>.py -s          # your dry-run test (see below)
 uv run pytest                                # existing suite still passes
 ```
 
-Review the dry-run output: commands (`#` = runs as root), diffs of every generated file,
-and no secret in clear text.
+`validate` never runs anything: it checks the format, security, bash syntax (`bash -n`),
+`$APPFORGE_ENTRY_DIR/<file>` references, and unused files and params.
 
-Optionally add a test in `tests/test_<id>.py` following `tests/test_ollama.py`: validate
-the entry, run a dry-run with the `home` fixture and assert on the rendered files. Tests
-must never touch real system paths.
+The CLI has no `apply`: the dry-run goes through a test. Add `tests/test_<id>.py`
+following `tests/test_ollama.py`: load the entry with the `config` fixture, run
+`Engine(config, sink).apply(entry, values, dry_run=True)`, and assert that `[check]` is
+false (`engine.is_applied(entry) is False`) and on the rendered files in `sink.text()`.
+Review that output: commands (`#` = runs as root), diffs of every generated file, and no
+secret in clear text. Tests must never touch real system paths (non-root entries may be
+applied for real under a temporary `HOME`, like `tests/test_git_alias.py`).
 
 ## Definition of done
 
-- `appforge show <id>` reports no problems.
-- Dry-run reviewed; `[check]` fails before applying.
+- `appforge validate --strict <id>` reports no errors or warnings.
+- Dry-run test added and reviewed; `[check]` fails before applying.
 - `uv run pytest` passes.
 - If the entry needs a file the user must provide (icon, key), say so in its
   `description` or a comment and in your final report.

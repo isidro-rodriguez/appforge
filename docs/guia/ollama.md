@@ -10,7 +10,7 @@ enciendes. Un lanzador del escritorio hace de interruptor.
 
 ## Uso
 
-1. Aplica la receta (en la TUI ++i++, o `appforge apply ollama`). Pide tu usuario,
+1. Aplica la receta (en la TUI, márcala y pulsa ++i++). Pide tu usuario,
    que será el dueño de la carpeta de modelos.
 2. En el menú de aplicaciones aparece **Ollama**. Al pulsarlo arranca el servicio y
    una notificación avisa cuando responde («Servicio activo en …»).

@@ -1,8 +1,31 @@
 # Instalación
 
 AppForge funciona en **Linux** (usa bash, `sudo` e `install`) y está pensado para
-Debian y derivadas. Hay dos formas de usarlo: desde el código con `uv` o como un
-binario autocontenido.
+Debian y derivadas. Hay dos formas de usarlo: el paquete con el binario ya
+compilado o desde el código con `uv`.
+
+## Paquete con el binario
+
+Cada versión publica en **Releases** del repositorio un
+`appforge-<versión>-linux-x86_64.tar.gz` con todo lo necesario:
+
+```text
+appforge/
+├── appforge        # binario (incluye Python y Textual)
+├── appforge.png    # icono para el lanzador de escritorio
+├── config.toml
+└── entries/        # recetas de ejemplo (Ollama, alias de git)
+```
+
+```bash
+sha256sum -c appforge-<versión>-linux-x86_64.tar.gz.sha256   # opcional
+tar -xzf appforge-<versión>-linux-x86_64.tar.gz -C ~/.local/opt
+~/.local/opt/appforge/appforge
+```
+
+El binario se compila en Debian 12, así que funciona en Debian 12, 13 y
+distribuciones más nuevas. Busca `config.toml` **junto a sí mismo**: la carpeta entera
+es portable.
 
 ## Desde el código
 
@@ -10,7 +33,7 @@ Necesitas [uv](https://docs.astral.sh/uv/) y Python 3.13 o superior (uv lo desca
 si no lo tienes).
 
 ```bash
-git clone https://github.com/isidro-rodriguez/appforge.git
+git clone https://github.com/<usuario>/appforge.git
 cd appforge
 uv sync
 uv run appforge
@@ -23,24 +46,10 @@ de recetas, apunta `APPFORGE_HOME` a ella:
 APPFORGE_HOME=~/mis-recetas uv run appforge
 ```
 
-## Binario autocontenido
+## Compilar el binario
 
-Genera una carpeta lista para copiar a cualquier equipo:
-
-```bash
-uv run python scripts/build.py
-```
-
-```text
-dist/appforge/
-├── appforge        # binario (incluye Python y Textual)
-├── appforge.png    # icono para el lanzador de escritorio
-├── config.toml
-└── entries/
-```
-
-El binario busca `config.toml` **junto a sí mismo**, así que la carpeta entera es
-portable. Más detalles, y cómo añadirlo al menú de aplicaciones, en
+`uv run python scripts/build.py` deja la misma carpeta en `dist/appforge/`. Más
+detalles, y cómo añadirlo al menú de aplicaciones, en
 [Empaquetado](../avanzado/empaquetado.md).
 
 !!! warning "Permisos de las recetas"

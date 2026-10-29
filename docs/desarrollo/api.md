@@ -14,6 +14,17 @@ Generada a partir de los docstrings del código.
         - load_entries
         - insecure_reason
 
+## Validación
+
+::: appforge.validate
+    options:
+      members:
+        - Validation
+        - Report
+        - validate_dir
+        - validate_entry
+        - bash_syntax_error
+
 ## Motor
 
 ::: appforge.engine

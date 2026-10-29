@@ -52,14 +52,14 @@ Debian, `DEBIAN_FRONTEND=noninteractive apt-get install -y …`.
 
 ## Categorías
 
-Reutiliza una categoría existente (`appforge list` las muestra) antes de crear una
+Reutiliza una categoría existente (el panel de categorías de la TUI las muestra) antes de crear una
 casi igual: «Desarrollo» y «Programación» acaban partiendo el catálogo.
 
 ## Lista de comprobación
 
-- [ ] `appforge show <id>` no muestra problemas.
+- [ ] `appforge validate --strict <id>` no muestra errores ni avisos.
 - [ ] El *dry-run* enseña exactamente lo esperado y ningún secreto en claro.
-- [ ] `appforge check <id>` falla antes de aplicar y pasa después.
+- [ ] `[check]` falla antes de aplicar y pasa después (la TUI muestra ✔).
 - [ ] Aplicar dos veces seguidas deja todo «sin cambios».
 - [ ] `[remove]` deshace la receta y `[check]` vuelve a fallar.
 - [ ] Si necesita algo que aporta el usuario (un icono, una clave), lo dice en

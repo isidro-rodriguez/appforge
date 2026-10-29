@@ -1,8 +1,9 @@
 """Genera las capturas SVG de la TUI para la documentación.
 
 Usa la entrada real ``ollama`` y varias entradas de demostración que solo hacen
-``echo``/``sleep`` en un directorio temporal: no toca el sistema. Las capturas
-quedan en ``docs/assets/images/screenshots/``.
+``echo``/``sleep`` en un directorio temporal: no toca el sistema. También
+captura la ayuda y la salida de ``appforge validate``. Las capturas quedan en
+``docs/assets/images/screenshots/``.
 
 Uso:
     poe screenshots
@@ -10,6 +11,7 @@ Uso:
 """
 
 import asyncio
+import io
 import os
 import shutil
 import tempfile
@@ -22,7 +24,6 @@ SIZE = (120, 34)
 
 # id: (nombre, categoría, descripción, ¿aplicada?)
 DEMO = {
-    "git-aliases": ("Alias de git", "Desarrollo", "Alias globales de git", True),
     "docker": (
         "Docker Engine",
         "Desarrollo",
@@ -127,7 +128,7 @@ async def _capture(base: Path) -> None:
         app._repaint()
         await pilot.press("d")
         await _wait(pilot, lambda: isinstance(app.screen, ParamsScreen))
-        app.screen.query_one("#p_owner", Input).value = "isidro"
+        app.screen.query_one("#p_owner", Input).value = "usuario"
         await pilot.pause(0.2)
         save(app, "parametros")
         await pilot.press("escape")
@@ -154,6 +155,93 @@ async def _capture(base: Path) -> None:
         save(app, "catalogo-simple")
 
 
+# Una entrada rota para la captura de ``appforge validate``.
+BROKEN = """name = "Docker Engine"
+description = "Docker desde el repositorio oficial"
+category = "Desarrollo"
+[check]
+run = "command -v docker"
+[[step]]
+title = "Repositorio"
+copy = "docker.list"
+dest = "/etc/apt/sources.list.d/docker.list"
+"""
+
+
+def _terminal_theme() -> object:
+    """Tema del SVG de Rich con el fondo y el texto de AppForge."""
+    from rich.terminal_theme import DEFAULT_TERMINAL_THEME, TerminalTheme
+
+    from appforge.theme import BACKGROUND, CREAM
+
+    def rgb(color: str) -> tuple[int, int, int]:
+        return (int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16))
+
+    ansi = [tuple(c) for c in DEFAULT_TERMINAL_THEME.ansi_colors._colors]
+    return TerminalTheme(rgb(BACKGROUND), rgb(CREAM), ansi[:8], ansi[8:])  # type: ignore[arg-type]
+
+
+def _capture_cli(base: Path) -> None:
+    """Captura ``appforge --help`` y ``appforge validate`` como SVG."""
+    import typer.rich_utils
+    from rich.console import Console
+
+    from appforge import main as cli
+    from appforge.theme import RICH_THEME
+
+    theme = _terminal_theme()
+    width = 88
+
+    def recorder(**kwargs: object) -> Console:
+        return Console(
+            file=io.StringIO(),
+            record=True,
+            width=width,
+            force_terminal=True,
+            color_system="truecolor",
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    # Ayuda: Typer crea su consola en cada llamada; se sustituye por una que graba.
+    original = typer.rich_utils._get_rich_console
+    holder: list[Console] = []
+
+    def recording_console(stderr: bool = False) -> Console:
+        console = original(stderr)
+        console.file = io.StringIO()
+        console.record = True
+        console.width = width
+        holder.append(console)
+        return console
+
+    typer.rich_utils.FORCE_TERMINAL = True
+    typer.rich_utils.COLOR_SYSTEM = "truecolor"
+    typer.rich_utils._get_rich_console = recording_console
+    try:
+        cli.main(["validate", "--help"])
+    finally:
+        typer.rich_utils._get_rich_console = original
+    holder[-1].save_svg(
+        str(OUT / "cli-ayuda.svg"), title="appforge validate --help", theme=theme
+    )
+
+    # validate: la entrada ollama, git-alias y una rota en un directorio de prueba.
+    entries = base / "validate" / "entries"
+    shutil.copytree(ROOT / "entries", entries)
+    (entries / "docker.toml").write_text(BROKEN, encoding="utf-8")
+    for p in [entries.parent, *entries.parent.rglob("*")]:
+        p.chmod(p.stat().st_mode & ~0o022)
+    out = recorder(theme=RICH_THEME, highlight=False)
+    cli.make_consoles = lambda: (out, out)  # type: ignore[assignment]
+    cwd = Path.cwd()
+    os.chdir(entries.parent)  # la salida muestra la ruta tal cual: "entries"
+    try:
+        cli.main(["validate", "--dir", "entries"])
+    finally:
+        os.chdir(cwd)
+    out.save_svg(str(OUT / "cli-validate.svg"), title="appforge validate", theme=theme)  # type: ignore[arg-type]
+
+
 def main() -> None:
     """Genera todas las capturas en ``docs/assets/images/screenshots/``."""
     OUT.mkdir(parents=True, exist_ok=True)
@@ -166,6 +254,7 @@ def main() -> None:
             XDG_STATE_HOME=str(base / ".local" / "state"),
         )
         asyncio.run(_capture(base))
+        _capture_cli(base)
     for svg in sorted(OUT.glob("*.svg")):
         print(svg.relative_to(ROOT))
 

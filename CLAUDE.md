@@ -23,7 +23,7 @@ Linux only (bash, sudo, `install`).
 
 ```text
 .
-├── .github/                # CI (ubuntu only) and Dependabot
+├── .github/                # CI, docs (Pages), release (.tar.gz) and Dependabot
 ├── .pre-commit-config.yaml # pre-commit/pre-push hooks (ruff, ty, pytest)
 ├── AGENTS.md               # Guide for agents adding entries
 ├── CLAUDE.md               # This file
@@ -31,23 +31,24 @@ Linux only (bash, sudo, `install`).
 ├── config.toml             # entries_dir = "entries"
 ├── docs/                   # Zensical site (Spanish): guia/, avanzado/, desarrollo/
 ├── docs_templates/         # Zensical overrides (favicons, mkdocstrings in Spanish)
-├── entries/                # Menu entries; ollama.toml is the reference example
+├── entries/                # Menu entries shipped as examples; ollama.toml is the reference
 ├── pyproject.toml          # Deps, build (uv_build), ruff, ty, pytest, poe
 ├── README.md               # Minimal overview
 ├── scripts/
 │   ├── backup.py           # git bundle
-│   ├── build.py            # PyInstaller --onefile -> dist/appforge/
-│   └── screenshots.py      # TUI SVG screenshots for the docs
+│   ├── build.py            # PyInstaller --onefile -> dist/appforge/ (--archive: .tar.gz)
+│   └── screenshots.py      # TUI and CLI SVG screenshots for the docs
 ├── src/appforge/
 │   ├── __init__.py         # __version__ via importlib.metadata
 │   ├── __main__.py         # python -m appforge
 │   ├── config.py           # Base dir and config.toml
 │   ├── engine.py           # Execution: check, steps, remove, sudo, backups, dry-run
 │   ├── entry.py            # Entry model and validation (never raises)
-│   ├── main.py             # CLI entry point (argparse + Rich); no subcommand -> TUI
+│   ├── main.py             # CLI entry point (Typer): validate, --version; no command -> TUI
 │   ├── runlog.py           # Run log file (acodo.logger, daily rotation)
 │   ├── theme.py            # Palette from the icon; Textual and Rich themes
 │   ├── tui.py              # Textual app (catalog, detail page, batches, progress)
+│   ├── validate.py         # `appforge validate`: whole-directory checks, never runs entries
 │   ├── resources/          # Optimized icons (appforge-<size>.png)
 │   └── py.typed
 ├── tests/                  # pytest
@@ -74,10 +75,16 @@ Linux only (bash, sudo, `install`).
   param names) are part of the contract. Do not relax them without asking.
 - Scope limit: four step kinds, no conditionals, loops or inter-entry dependencies.
   Push complex logic into an entry `script`. Ask before extending the format.
+- **The CLI does not duplicate the TUI.** Everything interactive (browse, apply,
+  remove, dry-run) lives in the TUI, which already runs in any console. The CLI
+  (Typer) only has what does not fit there: `validate` and `--version`. Do not add a
+  command the TUI already covers.
+- `appforge validate` never runs entry code: it reads files and calls `bash -n`.
+  Errors make it exit 1; warnings only with `--strict`.
 - The TUI imports Textual lazily from `main.py` so the CLI starts fast.
 - Colors live only in `theme.py` (taken from the icon). TUI CSS uses theme variables
-  (`$accent`, `$primary`, …) or `STYLES`; the CLI uses the `af.*` Rich styles. Do not
-  hard-code colors elsewhere.
+  (`$accent`, `$primary`, …) or `STYLES`; the CLI uses the `af.*` Rich styles and
+  `TYPER_STYLES` for Typer's help. Do not hard-code colors elsewhere.
 - Steps run inside `_wrap_cancellable` (subshell in its own process group) so
   `Engine.cancel()` kills the whole command tree. Keep it when touching `Runner.shell`.
 - Catalog bindings must not act on other screens: add new main-screen actions to
@@ -96,7 +103,8 @@ uv run ruff format .
 uv run ruff check .
 uv run ty check
 uv run pytest
-uv run python scripts/build.py     # binary in dist/appforge/
+uv run appforge validate --strict             # repo entries: no errors or warnings
+uv run python scripts/build.py --archive      # binary in dist/appforge/ + .tar.gz
 uv run python scripts/screenshots.py          # docs screenshots (SVG)
 uv run --group docs zensical build            # docs site in site/
 ```
@@ -105,7 +113,8 @@ uv run --group docs zensical build            # docs site in site/
 - Add dependencies with `uv add <pkg>` / `uv add --dev <pkg>` and justify them.
 - The `docs` dependency group (`zensical`, `mkdocstrings-python`) is only for the site.
 - `acodo` is the utility library (`acodo>=0.3,<1`); prefer its helpers (`get_env`,
-  `to_path`, ...) over ad-hoc code. `textual` is the only other runtime dependency.
+  `to_path`, ...) over ad-hoc code. The other runtime dependencies are `textual` (TUI)
+  and `typer` (CLI).
 
 ### Optional poe tasks
 
@@ -129,7 +138,10 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 - Tests must never touch real system paths. Use dry-run for real entries and
   `tmp_path` destinations for engine tests.
 - TUI tests use `App.run_test()` and Pilot at 100×30; `demo_entry()` in
-  `tests/test_ui.py` builds non-root entries that write under `tmp_path`.
+  `tests/test_ui.py` builds non-root entries that write under `tmp_path`, and an
+  autouse fixture keeps only `ollama` from the repo entries.
+- Every repo entry has a test: a dry-run, or a real run under a temporary `HOME` for
+  non-root entries (`tests/test_git_alias.py`).
 - Linux only (CI runs on `ubuntu-latest`).
 
 ## Agent workflow
@@ -160,7 +172,16 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 - The site theme mirrors `theme.py` in `docs/assets/stylesheets/appforge.css`.
 - Screenshots in `docs/assets/images/screenshots/` come from `scripts/screenshots.py`
   (harmless demo entries); never edit them by hand.
+- **No personal data** in docs, examples, tests or screenshots: use placeholders
+  (`usuario`, `<usuario>`, `~`, `$USER`).
 - Anchors keep accents (`#página-de-detalle`), like GitHub.
+
+## Releases
+
+- `.github/workflows/release.yml` builds the `.tar.gz` (binary, `config.toml`,
+  `entries/`) on Debian 12 for glibc compatibility and smoke-tests it.
+- A `vX.Y.Z` tag publishes a GitHub Release; the tag must match `pyproject.toml`.
+  Manual runs only upload a workflow artifact.
 
 ## Definition of done
 

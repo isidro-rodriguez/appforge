@@ -8,13 +8,12 @@
 [project]
 site_name = "AppForge"
 site_description = "Recetas de configuración repetibles desde un menú de consola."
-site_author = "Isidro Rodríguez"
 # GitHub Pages distingue mayúsculas en la ruta: debe coincidir con el nombre del repo.
 site_url = "https://isidro-rodriguez.github.io/appforge/"
 repo_url = "https://github.com/isidro-rodriguez/appforge"
 repo_name = "isidro-rodriguez/appforge"
 edit_uri = "edit/main/docs/"
-copyright = "Copyright &copy; 2026 Isidro Rodríguez · Licencia MIT"
+copyright = "AppForge · Licencia MIT"
 docs_dir = "docs"
 site_dir = "site"
 extra_css = ["assets/stylesheets/appforge.css"]

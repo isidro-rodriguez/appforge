@@ -4,7 +4,7 @@ Referencia completa. Para un recorrido paso a paso, ver [Crear una receta](nueva
 
 Cada opción del catálogo es un fichero `entries/<id>.toml`. Si necesita ficheros adicionales
 (plantillas, scripts, iconos) van en `entries/<id>/`. El `<id>` es el nombre del fichero
-sin extensión y es lo que se usa en la CLI (`appforge apply <id>`).
+sin extensión y es lo que se usa en la CLI (`appforge validate <id>`).
 
 ```text
 entries/
@@ -125,4 +125,4 @@ AppForge marca la receta como `inválida` (no se puede aplicar) si:
 - el `.toml`, su subdirectorio o cualquier fichero dentro son escribibles por grupo u
   otros, pertenecen a otro usuario (que no sea root) o son enlaces simbólicos.
 
-`appforge show <id>` y la ficha de la TUI listan todos los problemas. El porqué de cada comprobación está en [Seguridad](../avanzado/seguridad.md).
+`appforge validate <id>` y la ficha de la TUI listan todos los problemas; `validate` además avisa de ficheros y parámetros sin usar y comprueba la sintaxis de bash (ver [Línea de comandos](../guia/cli.md#appforge-validate)). El porqué de cada comprobación está en [Seguridad](../avanzado/seguridad.md).

@@ -7,8 +7,7 @@ pasos con root, comprobación y eliminación.
 ## 1. Los ficheros
 
 Una receta es `entries/<id>.toml`. Si necesita ficheros (plantillas, scripts,
-iconos), van en `entries/<id>/`. El `<id>` es el nombre del fichero y es lo que usa la
-CLI.
+iconos), van en `entries/<id>/`. El `<id>` es el nombre del fichero.
 
 ```text
 entries/
@@ -105,12 +104,14 @@ run = "rm -f /etc/ssh/sshd_config.d/50-appforge.conf && systemctl reload ssh"
 ## 7. Comprueba la receta
 
 ```bash
-chmod -R go-w entries                       # AppForge rechaza recetas editables por otros
-uv run appforge show ssh-hardening           # sin problemas → código 0
-uv run appforge apply ssh-hardening -n --no-input -s users="$USER"
+chmod -R go-w entries                          # AppForge rechaza recetas editables por otros
+uv run appforge validate --strict ssh-hardening # sin errores ni avisos → código 0
+uv run appforge                                 # TUI: márcala y pulsa d (dry-run)
 ```
 
-El *dry-run* muestra el diff del fichero y los comandos (`#` = con root):
+`validate` no ejecuta nada: comprueba el formato, los ficheros de `ssh-hardening/`,
+la sintaxis de bash y que cada parámetro se use. El *dry-run* de la TUI muestra el diff
+del fichero y los comandos (`#` = con root), con `usuario` como valor de `users`:
 
 ```text
   Estado actual: no aplicada
@@ -124,7 +125,7 @@ El *dry-run* muestra el diff del fichero y los comandos (`#` = con root):
   │ +PermitRootLogin no
   │ +PasswordAuthentication no
   │ +KbdInteractiveAuthentication no
-  │ +AllowUsers isidro
+  │ +AllowUsers usuario
 ==> [2/2] Validar y recargar [dry-run]
   │ # sshd -t && systemctl reload ssh
 ✔ Dry-run completado: no se ha cambiado nada

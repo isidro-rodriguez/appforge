@@ -4,14 +4,14 @@
 
 ```mermaid
 flowchart LR
-    main[main.py<br/>CLI] --> engine
-    main -.->|sin subcomando| tui[tui.py<br/>TUI]
+    main[main.py<br/>CLI] -.->|sin comando| tui[tui.py<br/>TUI]
+    main -->|validate| validate[validate.py<br/>validación]
     tui --> engine[engine.py<br/>motor]
-    main --> entry
+    validate --> entry
     tui --> entry[entry.py<br/>recetas]
     engine --> entry
     main & tui & engine --> config[config.py]
-    main & tui --> runlog[runlog.py<br/>registro]
+    tui --> runlog[runlog.py<br/>registro]
     main & tui --> theme[theme.py<br/>paleta]
 ```
 
@@ -22,21 +22,30 @@ flowchart LR
 | `engine.py` | Ejecuta `[check]`, pasos y `[remove]`: sudo, copias, *dry-run*, cancelación |
 | `runlog.py` | Registro en fichero con rotación diaria (`acodo.logger`) |
 | `theme.py` | Paleta sacada del icono; temas de Textual y de Rich |
-| `main.py` | CLI (`argparse` + Rich). Sin subcomando carga la TUI de forma perezosa |
+| `validate.py` | `appforge validate`: sintaxis de bash, referencias a ficheros, ficheros y parámetros sin usar. No ejecuta nada |
+| `main.py` | CLI ([Typer](https://typer.tiangolo.com/)): `validate` y `--version`. Sin comando carga la TUI de forma perezosa |
 | `tui.py` | Catálogo, página de detalle, diálogos y pantalla de progreso |
 
 La referencia de cada función está en la [API](api.md).
 
 ## El motor no imprime
 
-`Engine` emite eventos `sink(kind, text)` y cada interfaz los pinta a su manera:
+`Engine` emite eventos `sink(kind, text)` y la interfaz los pinta (hoy, la TUI; los
+tests usan un recolector):
 
-| `kind` | Significado | CLI | TUI |
-|---|---|---|---|
-| `step` | Empieza un paso | `==> [i/n] título` | `[run ] id: [i/n] título` |
-| `out` | Salida de un comando o línea de diff | `  │ …` | `[run ] …` |
-| `info` | Información (estado, ficheros) | atenuado | atenuado |
-| `ok` / `warn` / `error` | Resultado | `✔` / `!` / `✘` | ídem, en color |
+| `kind` | Significado | TUI |
+|---|---|---|
+| `step` | Empieza un paso | `[run ] id: [i/n] título` |
+| `out` | Salida de un comando o línea de diff | `[run ] …` |
+| `info` | Información (estado, ficheros) | atenuado |
+| `ok` / `warn` / `error` | Resultado | `✔` / `!` / `✘`, en color |
+
+## CLI solo para lo que no cabe en la TUI
+
+Todo lo interactivo vive en la TUI, que ya funciona en cualquier consola. La CLI no
+repite sus funciones: solo tiene `validate` (pensado para autores de recetas y la CI)
+y `--version`. Antes de añadir un comando, comprueba que no sea algo que la TUI ya
+hace.
 
 Además, `Engine.on_step(i, total, step)` avisa antes de cada paso (la barra de
 progreso) y `Engine.cancel()` se puede llamar desde otro hilo.
@@ -69,7 +78,8 @@ una fila puede recibir su estado antes de haberse montado y lo pinta al montarse
 ## Tema
 
 Los colores viven solo en `theme.py`. La TUI usa las variables del tema de Textual
-(`$accent`, `$primary`…) o `STYLES`; la CLI, los estilos `af.*` de Rich; esta web,
+(`$accent`, `$primary`…) o `STYLES`; la CLI, los estilos `af.*` de Rich y
+`TYPER_STYLES` para la ayuda de Typer; esta web,
 los mismos valores en `docs/assets/stylesheets/appforge.css`.
 
 | Nombre | Color | Origen en el icono | Uso |

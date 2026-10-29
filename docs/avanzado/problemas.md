@@ -13,7 +13,7 @@ Mensajes habituales, su causa y qué hacer.
 :   Errata o tipo incorrecto en `config.toml`. Los valores booleanos van sin comillas.
 
 Una receta aparece como `inválida`
-:   Su ficha (o `appforge show <id>`) dice por qué. La causa más frecuente son los
+:   Su ficha (o `appforge validate <id>`) dice por qué. La causa más frecuente son los
     permisos: `… escribible por grupo u otros (-rw-rw-r--)`. Arréglalo con
     `chmod -R go-w entries`. Ver [seguridad](seguridad.md).
 
@@ -24,9 +24,6 @@ Una receta aparece como `inválida`
 `la plantilla usa parámetros inexistentes: …`
 :   La plantilla tiene `$nombre` sin el `[[param]]` correspondiente. Si es un `$`
     literal (por ejemplo, en un script de shell), escríbelo `$$` o usa `copy`.
-
-`Faltan parámetros: owner`
-:   En la CLI con `--no-input`, da el valor con `-s owner=…`.
 
 `No puedo pedir la contraseña aquí. Ejecuta 'sudo -v' antes de abrir AppForge.`
 :   La terminal no permite suspender la TUI (por ejemplo, dentro de algunos

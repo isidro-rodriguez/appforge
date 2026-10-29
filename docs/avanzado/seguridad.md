@@ -38,9 +38,9 @@ chmod -R go-w entries
 AppForge no analiza lo que hacen los comandos de una receta. Antes de aplicar una
 receta que no has escrito tú:
 
-1. Ábrela en la [página de detalle](../guia/interfaz.md#página-de-detalle) o con
-   `appforge show <id>`.
-2. Haz un *dry-run* (++d++ o `appforge apply <id> -n`).
+1. Ábrela en la [página de detalle](../guia/interfaz.md#página-de-detalle) y pásale
+   `appforge validate <id>`.
+2. Haz un *dry-run* (++d++ en la TUI).
 3. Desconfía de descargas que se ejecutan directamente (`curl … | bash`).
 
 Para escribir recetas seguras, ver [buenas prácticas](../desarrollo/buenas-practicas.md).

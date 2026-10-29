@@ -71,7 +71,7 @@ preguntar, qué ejecutar y cómo comprobar que quedó bien.
 -   :lucide-package:{ .lg } **Un solo binario**
 
     Copia la carpeta con el binario, `config.toml` y tus recetas a otro equipo y
-    funciona igual. También como CLI para scripts.
+    funciona igual. `appforge validate` revisa las recetas en tu CI.
 
 </div>
 

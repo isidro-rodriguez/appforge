@@ -1,56 +1,60 @@
 # Línea de comandos
 
-Todo lo que hace la TUI está también disponible como subcomandos, útiles para
-scripts o para una sola receta. Sin subcomando, `appforge` abre la TUI.
+Todo lo interactivo (ver el catálogo, instalar, desinstalar, *dry-run*) se hace en la
+[TUI](interfaz.md), que también funciona en cualquier consola. La línea de comandos
+solo tiene lo que no cabe en ella:
 
 | Comando | Qué hace | Código de salida |
 |---|---|---|
-| `appforge list` | Lista las recetas con su estado | 0 |
-| `appforge show ID` | Parámetros, pasos y problemas de una receta | 0 válida · 1 inválida |
-| `appforge check ID` | Ejecuta su `[check]` | 0 aplicada · 1 no · 2 sin check o inválida |
-| `appforge apply ID` | Aplica la receta | 0 bien · 1 error |
-| `appforge remove ID` | Ejecuta su `[remove]` | 0 bien · 1 error |
-| `appforge --version` | Versión | 0 |
+| `appforge` | Abre la TUI | 0 · 2 sin terminal o `config.toml` inválido |
+| `appforge validate [ID...]` | Revisa las recetas sin ejecutarlas | 0 bien · 1 errores · 2 uso |
+| `appforge --version`, `-V` | Versión | 0 |
+| `appforge --help`, `-h` | Ayuda (también `appforge validate -h`) | 0 |
 
 `ID` es el nombre del fichero sin `.toml` (`ollama` para `entries/ollama.toml`).
 
-## Opciones de `apply` y `remove`
+![Ayuda de la línea de comandos](../assets/images/screenshots/cli-ayuda.svg){ .af-shot }
+
+## `appforge validate`
+
+Revisa todas las recetas (o las indicadas) **sin ejecutar nada**: solo lee los
+ficheros y comprueba la sintaxis con `bash -n`. Úsalo al escribir una receta o en la
+CI de tu repositorio de recetas.
 
 | Opción | Efecto |
 |---|---|
-| `-n`, `--dry-run` | Muestra comandos y diffs sin cambiar nada |
-| `-s`, `--set NOMBRE=VALOR` | Da un parámetro; se puede repetir (solo `apply`) |
-| `--no-input` | No preguntar: usa `--set` y los valores por defecto (solo `apply`) |
+| `-d`, `--dir DIR` | Valida otro directorio de recetas en lugar del de `config.toml` |
+| `-s`, `--strict` | Los avisos también hacen fallar (código 1) |
 
-Sin `--no-input`, en una terminal se preguntan los parámetros que falten; los
-secretos se piden sin eco.
+**Errores** (la receta no se puede aplicar o fallaría):
 
-## Ejemplos
+| Comprobación | Ejemplo de mensaje |
+|---|---|
+| TOML, claves y tipos | `step #2: necesita exactamente uno de run, template, copy, script` |
+| Seguridad (permisos, propietario, enlaces) | `entries/x.toml: escribible por grupo u otros` |
+| Ficheros de los pasos | `step #3: falta el fichero ollama/ollama.png` |
+| Plantillas | `step #4: la plantilla usa parámetros inexistentes: port` |
+| Sintaxis de bash en `run`, `[check]`, `[remove]` y scripts | `step #2: error de sintaxis: …` |
+| Referencias `$APPFORGE_ENTRY_DIR/<fichero>` | `[remove]: usa $APPFORGE_ENTRY_DIR/borra.sh, pero no existe x/borra.sh` |
+
+**Avisos** (se puede aplicar, pero algo sobra o falta):
+
+| Comprobación | Ejemplo de mensaje |
+|---|---|
+| Ficheros del subdirectorio que nada usa | `fichero sin usar: x/viejo.conf` |
+| Parámetros que ningún comando ni plantilla usa | `parámetro sin usar: port` |
+| Sin `description`, `[check]` o `[remove]` | `sin [check]: su estado siempre será desconocido` |
+| Dos recetas con el mismo `name` | `nombre repetido en 2 entradas: Docker` |
+| Subdirectorio sin su `.toml` | `docker/: subdirectorio sin docker.toml` |
 
 ```bash
-# Qué hay y qué está aplicado
-appforge list
-
-# Ver qué haría la receta de Ollama, sin preguntas
-appforge apply ollama -n --no-input -s owner="$USER"
-
-# Aplicarla de verdad con otro puerto
-appforge apply ollama -s owner="$USER" -s host=127.0.0.1:11500
-
-# En un script: instalar solo si falta
-appforge check ollama || appforge apply ollama --no-input -s owner="$USER"
+appforge validate                      # todas
+appforge validate ollama git-alias     # solo esas
+appforge validate --strict             # en la CI: sin errores ni avisos
+appforge validate -d ~/mis-recetas     # otro directorio
 ```
 
-```text title="Salida de un dry-run"
-  Estado actual: no aplicada
-==> [1/7] Dependencias (curl, zstd, notify-send) [dry-run]
-  │ # DEBIAN_FRONTEND=noninteractive apt-get install -y curl zstd libnotify-bin
-==> [4/7] Variables de entorno (optimización) [dry-run]
-  crear /opt/ollama/ollama.env (modo 0644, 276 bytes)
-  │ +OLLAMA_MODELS=/opt/ollama/models
-  │ +OLLAMA_HOST=127.0.0.1:11434
-✔ Dry-run completado: no se ha cambiado nada
-```
+![Salida de appforge validate con una receta rota](../assets/images/screenshots/cli-validate.svg){ .af-shot }
 
-La CLI usa los colores de AppForge en una terminal y respeta `NO_COLOR`. Los
-errores van a la salida de error.
+La línea de comandos usa los colores de AppForge en una terminal y respeta
+`NO_COLOR`. Los errores de uso van a la salida de error.

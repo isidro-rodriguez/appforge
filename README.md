@@ -3,14 +3,17 @@
 # appforge
 
 Menú de consola que centraliza recetas de configuración repetibles: cada opción es un
-fichero TOML que instala y configura una aplicación (ejemplo incluido: Ollama bajo
-demanda). Hecho con [Textual](https://textual.textualize.io/) y las herramientas de
+fichero TOML que instala y configura una aplicación (ejemplos incluidos: Ollama bajo
+demanda y alias de git). Hecho con [Textual](https://textual.textualize.io/) y las herramientas de
 [Astral](https://astral.sh) (`uv`, `ruff`, `ty`).
 
 ## 🚀 Instalación
 
+Descarga `appforge-<versión>-linux-x86_64.tar.gz` de **Releases** (binario,
+`config.toml` y recetas de ejemplo) y extráelo, o desde el código:
+
 ```bash
-git clone <repo> appforge
+git clone https://github.com/<usuario>/appforge.git
 cd appforge
 uv sync
 ```
@@ -18,11 +21,9 @@ uv sync
 ## 🛠️ Uso
 
 ```bash
-uv run appforge                          # menú: espacio marca, i instala, v detalle
-uv run appforge list                     # entradas y estado (✔ aplicada)
-uv run appforge apply ollama -n          # dry-run: muestra qué haría
-uv run appforge apply ollama             # aplica (pide parámetros y sudo)
-uv run python scripts/build.py           # binario en dist/appforge/
+uv run appforge                          # TUI: espacio marca, i instala, d dry-run, v detalle
+uv run appforge validate --strict        # revisa las recetas sin ejecutarlas
+uv run python scripts/build.py --archive # binario y .tar.gz en dist/
 ```
 
 El buscador y el panel de categorías se activan en `config.toml` (`[ui]`).
@@ -41,7 +42,7 @@ Con [Poe the Poet](https://poethepoet.natn.io/) instalado globalmente: `poe chec
 
 ## 📚 Documentación
 
-**<https://isidro-rodriguez.github.io/appforge/>** — guía de uso, uso avanzado y
+**[Web de la documentación](https://isidro-rodriguez.github.io/appforge/)** — guía de uso, uso avanzado y
 cómo crear recetas. Fuente en [`docs/`](docs/); vista previa local con
 `uv run --group docs zensical serve`.
 

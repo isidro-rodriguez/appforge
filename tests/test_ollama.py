@@ -12,7 +12,7 @@ import pytest
 from appforge.engine import Engine, EngineError, resolve_values
 from appforge.entry import load_entries
 
-VALUES = {"owner": "isidro"}
+VALUES = {"owner": "usuario"}
 
 
 def ollama(config):
