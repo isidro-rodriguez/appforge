@@ -7,6 +7,34 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-29
+
+### Added
+
+- `appforge validate [ID...] [--dir DIR] [--strict]`: revisa las entradas sin
+  ejecutarlas. Detecta errores de sintaxis de bash, referencias
+  `$APPFORGE_ENTRY_DIR/...` a ficheros que no existen, ficheros y parámetros sin usar,
+  entradas sin `description`, `[check]` o `[remove]`, nombres repetidos y
+  subdirectorios sin su `.toml`. La CI lo ejecuta con `--strict`.
+- Paquete `appforge-<versión>-linux-x86_64.tar.gz` (binario, `config.toml` y
+  entradas de ejemplo, con su `.sha256`) publicado en una Release de GitHub con cada
+  etiqueta `vX.Y.Z`; se compila en Debian 12 para que funcione en Debian 12 y
+  posteriores. `scripts/build.py --archive` lo genera en local.
+- Entrada de ejemplo `git-alias` (sin root).
+- Capturas de la línea de comandos en la documentación.
+
+### Changed
+
+- La CLI pasa a [Typer](https://typer.tiangolo.com/), con la ayuda en español y los
+  colores de AppForge.
+- La documentación, los ejemplos y los tests usan valores genéricos (`usuario`) en
+  lugar de datos personales.
+
+### Removed
+
+- Subcomandos `list`, `show`, `check`, `apply` y `remove`: repetían lo que ya hace la
+  TUI, que también funciona en consola. **Incompatible** con scripts que los usaran.
+
 ## [0.3.0] - 2026-10-29
 
 ### Added
