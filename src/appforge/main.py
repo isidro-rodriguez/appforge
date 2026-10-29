@@ -7,7 +7,8 @@ dry-run). La CLI solo tiene lo que no cabe en ella:
   autores de entradas y para la CI.
 - ``appforge --version``.
 
-Todo salvo ``--help`` y ``--version`` exige ser superusuario.
+La TUI exige ser superusuario; ``validate`` (solo lee ficheros), ``--help`` y
+``--version`` no.
 """
 
 import os
@@ -227,7 +228,6 @@ def validate(
     """
     from appforge.validate import validate_dir
 
-    _require_root()
     out, err = make_consoles()
     folder = entries_dir if entries_dir is not None else _load_config().entries_dir
     result = validate_dir(folder.resolve())

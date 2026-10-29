@@ -15,7 +15,7 @@ Descarga `appforge-<versión>-linux-x86_64.tar.gz` de
 ```bash
 tar -xzf appforge-<versión>-linux-x86_64.tar.gz
 sudo ./appforge/appforge                    # TUI: espacio marca, i instala, d dry-run, v detalle
-sudo ./appforge/appforge validate --strict  # revisa las recetas sin ejecutarlas
+./appforge/appforge validate --strict       # revisa las recetas (sin sudo)
 ```
 
 Trae el binario, `config.toml` y `entries/` con recetas de ejemplo: úsalas, cámbialas o

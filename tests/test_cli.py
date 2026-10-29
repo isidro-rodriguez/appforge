@@ -32,15 +32,13 @@ def as_root(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("appforge.main.is_root", lambda: True)
 
 
-@pytest.mark.parametrize("argv", [[], ["validate"]])
-def test_requires_superuser(
+def test_tui_requires_superuser(
     home: Path,
-    argv: list[str],
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr("appforge.main.is_root", lambda: False)
-    assert main(argv) == 2
+    assert main([]) == 2
     err = capsys.readouterr().err
     assert "hay que ejecutarlo como superusuario" in err
     assert "sudo " in err
@@ -52,6 +50,14 @@ def test_help_and_version_without_root(
     monkeypatch.setattr("appforge.main.is_root", lambda: False)
     assert main(["--version"]) == 0
     assert main(["validate", "--help"]) == 0
+    assert "superusuario" not in capsys.readouterr().err
+
+
+def test_validate_without_root(
+    home: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr("appforge.main.is_root", lambda: False)
+    assert main(["validate", "--strict"]) == 0
     assert "superusuario" not in capsys.readouterr().err
 
 

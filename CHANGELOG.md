@@ -12,6 +12,7 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Se aceptan las entradas cuyo propietario es quien ejecutó `sudo` (`SUDO_UID`),
   además de `root`: el paquete se puede descomprimir sin `sudo`. Siguen rechazándose
   las de otros usuarios y las escribibles por grupo u otros.
+- `appforge validate` ya no exige superusuario: solo lee ficheros. La TUI sí.
 - La documentación ya no tiene página de instalación: Primeros pasos indica
   descargar y descomprimir el paquete.
 

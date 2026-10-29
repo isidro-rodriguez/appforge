@@ -4,12 +4,12 @@ Todo lo interactivo (ver el catálogo, instalar, desinstalar, *dry-run*) se hace
 [TUI](interfaz.md), que también funciona en cualquier consola. La línea de comandos
 solo tiene lo que no cabe en ella:
 
-| Comando | Qué hace | Código de salida |
-|---|---|---|
-| `appforge` | Abre la TUI | 0 · 2 sin terminal o `config.toml` inválido |
-| `appforge validate [ID...]` | Revisa las recetas sin ejecutarlas | 0 bien · 1 errores · 2 uso |
-| `appforge --version`, `-V` | Versión | 0 |
-| `appforge --help`, `-h` | Ayuda (también `appforge validate -h`) | 0 |
+| Comando | Qué hace | `sudo` | Código de salida |
+|---|---|---|---|
+| `appforge` | Abre la TUI | sí | 0 · 2 sin superusuario, sin terminal o `config.toml` inválido |
+| `appforge validate [ID...]` | Revisa las recetas sin ejecutarlas | no | 0 bien · 1 errores · 2 uso |
+| `appforge --version`, `-V` | Versión | no | 0 |
+| `appforge --help`, `-h` | Ayuda (también `appforge validate -h`) | no | 0 |
 
 `ID` es el nombre del fichero sin `.toml` (`ollama` para `entries/ollama.toml`).
 
@@ -18,7 +18,7 @@ solo tiene lo que no cabe en ella:
 ## `appforge validate`
 
 Revisa todas las recetas (o las indicadas) **sin ejecutar nada**: solo lee los
-ficheros y comprueba la sintaxis con `bash -n`. Úsalo al escribir una receta o en la
+ficheros y comprueba la sintaxis con `bash -n`, así que **no necesita `sudo`**. Úsalo al escribir una receta o en la
 CI de tu repositorio de recetas.
 
 | Opción | Efecto |

@@ -67,9 +67,9 @@ Debian stable (13). It **only runs as root**: no sudo handling, no unprivileged 
   `export` lines, never through `argv` or the process environment.
 - Secret values are masked (`MASK`) in every sink event, including dry-run diffs.
 - `[check]` always runs with param defaults.
-- **Root only.** `main._require_root()` stops the TUI and `validate` with a clear error
-  (exit 2) unless `main.is_root()`; `--help`/`--version` work for anyone. Everything
-  runs with the process privileges: do not reintroduce sudo, `requires_root` or
+- **Root only.** `main._require_root()` stops the TUI with a clear error (exit 2)
+  unless `main.is_root()`. `validate` only reads files, so it does not require root;
+  nor do `--help`/`--version`. Everything runs with the process privileges: do not reintroduce sudo, `requires_root` or
   unprivileged code paths.
 - Steps and templates get `APPFORGE_USER` / `APPFORGE_USER_HOME` from
   `engine.invoking_user()` (`SUDO_USER`, else the process user); `entry.USER_VARS`
@@ -114,7 +114,7 @@ uv run ruff format .
 uv run ruff check .
 uv run ty check
 uv run pytest
-sudo .venv/bin/appforge validate --strict     # as root; entries must be root-owned (CI does it)
+uv run appforge validate --strict             # repo entries: no errors or warnings (no root needed)
 uv run python scripts/build.py --archive      # binary in dist/appforge/ + .tar.gz
 uv run python scripts/screenshots.py          # docs screenshots (SVG)
 uv run --group docs zensical build            # docs site in site/

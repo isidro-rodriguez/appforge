@@ -105,7 +105,7 @@ run = "rm -f /etc/ssh/sshd_config.d/50-appforge.conf && systemctl reload ssh"
 ```bash
 cd appforge
 chmod -R go-w entries                           # nadie más puede modificarlas
-sudo ./appforge validate --strict ssh-hardening   # sin errores ni avisos → código 0
+./appforge validate --strict ssh-hardening        # sin errores ni avisos → código 0
 sudo ./appforge                                 # TUI: márcala y pulsa d (dry-run)
 ```
 

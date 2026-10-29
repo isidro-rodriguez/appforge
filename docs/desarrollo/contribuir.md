@@ -16,12 +16,12 @@ uv run pre-commit install      # comprobaciones antes de cada commit y push
 
 ## Ejecutar desde el código
 
-Desde el código, AppForge busca `config.toml` en el **directorio de trabajo**. Como
-solo funciona como superusuario, usa el ejecutable del entorno con `sudo`:
+Desde el código, AppForge busca `config.toml` en el **directorio de trabajo**. La TUI
+solo funciona como superusuario, así que usa el ejecutable del entorno con `sudo`:
 
 ```bash
 sudo .venv/bin/appforge                        # TUI con las recetas de entries/
-sudo .venv/bin/appforge validate --strict
+uv run appforge validate --strict             # sin sudo: solo lee ficheros
 ```
 
 Acepta las recetas de tu copia de trabajo porque son tuyas (`SUDO_UID`); solo deben
