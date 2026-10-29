@@ -1,0 +1,93 @@
+# .github/workflows/release.yml
+# Empaqueta AppForge (binario + config.toml + entries/) en un .tar.gz.
+# - Etiqueta vX.Y.Z → publica el paquete en una Release de GitHub.
+# - Ejecución manual → deja el paquete como artefacto de la ejecución.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Empaquetar (linux-x86_64)
+    runs-on: ubuntu-latest
+    # El binario enlaza con la glibc de donde se construye: Debian 12 (glibc 2.36)
+    # da un binario que funciona en Debian 12, 13 y distros más nuevas.
+    container: debian:bookworm-slim
+    steps:
+      - name: Dependencias del sistema (objdump para PyInstaller, git, tar)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends binutils ca-certificates git
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Instalar uv y Python
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.x"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+
+      - name: La etiqueta coincide con la versión de pyproject.toml
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version="$(uv run --no-project python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          test "v$version" = "$GITHUB_REF_NAME" \
+            || { echo "::error::La etiqueta $GITHUB_REF_NAME no es v$version"; exit 1; }
+
+      - name: Sincronizar dependencias
+        run: uv sync --locked
+
+      - name: Construir binario y paquete
+        run: uv run python scripts/build.py --archive
+
+      - name: Probar el binario empaquetado
+        run: |
+          mkdir -p /tmp/smoke
+          tar -xzf dist/appforge-*.tar.gz -C /tmp/smoke
+          /tmp/smoke/appforge/appforge --version
+          /tmp/smoke/appforge/appforge validate --strict
+
+      - name: Subir el paquete como artefacto
+        uses: actions/upload-artifact@v5
+        with:
+          name: appforge-linux-x86_64
+          path: |
+            dist/appforge-*.tar.gz
+            dist/appforge-*.tar.gz.sha256
+          if-no-files-found: error
+
+  release:
+    name: Publicar Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Descargar el paquete
+        uses: actions/download-artifact@v5
+        with:
+          name: appforge-linux-x86_64
+          path: dist
+
+      - name: Crear la Release con el paquete
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "AppForge $GITHUB_REF_NAME" \
+            --generate-notes
