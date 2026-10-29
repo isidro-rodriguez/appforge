@@ -26,7 +26,6 @@ entries/
 | `description` | texto | no | Una línea: resumen en el catálogo y en la ficha |
 | `details` | texto (Markdown) | no | Descripción larga para la [página de detalle](../guia/interfaz.md#página-de-detalle). Usa `"""…"""` |
 | `category` | texto | no | Agrupa la receta en el panel de categorías ([`[ui] categories`](../avanzado/configuracion.md#interfaz)) |
-| `requires_root` | bool | no (`false`) | Los pasos y `[remove]` se ejecutan con `sudo` |
 
 ### `[[param]]`
 
@@ -46,7 +45,7 @@ Valores que se piden antes de aplicar. No se guardan en disco.
 run = "test -x /opt/x/bin/x"
 ```
 
-Código de salida 0 = aplicada (`aplicada` en el catálogo). Se ejecuta **sin root** y con los valores
+Código de salida 0 = aplicada (`aplicada` en el catálogo). Se ejecuta con los valores
 por defecto de los parámetros, al pintar el menú y después de aplicar o eliminar. Debe
 comprobar el **resultado final**, no un paso intermedio.
 
@@ -123,6 +122,6 @@ AppForge marca la receta como `inválida` (no se puede aplicar) si:
 - un fichero de origen falta, es absoluto o contiene `..`;
 - una plantilla usa parámetros no declarados o un `$` mal formado;
 - el `.toml`, su subdirectorio o cualquier fichero dentro son escribibles por grupo u
-  otros, pertenecen a otro usuario (que no sea root) o son enlaces simbólicos.
+  otros, pertenecen a otro usuario (que no sea `root`) o son enlaces simbólicos.
 
 `appforge validate <id>` y la ficha de la TUI listan todos los problemas; `validate` además avisa de ficheros y parámetros sin usar y comprueba la sintaxis de bash (ver [Línea de comandos](../guia/cli.md#appforge-validate)). El porqué de cada comprobación está en [Seguridad](../avanzado/seguridad.md).

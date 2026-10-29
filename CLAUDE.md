@@ -16,8 +16,8 @@ entries (`entries/*.toml`), follow [AGENTS.md](AGENTS.md) instead.
 
 A console launcher: one binary, a `config.toml` next to it pointing to an `entries/`
 directory, one TOML per menu option. Each entry declares params, a `[check]`, ordered
-steps (`run`, `script`, `template`, `copy`) and an optional `[remove]`. Target: Debian,
-Linux only (bash, sudo, `install`).
+steps (`run`, `script`, `template`, `copy`) and an optional `[remove]`. Target: current
+Debian stable (13). It **only runs as root**: no sudo handling, no unprivileged cases.
 
 ## Structure
 
@@ -41,11 +41,11 @@ Linux only (bash, sudo, `install`).
 ├── src/appforge/
 │   ├── __init__.py         # __version__ via importlib.metadata
 │   ├── __main__.py         # python -m appforge
-│   ├── config.py           # Base dir and config.toml
-│   ├── engine.py           # Execution: check, steps, remove, sudo, backups, dry-run
+│   ├── config.py           # Base dir (binary dir, or cwd from source) and config.toml
+│   ├── engine.py           # Execution: check, steps, remove, .backup copies, dry-run
 │   ├── entry.py            # Entry model and validation (never raises)
 │   ├── main.py             # CLI entry point (Typer): validate, --version; no command -> TUI
-│   ├── runlog.py           # Run log file (acodo.logger, daily rotation)
+│   ├── runlog.py           # Run log <base>/logs/appforge.log (acodo.logger, daily)
 │   ├── theme.py            # Palette from the icon; Textual and Rich themes
 │   ├── tui.py              # Textual app (catalog, detail page, batches, progress)
 │   ├── validate.py         # `appforge validate`: whole-directory checks, never runs entries
@@ -66,11 +66,17 @@ Linux only (bash, sudo, `install`).
 - Params are never persisted. They reach bash through a temporary `0600` script with
   `export` lines, never through `argv` or the process environment.
 - Secret values are masked (`MASK`) in every sink event, including dry-run diffs.
-- `[check]` always runs unprivileged and with param defaults.
-- Privileged commands go through `Runner._prefix` (`sudo -n` after one `sudo -v`).
-  `APPFORGE_SUDO` overrides the prefix; tests set it to `""`.
-- Before overwriting a file, back it up to `backups_dir` (`0600`). Identical content
-  means "sin cambios", no backup.
+- `[check]` always runs with param defaults.
+- **Root only.** `main._require_root()` stops the TUI and `validate` with a clear error
+  (exit 2) unless `main.is_root()`; `--help`/`--version` work for anyone. Everything
+  runs with the process privileges: do not reintroduce sudo, `requires_root` or
+  unprivileged code paths.
+- Configuration is only `config.toml` next to the binary (cwd when run from source):
+  no environment variables, no extra directories. Multiple entry directories may come
+  later; do not add them (or mention them in docs) until asked.
+- Before overwriting a file, copy it to `<dest>.backup` in the same directory with the
+  original's mode, replacing any previous backup; the sink event lands in the run log
+  (`<base>/logs/appforge.log`). Identical content means "sin cambios", no backup.
 - Security checks in `entry.py` (owner, group/other writable, symlinks, `..`, reserved
   param names) are part of the contract. Do not relax them without asking.
 - Scope limit: four step kinds, no conditionals, loops or inter-entry dependencies.
@@ -103,7 +109,7 @@ uv run ruff format .
 uv run ruff check .
 uv run ty check
 uv run pytest
-uv run appforge validate --strict             # repo entries: no errors or warnings
+sudo .venv/bin/appforge validate --strict     # as root; entries must be root-owned (CI does it)
 uv run python scripts/build.py --archive      # binary in dist/appforge/ + .tar.gz
 uv run python scripts/screenshots.py          # docs screenshots (SVG)
 uv run --group docs zensical build            # docs site in site/
@@ -134,14 +140,14 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 - `pytest` with `--import-mode=importlib`: tests cannot import `conftest`; share helpers
   through fixtures (`home`, `config`, `write_entry`, `sink`).
 - The `home` fixture copies the real `entries/` into `tmp_path` with a default
-  `config.toml` (never the repo's, which is user configuration) and sets `APPFORGE_HOME`, `XDG_STATE_HOME` and `APPFORGE_SUDO=""`.
+  `config.toml` (never the repo's, which is user configuration), `chdir`s into it and
+  patches `appforge.main.is_root` to `True` (tests run unprivileged).
 - Tests must never touch real system paths. Use dry-run for real entries and
   `tmp_path` destinations for engine tests.
 - TUI tests use `App.run_test()` and Pilot at 100×30; `demo_entry()` in
   `tests/test_ui.py` builds non-root entries that write under `tmp_path`, and an
   autouse fixture keeps only `ollama` from the repo entries.
-- Every repo entry has a test: a dry-run, or a real run under a temporary `HOME` for
-  non-root entries (`tests/test_git_alias.py`).
+- Every repo entry has a dry-run test (`tests/test_ollama.py`, `tests/test_git_alias.py`).
 - Linux only (CI runs on `ubuntu-latest`).
 
 ## Agent workflow
@@ -173,7 +179,10 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 - Screenshots in `docs/assets/images/screenshots/` come from `scripts/screenshots.py`
   (harmless demo entries); never edit them by hand.
 - **No personal data** in docs, examples, tests or screenshots: use placeholders
-  (`usuario`, `<usuario>`, `~`, `$USER`).
+  (`usuario`, `$USER`). The only exception is the repository URL
+  (`github.com/isidro-rodriguez/appforge` and its Pages site).
+- User docs (`guia/`, `avanzado/`, README usage) describe the packaged binary run with
+  `sudo`. `uv` and running from source belong to `desarrollo/` only.
 - Anchors keep accents (`#página-de-detalle`), like GitHub.
 
 ## Releases

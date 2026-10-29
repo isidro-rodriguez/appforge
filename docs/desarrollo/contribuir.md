@@ -2,13 +2,31 @@
 
 ## Entorno
 
+Necesitas [uv](https://docs.astral.sh/uv/); descarga Python 3.13 si no lo tienes.
+
 ```bash
+git clone https://github.com/isidro-rodriguez/appforge.git
+cd appforge
 uv sync                        # dependencias de desarrollo
 uv sync --group docs           # además, las de esta web
 uv run pre-commit install      # comprobaciones antes de cada commit y push
 ```
 
 `uv` gestiona todo: un `uv.lock` y un entorno en la raíz. No uses `pip install`.
+
+## Ejecutar desde el código
+
+Desde el código, AppForge busca `config.toml` en el **directorio de trabajo**. Como
+solo funciona como superusuario, usa el ejecutable del entorno con `sudo`:
+
+```bash
+sudo .venv/bin/appforge                        # TUI con las recetas de entries/
+sudo .venv/bin/appforge validate --strict
+```
+
+Las recetas deben ser de `root` para que AppForge las acepte como superusuario
+(`sudo chown -R root:root entries`). Si prefieres no cambiar el propietario en tu
+copia de trabajo, usa los tests: el motor se prueba sin `root`.
 
 ## Calidad
 
@@ -45,8 +63,8 @@ Con [Poe the Poet](https://poethepoet.natn.io/) instalado globalmente hay atajos
 - `pytest` con `--import-mode=importlib`: los tests no importan `conftest`; las
   utilidades son fixtures (`home`, `config`, `write_entry`, `sink`).
 - `home` copia `entries/` a un temporal con un `config.toml` por defecto (nunca el
-  del repositorio, que es configuración tuya) y fija `APPFORGE_HOME`,
-  `XDG_STATE_HOME` y `APPFORGE_SUDO=""` (sin sudo real).
+  del repositorio, que es configuración tuya), entra en él (`chdir`) y simula ser
+  superusuario.
 - Nunca se tocan rutas reales del sistema: *dry-run* para las recetas del repositorio y
   destinos en `tmp_path` para el motor.
 - La TUI se prueba con `App.run_test()` y Pilot.

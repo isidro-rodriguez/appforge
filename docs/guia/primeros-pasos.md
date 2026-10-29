@@ -6,7 +6,7 @@ cambia nada en tu sistema hasta el final, y ese paso es opcional.
 ## 1. Abre el catálogo
 
 ```bash
-uv run appforge
+sudo appforge          # o: sudo /opt/appforge/appforge
 ```
 
 <figure class="af-shot" markdown>
@@ -19,7 +19,7 @@ Cada fila tiene una **casilla** de selección, el nombre y una etiqueta:
 | Etiqueta | Significado |
 |---|---|
 | `aplicada` | Su comprobación (`[check]`) pasa: ya está en tu sistema |
-| `root` / `user` | No aplicada; indica si necesitará `sudo` |
+| `·` | No aplicada |
 | `…` | Comprobando |
 | `inválida` | La receta tiene errores; la ficha dice cuáles |
 
@@ -46,14 +46,13 @@ Pulsa ++d++ (*dry-run*). AppForge te pide los parámetros de la receta:
 </figure>
 
 Escribe tu usuario en el primero y acepta. La pantalla de progreso enseña cada
-comando que se ejecutaría (con `#` si sería como root) y el **diff** de cada fichero
+comando que se ejecutaría (precedido de `#`) y el **diff** de cada fichero
 que se escribiría. Al terminar, ++esc++ vuelve al catálogo.
 
 ## 4. Instala por lotes
 
 Marca varias recetas con ++space++ y pulsa ++i++. AppForge pide los parámetros de
-cada una, confirma la lista y, si alguna necesita root, pide la contraseña de `sudo`
-**una sola vez**.
+cada una y confirma la lista antes de empezar.
 
 <figure class="af-shot" markdown>
 ![Confirmación del lote](../assets/images/screenshots/confirmar.svg)

@@ -11,7 +11,7 @@
 |---|---|
 | **Buscar** | Filtra por nombre, id, descripción y categoría mientras escribes. Opcional: [`[ui] search`](../avanzado/configuracion.md#interfaz) |
 | **Categorías** | `Todas` y una fila por categoría, con contador. Las recetas sin `category` van a «Sin categoría». Opcional: [`[ui] categories`](../avanzado/configuracion.md#interfaz) |
-| **Aplicaciones** | Casilla de selección, nombre y etiqueta de estado (`aplicada`, `root`, `user`, `inválida`) |
+| **Aplicaciones** | Casilla de selección, nombre y etiqueta de estado (`aplicada`, `·` no aplicada, `inválida`) |
 | **Detalle** | Resumen de la receta resaltada, sus problemas si los tiene y la lista de seleccionadas |
 
 ### Teclas
@@ -36,7 +36,7 @@ Con el ratón, un clic resalta una fila y el doble clic abre su detalle.
 ![Página de detalle](../assets/images/screenshots/detalle.svg)
 </figure>
 
-Muestra la receta entera: estado, categoría, si necesita root, la descripción larga
+Muestra la receta entera: estado, categoría, la descripción larga
 (clave [`details`](../desarrollo/formato.md#cabecera)), los parámetros con sus
 valores por defecto (los secretos nunca), cada paso con su comando o fichero de
 destino, la comprobación y la eliminación. ++esc++, ++q++ o ++v++ vuelven.
@@ -47,8 +47,6 @@ destino, la comprobación y la eliminación. ++esc++, ++q++ o ++v++ vuelven.
    campo; en el último, acepta. ++esc++ cancela todo el lote.
 2. **Confirmación** (no en *dry-run*): lista de lo que se va a hacer. ++y++ / ++s++
    para sí, ++n++ / ++esc++ para no.
-3. **Contraseña de sudo** si alguna receta la necesita: la TUI se suspende, la pide
-   `sudo` en la terminal y vuelve. Solo una vez por lote.
 
 ## Progreso
 

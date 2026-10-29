@@ -55,8 +55,8 @@ preguntar, qué ejecutar y cómo comprobar que quedó bien.
 
 -   :lucide-shield-check:{ .lg } **Seguro por defecto**
 
-    Contraseña de sudo una sola vez, secretos enmascarados, copias de seguridad
-    antes de sobrescribir y recetas rechazadas si alguien más puede editarlas.
+    Secretos enmascarados, copia `.backup` antes de sobrescribir y recetas
+    rechazadas si alguien más puede editarlas.
 
 -   :lucide-layers:{ .lg } **Por lotes y cancelable**
 

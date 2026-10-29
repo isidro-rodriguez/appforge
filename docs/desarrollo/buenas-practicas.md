@@ -23,8 +23,8 @@ Para lógica de verdad (decidir, iterar), escribe un `script` con
 
 - **`[check]` comprueba el resultado final**, no un paso intermedio: que el binario
   existe y es ejecutable, no que se descargó.
-- Debe ser de **solo lectura** y funcionar **sin root** (`test -e`, `command -v`,
-  `grep -q` sobre ficheros legibles).
+- Debe ser de **solo lectura** (`test -e`, `command -v`, `grep -q`): se ejecuta cada
+  vez que se pinta el catálogo.
 - Tras `[remove]`, `[check]` debe fallar.
 
 ## Ficheros mejor que comandos

@@ -1,70 +1,79 @@
 # Instalación
 
-AppForge funciona en **Linux** (usa bash, `sudo` e `install`) y está pensado para
-Debian y derivadas. Hay dos formas de usarlo: el paquete con el binario ya
-compilado o desde el código con `uv`.
+AppForge es un binario autocontenido para **Debian 13**. Se distribuye como un
+paquete `.tar.gz` con todo lo necesario.
 
-## Paquete con el binario
+## Descarga
 
-Cada versión publica en **Releases** del repositorio un
-`appforge-<versión>-linux-x86_64.tar.gz` con todo lo necesario:
+En [Releases](https://github.com/isidro-rodriguez/appforge/releases) descarga
+`appforge-<versión>-linux-x86_64.tar.gz` y su `.sha256`:
 
 ```text
 appforge/
 ├── appforge        # binario (incluye Python y Textual)
 ├── appforge.png    # icono para el lanzador de escritorio
-├── config.toml
+├── config.toml     # configuración
 └── entries/        # recetas de ejemplo (Ollama, alias de git)
 ```
 
-```bash
-sha256sum -c appforge-<versión>-linux-x86_64.tar.gz.sha256   # opcional
-tar -xzf appforge-<versión>-linux-x86_64.tar.gz -C ~/.local/opt
-~/.local/opt/appforge/appforge
-```
-
-El binario se compila para la versión estable actual de Debian (13, *trixie*). Busca `config.toml` **junto a sí mismo**: la carpeta entera
-es portable.
-
-## Desde el código
-
-Necesitas [uv](https://docs.astral.sh/uv/) y Python 3.13 o superior (uv lo descarga
-si no lo tienes).
+## Instalar
 
 ```bash
-git clone https://github.com/<usuario>/appforge.git
-cd appforge
-uv sync
-uv run appforge
+sha256sum -c appforge-<versión>-linux-x86_64.tar.gz.sha256
+sudo tar -xzf appforge-<versión>-linux-x86_64.tar.gz -C /opt
 ```
 
-`uv run appforge` busca `config.toml` en el directorio actual. Para usar otra carpeta
-de recetas, apunta `APPFORGE_HOME` a ella:
+Queda en `/opt/appforge/`. La carpeta es portable: el binario busca `config.toml`
+**junto a sí mismo**, así que puedes ponerla en otro sitio.
 
-```bash
-APPFORGE_HOME=~/mis-recetas uv run appforge
-```
+!!! warning "Extrae como superusuario"
 
-## Compilar el binario
-
-`uv run python scripts/build.py` deja la misma carpeta en `dist/appforge/`. Más
-detalles, y cómo añadirlo al menú de aplicaciones, en
-[Empaquetado](../avanzado/empaquetado.md).
-
-!!! warning "Permisos de las recetas"
-
-    Las recetas ejecutan comandos, a veces como root. AppForge **rechaza** cualquier
-    receta que puedan modificar otros usuarios (escribible por grupo u otros, o de
-    otro propietario). Si copias la carpeta y una receta aparece como *inválida*:
+    AppForge solo carga recetas que no puede modificar otro usuario: deben ser de
+    `root` y no escribibles por grupo ni otros. `sudo tar` las deja así. Si alguna
+    aparece como *inválida* por sus permisos:
 
     ```bash
-    chmod -R go-w entries
+    sudo chown -R root:root /opt/appforge
+    sudo chmod -R go-w /opt/appforge/entries
     ```
+
+## Ejecutar
+
+AppForge instala y configura software del sistema, así que **solo funciona como
+superusuario**:
+
+```bash
+sudo /opt/appforge/appforge
+```
+
+Sin `sudo` sale con un aviso y el comando exacto para repetirlo. Para no escribir la
+ruta cada vez:
+
+```bash
+sudo ln -s /opt/appforge/appforge /usr/local/bin/appforge
+sudo appforge
+```
+
+## Lanzador de escritorio
+
+Para tener AppForge en el menú de aplicaciones, crea un lanzador que abra una
+terminal y pida la contraseña de `sudo`:
+
+```ini title="/usr/local/share/applications/appforge.desktop"
+[Desktop Entry]
+Type=Application
+Name=AppForge
+Comment=Recetas de configuración
+Exec=sudo /opt/appforge/appforge
+Icon=/opt/appforge/appforge.png
+Terminal=true
+Categories=System;Utility;
+```
 
 ## Requisitos de las recetas
 
-Cada receta instala lo que necesita. La de ejemplo, [Ollama](ollama.md), usa `apt-get`
-para `curl`, `zstd` y `libnotify-bin`.
+Cada receta instala lo que necesita. La de [Ollama](ollama.md) usa `apt-get` para
+`curl`, `zstd` y `libnotify-bin`.
 
 ## Siguiente paso
 

@@ -19,7 +19,7 @@ flowchart LR
 |---|---|
 | `config.py` | Directorio base y `config.toml` (incluida la tabla `[ui]`) |
 | `entry.py` | Carga y valida recetas. **Nunca lanza excepción**: acumula `problems` |
-| `engine.py` | Ejecuta `[check]`, pasos y `[remove]`: sudo, copias, *dry-run*, cancelación |
+| `engine.py` | Ejecuta `[check]`, pasos y `[remove]`: copias `.backup`, *dry-run*, cancelación |
 | `runlog.py` | Registro en fichero con rotación diaria (`acodo.logger`) |
 | `theme.py` | Paleta sacada del icono; temas de Textual y de Rich |
 | `validate.py` | `appforge validate`: sintaxis de bash, referencias a ficheros, ficheros y parámetros sin usar. No ejecuta nada |
@@ -55,8 +55,11 @@ progreso) y `Engine.cancel()` se puede llamar desde otro hilo.
 - El estado solo se deriva de `[check]`. No hay fichero de estado.
 - Los parámetros nunca se guardan: viajan a bash en un temporal `0600` con `export`.
 - Los secretos se enmascaran en todos los eventos.
-- `[check]` siempre sin privilegios y con los valores por defecto.
-- Antes de sobrescribir un fichero se copia a `backups_dir`.
+- AppForge solo se ejecuta como superusuario (`main.is_root()`): no hay sudo ni casos
+  sin privilegios.
+- `[check]` siempre con los valores por defecto de los parámetros.
+- Antes de sobrescribir un fichero se copia a `<fichero>.backup` (mismos permisos,
+  reemplaza la copia anterior) y se anota en el registro.
 - Cuatro tipos de paso y nada más: sin condicionales, bucles ni dependencias entre
   recetas. La lógica compleja va en un `script`.
 

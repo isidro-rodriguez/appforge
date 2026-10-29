@@ -33,7 +33,6 @@ category = "Desarrollo"        # optional; groups entries in the categories pane
 details = """
 Long Markdown description shown in the TUI detail page (double click or `v`).
 """
-requires_root = true
 
 [[param]]
 name = "owner"                 # available as $owner in run/script and templates
@@ -41,7 +40,7 @@ prompt = "Usuario propietario"
 default = "usuario"            # omit to make it mandatory
 secret = false                 # true: hidden input, masked output
 
-[check]                        # exit 0 = applied; runs WITHOUT root, with defaults
+[check]                        # exit 0 = applied; runs with param defaults
 run = "test -x /opt/x/bin/x"
 
 [[step]]                       # exactly one of: run | script | template | copy
@@ -66,8 +65,9 @@ Extra variables in `run`/`script`: `APPFORGE_ENTRY`, `APPFORGE_ENTRY_DIR`,
 1. **Idempotent steps.** Every step must be safe to run again after a partial failure.
    Prefer `install -D`, `mkdir -p`, `apt-get install -y`, `ln -sf`, `systemctl enable`.
 2. **`[check]` verifies the final result**, not an intermediate step, and must be
-   read-only and work without root (use `test -e`, `command -v`, `grep -q` on readable
-   files). If the result is not readable without root, check something that is.
+   read-only (use `test -e`, `command -v`, `grep -q`): it runs every time the catalog
+   is drawn. AppForge only runs as root, so everything (steps, `[check]`, `[remove]`)
+   runs as root; there is no `requires_root` key.
 3. **Target Debian.** Use `apt-get` with `DEBIAN_FRONTEND=noninteractive`. Do not
    abstract the package manager.
 4. **No `curl | bash`.** Download to a file, verify when the upstream publishes a
@@ -111,9 +111,9 @@ The CLI has no `apply`: the dry-run goes through a test. Add `tests/test_<id>.py
 following `tests/test_ollama.py`: load the entry with the `config` fixture, run
 `Engine(config, sink).apply(entry, values, dry_run=True)`, and assert that `[check]` is
 false (`engine.is_applied(entry) is False`) and on the rendered files in `sink.text()`.
-Review that output: commands (`#` = runs as root), diffs of every generated file, and no
-secret in clear text. Tests must never touch real system paths (non-root entries may be
-applied for real under a temporary `HOME`, like `tests/test_git_alias.py`).
+Review that output: commands (shown with `#`), diffs of every generated file, and no
+secret in clear text. Tests must never touch real system paths, so repo entries are only
+tested with a dry-run (see `tests/test_git_alias.py`).
 
 ## Definition of done
 

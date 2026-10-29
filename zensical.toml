@@ -32,7 +32,6 @@ nav = [
         { "Configuración" = "avanzado/configuracion.md" },
         { "Qué pasa al aplicar" = "avanzado/ejecucion.md" },
         { "Seguridad" = "avanzado/seguridad.md" },
-        { "Empaquetado" = "avanzado/empaquetado.md" },
         { "Solución de problemas" = "avanzado/problemas.md" },
     ] },
     { "Desarrollo" = [
@@ -41,6 +40,7 @@ nav = [
         { "Buenas prácticas" = "desarrollo/buenas-practicas.md" },
         { "Arquitectura" = "desarrollo/arquitectura.md" },
         { "Contribuir" = "desarrollo/contribuir.md" },
+        { "Empaquetado y publicación" = "desarrollo/empaquetado.md" },
         { "Referencia de la API" = "desarrollo/api.md" },
     ] },
     { "Cambios" = "changelog.md" },

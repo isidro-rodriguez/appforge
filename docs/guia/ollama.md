@@ -49,7 +49,7 @@ Fijos en la plantilla: `OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_MAX_LOADED_MODELS=1` 
 !!! tip "Cambiar los ajustes"
 
     Vuelve a aplicar la receta con otros valores: solo se reescribe
-    `ollama.env` (con copia de seguridad del anterior) y el resto de pasos quedan
+    `ollama.env` (el anterior queda en `ollama.env.backup`) y el resto de pasos quedan
     «sin cambios».
 
 ## Desinstalar

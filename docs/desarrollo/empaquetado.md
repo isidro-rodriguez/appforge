@@ -1,4 +1,4 @@
-# Empaquetado y distribución
+# Empaquetado y publicación
 
 ## Binario
 
@@ -52,22 +52,6 @@ git tag v0.4.0          # la versión de pyproject.toml
 git push origin v0.4.0
 ```
 
-## Lanzador de escritorio
-
-En Linux PyInstaller no incrusta iconos en el binario. Para tener AppForge en el menú
-de aplicaciones, crea un lanzador que abra una terminal:
-
-```ini title="~/.local/share/applications/appforge.desktop"
-[Desktop Entry]
-Type=Application
-Name=AppForge
-Comment=Recetas de configuración
-Exec=/ruta/a/appforge/appforge
-Icon=/ruta/a/appforge/appforge.png
-Terminal=true
-Categories=System;Utility;
-```
-
 Los iconos en otros tamaños están en `src/appforge/resources/`
 (`appforge-{32,48,64,128,256,512}.png`, esquinas transparentes).
 
@@ -78,4 +62,4 @@ Los iconos en otros tamaños están en `src/appforge/resources/`
 | glibc | El binario enlaza con la glibc del sistema donde se construye: por eso la CI compila en Debian 13 y no en `ubuntu-latest` |
 | Textual | Importa sus widgets de forma perezosa; por eso el build usa `--collect-submodules textual` y `--collect-data textual` |
 | Intermedios | En `build/` (ignorado por git) |
-| Sin binario | `uv run appforge` con `APPFORGE_HOME` apuntando a la carpeta con `config.toml` |
+| Sin binario | `sudo .venv/bin/appforge` desde la raíz del repositorio: busca `config.toml` en el directorio de trabajo |

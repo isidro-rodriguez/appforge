@@ -2,7 +2,7 @@
 
 Vamos a escribir una receta completa: **endurecer el servidor SSH** con un fichero en
 `/etc/ssh/sshd_config.d/`. Usa casi todo el formato: parámetros, una plantilla,
-pasos con root, comprobación y eliminación.
+pasos, comprobación y eliminación.
 
 ## 1. Los ficheros
 
@@ -22,7 +22,6 @@ entries/
 name = "SSH endurecido"
 description = "Sin contraseñas ni root por SSH; puerto y usuarios propios"
 category = "Sistema"
-requires_root = true
 details = """
 Escribe `/etc/ssh/sshd_config.d/50-appforge.conf` con una configuración
 restrictiva y recarga el servicio **solo si la sintaxis es válida**.
@@ -32,7 +31,7 @@ aplicarla: se desactiva el acceso con contraseña.
 """
 ```
 
-`requires_root` hace que los pasos y `[remove]` se ejecuten con `sudo`. `details` es
+Todo se ejecuta como `root`: AppForge solo arranca como superusuario. `details` es
 Markdown y se ve en la [página de detalle](../guia/interfaz.md#página-de-detalle).
 
 ## 3. Los parámetros
@@ -97,21 +96,22 @@ run = "rm -f /etc/ssh/sshd_config.d/50-appforge.conf && systemctl reload ssh"
 
 !!! info "`[check]` no ve tus parámetros"
 
-    La comprobación se ejecuta **sin root** y con los valores **por defecto** de los
+    La comprobación se ejecuta con los valores **por defecto** de los
     parámetros (al pintar el catálogo no hay otros). Comprueba que el resultado
     existe, no que tenga un valor concreto de un parámetro.
 
 ## 7. Comprueba la receta
 
 ```bash
-chmod -R go-w entries                          # AppForge rechaza recetas editables por otros
-uv run appforge validate --strict ssh-hardening # sin errores ni avisos → código 0
-uv run appforge                                 # TUI: márcala y pulsa d (dry-run)
+cd /opt/appforge
+sudo chown -R root:root entries && sudo chmod -R go-w entries  # recetas solo de root
+sudo appforge validate --strict ssh-hardening   # sin errores ni avisos → código 0
+sudo appforge                                   # TUI: márcala y pulsa d (dry-run)
 ```
 
 `validate` no ejecuta nada: comprueba el formato, los ficheros de `ssh-hardening/`,
 la sintaxis de bash y que cada parámetro se use. El *dry-run* de la TUI muestra el diff
-del fichero y los comandos (`#` = con root), con `usuario` como valor de `users`:
+del fichero y los comandos (precedidos de `#`), con `usuario` como valor de `users`:
 
 ```text
   Estado actual: no aplicada
