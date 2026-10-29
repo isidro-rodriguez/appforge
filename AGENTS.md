@@ -5,8 +5,8 @@ CLI or TUI is out of scope here: see [CLAUDE.md](CLAUDE.md).
 
 ## Language
 
-- Entry content shown to the user (`name`, `description`, `prompt`, `title`, comments)
-  in **Spanish**.
+- Entry content shown to the user (`name`, `description`, `details`, `prompt`, `title`,
+  comments) in **Spanish**.
 - Param names, file names and shell code identifiers in **English** (`snake_case`).
 
 ## Where things go
@@ -20,8 +20,9 @@ entries/
     └── ...          # files for `copy` steps
 ```
 
-Full format reference: [docs/entradas.md](docs/entradas.md). Reference example:
-`entries/ollama.toml` ([docs/ollama.md](docs/ollama.md)).
+Full format reference: [docs/desarrollo/formato.md](docs/desarrollo/formato.md); step-by-step
+tutorial: [docs/desarrollo/nueva-entrada.md](docs/desarrollo/nueva-entrada.md). Reference
+example: `entries/ollama.toml` ([docs/guia/ollama.md](docs/guia/ollama.md)).
 
 ## Format cheat sheet
 
@@ -29,6 +30,9 @@ Full format reference: [docs/entradas.md](docs/entradas.md). Reference example:
 name = "Nombre en el menú"
 description = "Una línea"
 category = "Desarrollo"        # optional; groups entries in the categories panel
+details = """
+Long Markdown description shown in the TUI detail page (double click or `v`).
+"""
 requires_root = true
 
 [[param]]
@@ -116,4 +120,5 @@ must never touch real system paths.
 - If the entry needs a file the user must provide (icon, key), say so in its
   `description` or a comment and in your final report.
 - `CHANGELOG.md` updated under `## [Unreleased]` → `### Added` (Spanish).
-- Never commit automatically; report and wait for confirmation.
+- Commit the entry (Conventional Commits in Spanish, e.g. `feat: receta de syncthing`);
+  never push.

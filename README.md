@@ -18,7 +18,7 @@ uv sync
 ## 🛠️ Uso
 
 ```bash
-uv run appforge                          # menú: espacio marca, i instala, u desinstala
+uv run appforge                          # menú: espacio marca, i instala, v detalle
 uv run appforge list                     # entradas y estado (✔ aplicada)
 uv run appforge apply ollama -n          # dry-run: muestra qué haría
 uv run appforge apply ollama             # aplica (pide parámetros y sudo)
@@ -41,12 +41,11 @@ Con [Poe the Poet](https://poethepoet.natn.io/) instalado globalmente: `poe chec
 
 ## 📚 Documentación
 
-- [Interfaz y tema](docs/interfaz.md)
-- [Formato de las entradas](docs/entradas.md)
-- [Funcionamiento del motor](docs/funcionamiento.md)
-- [Empaquetado y distribución](docs/empaquetado.md)
-- [Entrada de ejemplo: Ollama](docs/ollama.md)
-- Desarrollo: [CLAUDE.md](CLAUDE.md) · Nuevas entradas: [AGENTS.md](AGENTS.md)
+**<https://isidro-rodriguez.github.io/appforge/>** — guía de uso, uso avanzado y
+cómo crear recetas. Fuente en [`docs/`](docs/); vista previa local con
+`uv run --group docs zensical serve`.
+
+- Desarrollo: [CLAUDE.md](CLAUDE.md) · Nuevas recetas: [AGENTS.md](AGENTS.md)
 
 ## Licencia
 

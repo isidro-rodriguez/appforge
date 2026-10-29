@@ -34,6 +34,10 @@ dev = [
     "ruff>=0.17.3",
     "ty>=0.0.94",
 ]
+docs = [
+    "mkdocstrings-python>=2.0.10",
+    "zensical>=0.0.73",
+]
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.14.0"]
@@ -76,6 +80,14 @@ cmd = "python scripts/backup.py"
 [tool.poe.tasks.build]
 help = "Binario PyInstaller --onefile en dist/appforge/"
 cmd = "python scripts/build.py"
+
+[tool.poe.tasks.screenshots]
+help = "Capturas SVG de la TUI para la documentación"
+cmd = "python scripts/screenshots.py"
+
+[tool.poe.tasks.docs]
+help = "Vista previa de la documentación en http://localhost:8000"
+cmd = "uv run --group docs zensical serve"
 
 # --- pytest ------------------------------------------------------------------
 [tool.pytest.ini_options]

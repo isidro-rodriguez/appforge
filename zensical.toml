@@ -1,13 +1,13 @@
-# appforge.toml
-# Configuración de la documentación de App Forge.
+# zensical.toml
+# Configuración de la documentación de AppForge.
 # Referencia: https://zensical.org/docs/setup/basics/
 #
-#   uv run zensical serve   # vista previa en http://localhost:8000 con recarga
-#   uv run zensical build   # genera el sitio estático en site/
+#   uv run --group docs zensical serve   # vista previa en http://localhost:8000
+#   uv run --group docs zensical build   # genera el sitio estático en site/
 
 [project]
-site_name = "appforge"
-site_description = "TUI para la instalación personalizada de aplicaciones."
+site_name = "AppForge"
+site_description = "Recetas de configuración repetibles desde un menú de consola."
 site_author = "Isidro Rodríguez"
 # GitHub Pages distingue mayúsculas en la ruta: debe coincidir con el nombre del repo.
 site_url = "https://isidro-rodriguez.github.io/appforge/"
@@ -21,7 +21,30 @@ extra_css = ["assets/stylesheets/appforge.css"]
 
 # Orden de lectura explícito: primero el uso, después el desarrollo.
 nav = [
-    { "Inicio" = "index.md" }
+    { "Inicio" = "index.md" },
+    { "Guía" = [
+        { "Instalación" = "guia/instalacion.md" },
+        { "Primeros pasos" = "guia/primeros-pasos.md" },
+        { "Interfaz" = "guia/interfaz.md" },
+        { "Línea de comandos" = "guia/cli.md" },
+        { "Receta incluida: Ollama" = "guia/ollama.md" },
+    ] },
+    { "Uso avanzado" = [
+        { "Configuración" = "avanzado/configuracion.md" },
+        { "Qué pasa al aplicar" = "avanzado/ejecucion.md" },
+        { "Seguridad" = "avanzado/seguridad.md" },
+        { "Empaquetado" = "avanzado/empaquetado.md" },
+        { "Solución de problemas" = "avanzado/problemas.md" },
+    ] },
+    { "Desarrollo" = [
+        { "Crear una receta" = "desarrollo/nueva-entrada.md" },
+        { "Formato de las recetas" = "desarrollo/formato.md" },
+        { "Buenas prácticas" = "desarrollo/buenas-practicas.md" },
+        { "Arquitectura" = "desarrollo/arquitectura.md" },
+        { "Contribuir" = "desarrollo/contribuir.md" },
+        { "Referencia de la API" = "desarrollo/api.md" },
+    ] },
+    { "Cambios" = "changelog.md" },
 ]
 
 [project.theme]
@@ -30,7 +53,6 @@ language = "es"
 custom_dir = "docs_templates"
 favicon = "assets/images/favicon.png"
 logo = "assets/images/logo.png"
-# Source Code Pro es la tipografía que pyMedia ya usa en la cabecera de `sheet`.
 font.text = "Source Sans 3"
 font.code = "Source Code Pro"
 features = [
@@ -45,6 +67,7 @@ features = [
     "navigation.indexes",
     "navigation.instant",
     "navigation.instant.prefetch",
+    "navigation.tabs",
     "navigation.path",
     "navigation.sections",
     "navigation.top",
@@ -53,7 +76,7 @@ features = [
     "toc.follow",
 ]
 
-# Los colores reales (paleta de la CLI) están en `docs/assets/stylesheets/appforge.css`.
+# Los colores reales (paleta de theme.py) están en `docs/assets/stylesheets/appforge.css`.
 [[project.theme.palette]]
 media = "(prefers-color-scheme)"
 primary = "custom"
@@ -79,7 +102,7 @@ toggle.name = "Cambiar a la preferencia del sistema"
 
 [[project.extra.social]]
 icon = "fontawesome/brands/github"
-link = "https://github.com/isidro-rodriguez/pyMedia"
+link = "https://github.com/isidro-rodriguez/appforge"
 name = "Código fuente en GitHub"
 
 [project.markdown_extensions]
@@ -106,6 +129,8 @@ pymdownx.keys = {}
 pymdownx.magiclink = {}
 pymdownx.mark = {}
 pymdownx.smartsymbols = {}
+# Para incluir CHANGELOG.md en docs/changelog.md.
+pymdownx.snippets = { base_path = ["."], check_paths = true }
 pymdownx.superfences.custom_fences = [
     { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
 ]
@@ -113,3 +138,22 @@ pymdownx.tabbed.alternate_style = true
 pymdownx.tabbed.combine_header_slug = true
 pymdownx.tasklist.custom_checkbox = true
 pymdownx.tilde = {}
+
+# Referencia de la API desde los docstrings (estilo Google, en español).
+[project.plugins.mkdocstrings]
+custom_templates = "docs_templates"
+locale = "es"
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["src"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "google"
+show_root_heading = false
+show_source = false
+show_signature_annotations = true
+separate_signature = true
+members_order = "source"
+merge_init_into_class = true
+show_if_no_docstring = false
+heading_level = 3

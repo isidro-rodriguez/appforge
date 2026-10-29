@@ -29,13 +29,15 @@ Linux only (bash, sudo, `install`).
 ├── CLAUDE.md               # This file
 ├── CHANGELOG.md            # Keep a Changelog
 ├── config.toml             # entries_dir = "entries"
-├── docs/                   # Advanced documentation (Spanish)
+├── docs/                   # Zensical site (Spanish): guia/, avanzado/, desarrollo/
+├── docs_templates/         # Zensical overrides (favicons, mkdocstrings in Spanish)
 ├── entries/                # Menu entries; ollama.toml is the reference example
 ├── pyproject.toml          # Deps, build (uv_build), ruff, ty, pytest, poe
 ├── README.md               # Minimal overview
 ├── scripts/
 │   ├── backup.py           # git bundle
-│   └── build.py            # PyInstaller --onefile -> dist/appforge/
+│   ├── build.py            # PyInstaller --onefile -> dist/appforge/
+│   └── screenshots.py      # TUI SVG screenshots for the docs
 ├── src/appforge/
 │   ├── __init__.py         # __version__ via importlib.metadata
 │   ├── __main__.py         # python -m appforge
@@ -45,11 +47,12 @@ Linux only (bash, sudo, `install`).
 │   ├── main.py             # CLI entry point (argparse + Rich); no subcommand -> TUI
 │   ├── runlog.py           # Run log file (acodo.logger, daily rotation)
 │   ├── theme.py            # Palette from the icon; Textual and Rich themes
-│   ├── tui.py              # Textual app (catalog, batches, progress)
+│   ├── tui.py              # Textual app (catalog, detail page, batches, progress)
 │   ├── resources/          # Optimized icons (appforge-<size>.png)
 │   └── py.typed
 ├── tests/                  # pytest
-└── uv.lock
+├── uv.lock
+└── zensical.toml          # Docs site config (nav, theme, mkdocstrings)
 ```
 
 ## Architecture rules (load-bearing)
@@ -79,7 +82,8 @@ Linux only (bash, sudo, `install`).
   `Engine.cancel()` kills the whole command tree. Keep it when touching `Runner.shell`.
 - Catalog bindings must not act on other screens: add new main-screen actions to
   `_MAIN_ACTIONS` in `tui.py`.
-- The TUI mirrors `docs/interfaz.md`; update both together. `[ui]` options in
+- The TUI mirrors `docs/guia/interfaz.md`; update both together (and regenerate the
+  screenshots with `scripts/screenshots.py`). `[ui]` options in
   `config.toml` are validated in `config.py`; unknown keys are an error.
 
 ## Tools and canonical commands
@@ -93,17 +97,20 @@ uv run ruff check .
 uv run ty check
 uv run pytest
 uv run python scripts/build.py     # binary in dist/appforge/
+uv run python scripts/screenshots.py          # docs screenshots (SVG)
+uv run --group docs zensical build            # docs site in site/
 ```
 
 - One `uv.lock` and one venv at the root. Run tools from the root.
 - Add dependencies with `uv add <pkg>` / `uv add --dev <pkg>` and justify them.
+- The `docs` dependency group (`zensical`, `mkdocstrings-python`) is only for the site.
 - `acodo` is the utility library (`acodo>=0.3,<1`); prefer its helpers (`get_env`,
   `to_path`, ...) over ad-hoc code. `textual` is the only other runtime dependency.
 
 ### Optional poe tasks
 
-`[tool.poe]` defines shortcuts (`check`, `fix`, `build`, `backup`) for developers who
-have Poe the Poet installed globally. `poethepoet` is **not** a project dependency;
+`[tool.poe]` defines shortcuts (`check`, `fix`, `build`, `screenshots`, `docs`,
+`backup`) for developers who have Poe the Poet installed globally. `poethepoet` is **not** a project dependency;
 every task must also run with plain `uv run`. Keep tasks thin wrappers.
 
 ## Code rules
@@ -117,7 +124,8 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 
 - `pytest` with `--import-mode=importlib`: tests cannot import `conftest`; share helpers
   through fixtures (`home`, `config`, `write_entry`, `sink`).
-- The `home` fixture copies the real `config.toml` and `entries/` into `tmp_path` and sets `APPFORGE_HOME`, `XDG_STATE_HOME` and `APPFORGE_SUDO=""`.
+- The `home` fixture copies the real `config.toml` and `entries/` into `tmp_path` and
+  sets `APPFORGE_HOME`, `XDG_STATE_HOME` and `APPFORGE_SUDO=""`.
 - Tests must never touch real system paths. Use dry-run for real entries and
   `tmp_path` destinations for engine tests.
 - TUI tests use `App.run_test()` and Pilot at 100×30; `demo_entry()` in
@@ -131,16 +139,28 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 3. Run the quality commands from the root and fix until they pass.
 4. If something fails and you cannot resolve it, show the exact error and propose the
    minimal fix.
-5. Update `docs/` when behavior or the entry format changes.
+5. Update `docs/` when behavior or the entry format changes, and check that
+   `uv run --group docs zensical build` reports no issues.
 
 ## Commits and versioning
 
-- Never commit automatically; report success and wait for confirmation.
+- Commit directly when a change is done and the quality commands pass; never push.
 - Conventional Commits in Spanish (`feat: …`, `fix: …`, `docs: …`, `test: …`,
   `chore: …`), atomic, explaining the _why_.
 - Before any push with code changes: bump the version in `pyproject.toml` (SemVer) and
   update `CHANGELOG.md` (Keep a Changelog, Spanish). Changing the entry format in a
   non-backward-compatible way is MAJOR.
+
+## Documentation
+
+- The site is built with Zensical from `docs/` and `zensical.toml`; the nav is explicit,
+  so add new pages there. `.github/workflows/docs.yml` publishes it to GitHub Pages.
+- Sections: `guia/` (users), `avanzado/` (advanced users), `desarrollo/` (entry authors
+  and contributors). `docs/changelog.md` includes `CHANGELOG.md` via snippets.
+- The site theme mirrors `theme.py` in `docs/assets/stylesheets/appforge.css`.
+- Screenshots in `docs/assets/images/screenshots/` come from `scripts/screenshots.py`
+  (harmless demo entries); never edit them by hand.
+- Anchors keep accents (`#página-de-detalle`), like GitHub.
 
 ## Definition of done
 

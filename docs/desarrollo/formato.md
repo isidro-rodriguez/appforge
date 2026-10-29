@@ -1,6 +1,8 @@
-# Formato de las entradas
+# Formato de las recetas
 
-Cada opción del menú es un fichero `entries/<id>.toml`. Si necesita ficheros adicionales
+Referencia completa. Para un recorrido paso a paso, ver [Crear una receta](nueva-entrada.md).
+
+Cada opción del catálogo es un fichero `entries/<id>.toml`. Si necesita ficheros adicionales
 (plantillas, scripts, iconos) van en `entries/<id>/`. El `<id>` es el nombre del fichero
 sin extensión y es lo que se usa en la CLI (`appforge apply <id>`).
 
@@ -21,8 +23,9 @@ entries/
 | Clave | Tipo | Obligatoria | Descripción |
 |---|---|---|---|
 | `name` | texto | sí | Nombre en el menú |
-| `description` | texto | no | Una línea que se muestra en el detalle |
-| `category` | texto | no | Agrupa la entrada en el panel de categorías (`[ui].categories`) |
+| `description` | texto | no | Una línea: resumen en el catálogo y en la ficha |
+| `details` | texto (Markdown) | no | Descripción larga para la [página de detalle](../guia/interfaz.md#página-de-detalle). Usa `"""…"""` |
+| `category` | texto | no | Agrupa la receta en el panel de categorías ([`[ui] categories`](../avanzado/configuracion.md#interfaz)) |
 | `requires_root` | bool | no (`false`) | Los pasos y `[remove]` se ejecutan con `sudo` |
 
 ### `[[param]]`
@@ -43,7 +46,7 @@ Valores que se piden antes de aplicar. No se guardan en disco.
 run = "test -x /opt/x/bin/x"
 ```
 
-Código de salida 0 = aplicada (✔ en el menú). Se ejecuta **sin root** y con los valores
+Código de salida 0 = aplicada (`aplicada` en el catálogo). Se ejecuta **sin root** y con los valores
 por defecto de los parámetros, al pintar el menú y después de aplicar o eliminar. Debe
 comprobar el **resultado final**, no un paso intermedio.
 
@@ -113,7 +116,7 @@ run = "git config --global --unset alias.st"
 
 ## Validación
 
-AppForge rechaza la entrada (⚠ en el menú, no se puede aplicar) si:
+AppForge marca la receta como `inválida` (no se puede aplicar) si:
 
 - el TOML no es válido o tiene claves desconocidas o de tipo incorrecto;
 - un paso tiene cero o varios tipos, o un `dest`/`mode` donde no corresponde;
@@ -122,4 +125,4 @@ AppForge rechaza la entrada (⚠ en el menú, no se puede aplicar) si:
 - el `.toml`, su subdirectorio o cualquier fichero dentro son escribibles por grupo u
   otros, pertenecen a otro usuario (que no sea root) o son enlaces simbólicos.
 
-`appforge show <id>` lista todos los problemas.
+`appforge show <id>` y la ficha de la TUI listan todos los problemas. El porqué de cada comprobación está en [Seguridad](../avanzado/seguridad.md).
