@@ -1,0 +1,96 @@
+name = "Ollama (bajo demanda)"
+description = "Ollama en /opt/ollama, sin servicio de arranque; lanzador on/off con notificación"
+requires_root = true
+
+# Supuesto del motor: los parámetros llegan a los pasos `run` como variables
+# de entorno ($owner, $arch...) y a las plantillas vía string.Template.
+
+[[param]]
+name = "owner"
+prompt = "Usuario que ejecutará Ollama (dueño de /opt/ollama/models)"
+
+[[param]]
+name = "arch"
+prompt = "Arquitectura (amd64 | arm64)"
+default = "amd64"
+
+[[param]]
+name = "host"
+prompt = "OLLAMA_HOST"
+default = "127.0.0.1:11434"
+
+[[param]]
+name = "keep_alive"
+prompt = "OLLAMA_KEEP_ALIVE (5m, 30m, -1 = siempre)"
+default = "30m"
+
+[[param]]
+name = "kv_cache"
+prompt = "OLLAMA_KV_CACHE_TYPE (f16 | q8_0 | q4_0)"
+default = "q8_0"
+
+[[param]]
+name = "context_length"
+prompt = "OLLAMA_CONTEXT_LENGTH"
+default = "8192"
+
+[check]
+run = """
+test -x /opt/ollama/bin/ollama \
+  && test -f /opt/ollama/ollama.env \
+  && test -x /opt/ollama/ollama-toggle.sh \
+  && test -f /usr/local/share/applications/ollama.desktop
+"""
+
+[[step]]
+title = "Dependencias (curl, zstd, notify-send)"
+# Debian: notify-send viene en libnotify-bin.
+run = "DEBIAN_FRONTEND=noninteractive apt-get install -y curl zstd libnotify-bin"
+
+[[step]]
+title = "Descargar y extraer binario en /opt/ollama"
+run = """
+set -e
+mkdir -p /opt/ollama/models
+curl -fsSL "https://ollama.com/download/ollama-linux-${arch}.tar.zst" \
+  | tar --zstd -x -C /opt/ollama
+test -x /opt/ollama/bin/ollama
+"""
+
+[[step]]
+title = "Permisos de la carpeta de modelos"
+run = "chown -R \"$owner\": /opt/ollama/models"
+
+[[step]]
+title = "Variables de entorno (optimización)"
+template = "ollama.env.tpl"
+dest = "/opt/ollama/ollama.env"
+mode = "0644"
+
+[[step]]
+title = "Script switcher on/off"
+copy = "ollama-toggle.sh"
+dest = "/opt/ollama/ollama-toggle.sh"
+mode = "0755"
+
+[[step]]
+title = "Icono"
+# Fichero aportado por el usuario en entries/ollama/
+copy = "ollama.png"
+dest = "/opt/ollama/ollama.png"
+mode = "0644"
+
+[[step]]
+title = "Lanzador de escritorio"
+copy = "ollama.desktop"
+dest = "/usr/local/share/applications/ollama.desktop"
+mode = "0644"
+
+[remove]
+# Conserva /opt/ollama/models (los modelos pesan GB).
+run = """
+pkill -f '/opt/ollama/bin/ollama serve' || true
+rm -f /usr/local/share/applications/ollama.desktop
+rm -rf /opt/ollama/bin /opt/ollama/lib
+rm -f /opt/ollama/ollama.env /opt/ollama/ollama-toggle.sh /opt/ollama/ollama.png
+"""

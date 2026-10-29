@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ollama
+Comment=Arrancar / detener el servicio Ollama
+Exec=/opt/ollama/ollama-toggle.sh
+Icon=/opt/ollama/ollama.png
+Terminal=false
+Categories=Development;

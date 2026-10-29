@@ -1,0 +1,3 @@
+# Junto al binario. Rutas relativas a este directorio.
+entries_dir = "entries"
+# backups_dir = "~/.local/state/appforge/backups"   # valor por defecto
