@@ -104,6 +104,7 @@ async def _capture(base: Path) -> None:
         await pilot.pause(0.5)
         await app.workers.wait_for_complete()
         app.marked = {"docker", "vlc", "steam"}
+        app._repaint()
         highlight(app, "steam")
         await pilot.pause(0.3)
         save(app, "catalogo")
@@ -123,6 +124,7 @@ async def _capture(base: Path) -> None:
         await pilot.press("escape")
 
         app.marked = {"ollama"}
+        app._repaint()
         await pilot.press("d")
         await _wait(pilot, lambda: isinstance(app.screen, ParamsScreen))
         app.screen.query_one("#p_owner", Input).value = "isidro"
@@ -131,6 +133,7 @@ async def _capture(base: Path) -> None:
         await pilot.press("escape")
 
         app.marked = {"docker", "vlc", "steam"}
+        app._repaint()
         await pilot.press("i")
         await pilot.pause(0.3)
         save(app, "confirmar")
