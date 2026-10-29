@@ -136,3 +136,18 @@ def test_sudo_user_files_are_trusted(
         assert "propietario ajeno" in (insecure_reason(f) or "")
     monkeypatch.setenv("SUDO_UID", str(real.st_uid))  # quien llamó a sudo
     assert insecure_reason(f) is None
+
+
+def test_insecure_config_is_rejected(home: Path) -> None:
+    from appforge.config import ConfigError, load_config
+
+    config = home / "config.toml"
+    config.chmod(0o666)
+    with pytest.raises(ConfigError, match="escribible por grupo u otros"):
+        load_config(home)
+    config.chmod(0o644)
+    real = home / "real.toml"
+    config.rename(real)
+    config.symlink_to(real)
+    with pytest.raises(ConfigError, match="enlace simbólico"):
+        load_config(home)

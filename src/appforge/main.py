@@ -13,6 +13,7 @@ La TUI exige ser superusuario; ``validate`` (solo lee ficheros), ``--help`` y
 
 import os
 import shlex
+import shutil
 import sys
 from pathlib import Path
 from typing import Annotated, Any
@@ -114,17 +115,48 @@ def is_root() -> bool:
     return os.geteuid() == 0
 
 
+def sudo_command() -> list[str] | None:
+    """Orden para volver a lanzar AppForge con ``sudo`` desde el código.
+
+    Solo en desarrollo (no empaquetado), con una terminal para pedir la
+    contraseña y con ``sudo`` instalado. Se relanza el mismo intérprete del
+    entorno con ``-m appforge``; ``sudo`` conserva el directorio de trabajo, que
+    es donde se busca ``config.toml``.
+
+    Returns:
+        La orden, o ``None`` si no procede.
+    """
+    if getattr(sys, "frozen", False) or not sys.stdin.isatty():
+        return None
+    sudo = shutil.which("sudo")
+    if sudo is None:
+        return None
+    return [sudo, "--", sys.executable, "-m", "appforge", *sys.argv[1:]]
+
+
 def _require_root() -> None:
-    """Sale con código 2 y un mensaje claro si no se es superusuario."""
+    """Exige superusuario.
+
+    Desde el código pide la contraseña de ``sudo`` y se relanza; empaquetado,
+    sale con código 2 y un mensaje claro.
+    """
     if is_root():
         return
-    command = shlex.join(sys.argv)
-    make_consoles()[1].print(
+    _, err = make_consoles()
+    if (command := sudo_command()) is not None:
+        err.print(
+            Text(
+                "AppForge necesita superusuario: pidiendo la contraseña de sudo…",
+                style="af.muted",
+            )
+        )
+        os.execv(command[0], command)
+    err.print(
         Text.assemble(
             ("appforge: ", "af.error"),
             ("hay que ejecutarlo como superusuario.", "af.error"),
             "\n  Prueba: ",
-            (f"sudo {command}", "af.id"),
+            (f"sudo {shlex.join(sys.argv)}", "af.id"),
         )
     )
     raise typer.Exit(2)

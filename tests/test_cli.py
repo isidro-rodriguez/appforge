@@ -38,10 +38,57 @@ def test_tui_requires_superuser(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr("appforge.main.is_root", lambda: False)
+    monkeypatch.setattr("appforge.main.sudo_command", lambda: None)  # empaquetado
     assert main([]) == 2
     err = capsys.readouterr().err
     assert "hay que ejecutarlo como superusuario" in err
     assert "sudo " in err
+
+
+def test_from_source_asks_for_sudo(
+    home: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import os
+
+    calls: list[list[str]] = []
+
+    class RelaunchedError(Exception):
+        pass
+
+    def fake_execv(path: str, argv: list[str]) -> None:
+        calls.append(argv)
+        raise RelaunchedError
+
+    monkeypatch.setattr("appforge.main.is_root", lambda: False)
+    monkeypatch.setattr(
+        "appforge.main.sudo_command",
+        lambda: ["/usr/bin/sudo", "--", "py", "-m", "appforge"],
+    )
+    monkeypatch.setattr(os, "execv", fake_execv)
+    with pytest.raises(RelaunchedError):
+        main([])
+    assert calls == [["/usr/bin/sudo", "--", "py", "-m", "appforge"]]
+    assert "pidiendo la contraseña de sudo" in capsys.readouterr().err
+
+
+def test_sudo_command_only_from_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+
+    from appforge.main import sudo_command
+
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(sys, "argv", ["appforge", "validate"])
+    monkeypatch.setattr("shutil.which", lambda _: "/usr/bin/sudo")
+    assert sudo_command() == [
+        "/usr/bin/sudo",
+        "--",
+        sys.executable,
+        "-m",
+        "appforge",
+        "validate",
+    ]
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    assert sudo_command() is None  # binario del paquete: error, sin relanzar
 
 
 def test_help_and_version_without_root(

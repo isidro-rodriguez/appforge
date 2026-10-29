@@ -8,10 +8,15 @@ from typing import Any
 
 from acodo.utils import to_path
 
+from appforge.entry import insecure_reason
+
 APP_NAME = "appforge"
 CONFIG_FILE = "config.toml"
 _CONFIG_KEYS = {"entries_dir", "ui"}
 LOGS_DIR = "logs"
+# Instalación del paquete .deb: configuración y entradas en /etc, registro en /var/log.
+SYSTEM_CONFIG_DIR = Path("/etc/appforge")
+SYSTEM_LOGS_DIR = Path("/var/log/appforge")
 _UI_KEYS = {"search", "categories"}
 
 
@@ -48,21 +53,27 @@ class Config:
 
     @property
     def logs_dir(self) -> Path:
-        """Directorio del registro de ejecuciones: ``<base_dir>/logs``."""
+        """Directorio del registro de ejecuciones.
+
+        ``/var/log/appforge`` en la instalación del paquete; ``<base_dir>/logs``
+        desde el código.
+        """
+        if self.base_dir == SYSTEM_CONFIG_DIR:
+            return SYSTEM_LOGS_DIR
         return self.base_dir / LOGS_DIR
 
 
 def base_dir() -> Path:
     """Devuelve el directorio donde se busca ``config.toml``.
 
-    Empaquetado con PyInstaller (``sys.frozen``) es el directorio del binario;
-    desde el código, el directorio de trabajo.
+    El binario empaquetado (``sys.frozen``, instalado con el ``.deb``) usa
+    ``/etc/appforge``; desde el código, el directorio de trabajo.
 
     Returns:
         Ruta absoluta del directorio base.
     """
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
+        return SYSTEM_CONFIG_DIR
     return Path.cwd()
 
 
@@ -84,6 +95,11 @@ def load_config(base: Path | None = None) -> Config:
     path = base / CONFIG_FILE
     if not path.is_file():
         raise ConfigError(f"No existe {path}")
+    # Decide qué recetas se ejecutan como root: misma exigencia que las entradas.
+    if path.is_symlink():
+        raise ConfigError(f"{path}: no puede ser un enlace simbólico")
+    if reason := insecure_reason(path):
+        raise ConfigError(f"{path} no es de fiar: {reason}")
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as e:

@@ -196,3 +196,32 @@ def test_invoking_user_comes_from_sudo(monkeypatch: pytest.MonkeyPatch) -> None:
     assert invoking_user() == (me.pw_name, me.pw_dir)  # el del proceso
     monkeypatch.delenv("SUDO_USER")
     assert invoking_user() == (me.pw_name, me.pw_dir)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "con espacios y 'comillas' \"dobles\"",
+        "$(touch /tmp/appforge-inyeccion) `id` ; rm -rf /",
+        "línea1\nlínea2",
+        "ñandú ☕ \\ barra",
+    ],
+)
+def test_param_values_reach_bash_literally(
+    config, sink, write_entry, tmp_path: Path, value: str
+) -> None:
+    out = tmp_path / "valor"
+    write_entry(
+        "literal",
+        f"""
+name = "Literal"
+[[param]]
+name = "v"
+[[step]]
+run = 'printf %s "$v" > {out}'
+""",
+    )
+    e = get_entry(config, "literal")
+    assert Engine(config, sink).apply(e, {"v": value}), sink.text()
+    assert out.read_text() == value  # sin expansión ni inyección
+    assert not Path("/tmp/appforge-inyeccion").exists()

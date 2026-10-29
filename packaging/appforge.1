@@ -1,0 +1,104 @@
+.\" Página de manual de AppForge. Fuente: packaging/appforge.1 del repositorio.
+.\" scripts/build.py sustituye @VERSION@ y @DATE@ al construir el .deb.
+.TH APPFORGE 1 "@DATE@" "AppForge @VERSION@" "Órdenes de usuario"
+.SH NOMBRE
+appforge \- recetas de configuración repetibles para Debian desde un menú de consola
+.SH SINOPSIS
+.B sudo appforge
+.br
+.B appforge validate
+.RI [ OPCIONES ]
+.RI [ ID ...]
+.br
+.B appforge
+.RB [ \-\-version | \-\-help ]
+.SH DESCRIPCIÓN
+.B AppForge
+muestra un catálogo de
+.I recetas
+(ficheros TOML) que instalan y configuran software en Debian. Cada receta declara
+parámetros, una comprobación
+.RB ( [check] ),
+pasos en orden y, opcionalmente, cómo deshacerse
+.RB ( [remove] ).
+.PP
+Sin orden abre la interfaz de texto (TUI): espacio marca, \fBi\fR instala,
+\fBu\fR desinstala, \fBd\fR hace un \fIdry-run\fR (muestra comandos y diferencias sin
+cambiar nada), \fBv\fR abre la página de detalle, \fBq\fR sale.
+.SH ÓRDENES
+.TP
+.B validate
+Revisa las recetas sin ejecutarlas: formato, permisos, ficheros que faltan,
+sintaxis de bash (\fBbash \-n\fR), referencias a \fB$APPFORGE_ENTRY_DIR\fR,
+ficheros y parámetros sin usar. No necesita superusuario.
+.SH OPCIONES
+.TP
+.BR \-d ", " \-\-dir " " \fIDIR\fR
+(\fBvalidate\fR) Valida otro directorio de recetas.
+.TP
+.BR \-s ", " \-\-strict
+(\fBvalidate\fR) Los avisos también hacen fallar.
+.TP
+.BR \-V ", " \-\-version
+Muestra la versión.
+.TP
+.BR \-h ", " \-\-help
+Muestra la ayuda.
+.SH SUPERUSUARIO
+La TUI solo funciona como superusuario (\fBsudo appforge\fR): instala y configura
+software del sistema y todos los pasos se ejecutan como \fBroot\fR. Las recetas
+reciben \fBAPPFORGE_USER\fR y \fBAPPFORGE_USER_HOME\fR con el usuario que llamó a
+\fBsudo\fR, para los ficheros que deben ser suyos.
+\fBvalidate\fR, \fB\-\-help\fR y \fB\-\-version\fR no lo exigen.
+.SH FICHEROS
+.TP
+.I /etc/appforge/config.toml
+Configuración: \fBentries_dir\fR y la tabla \fB[ui]\fR (\fBsearch\fR, \fBcategories\fR).
+.TP
+.I /etc/appforge/entries/
+Recetas: \fI<id>.toml\fR y, si los necesita, el subdirectorio \fI<id>/\fR.
+Añade aquí las tuyas.
+.TP
+.I /var/log/appforge/appforge.log
+Registro de todas las ejecuciones, copias de seguridad incluidas. Rota cada día y
+guarda 7.
+.TP
+.I <fichero>.backup
+Copia del fichero anterior, junto al original, cuando un paso lo sobrescribe.
+.TP
+.I /opt/appforge/appforge
+El programa; \fI/usr/bin/appforge\fR enlaza a él.
+.SH SEGURIDAD
+AppForge no es un sandbox: una receta es código que se ejecuta como \fBroot\fR.
+Solo se cargan recetas cuyo propietario es \fBroot\fR (o quien llamó a \fBsudo\fR)
+y que no son escribibles por grupo ni otros, sin enlaces simbólicos. Eso protege
+la integridad del catálogo, no hace fiable una receta: revisa con
+\fBvalidate\fR, la página de detalle y un \fIdry-run\fR antes de aplicar una que no
+hayas escrito. No permitas \fBsudo appforge\fR a usuarios que no deban tener
+\fBroot\fR.
+.SH ESTADO DE SALIDA
+.TP
+.B 0
+Correcto.
+.TP
+.B 1
+\fBvalidate\fR encontró errores (o avisos, con \fB\-\-strict\fR).
+.TP
+.B 2
+Uso incorrecto, \fIconfig.toml\fR inválido, sin superusuario o sin terminal.
+.SH EJEMPLOS
+.TP
+.B sudo appforge
+Abre el catálogo.
+.TP
+.B appforge validate \-\-strict
+Revisa todas las recetas; falla también con avisos.
+.TP
+.B appforge validate ollama fonts
+Revisa solo esas dos recetas.
+.SH ERRORES
+Informa en https://github.com/isidro-rodriguez/appforge/issues
+.SH VÉASE TAMBIÉN
+Documentación: https://isidro-rodriguez.github.io/appforge/
+.SH LICENCIA
+MIT.

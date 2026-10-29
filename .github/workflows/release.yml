@@ -1,9 +1,9 @@
 # .github/workflows/release.yml
-# Empaqueta AppForge (binario + config.toml + entries/) en un .tar.gz.
-# - Etiqueta vX.Y.Z → publica el paquete en una Release de GitHub.
-# - Ejecución manual → deja el paquete como artefacto de la ejecución; con
-#   «publish» en main, además crea la etiqueta vX.Y.Z (versión de pyproject.toml)
-#   sobre ese commit y su Release.
+# Construye el paquete .deb de AppForge, lo prueba en un Debian 13 limpio y lo
+# publica con SHA256SUMS y procedencia (attestation) de GitHub.
+# - Etiqueta vX.Y.Z → publica la Release.
+# - Ejecución manual → deja el paquete como artefacto; con «publish» en main,
+#   además crea la etiqueta vX.Y.Z (versión de pyproject.toml) y la Release.
 name: Release
 
 on:
@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   build:
-    name: Empaquetar (linux-x86_64)
+    name: Construir .deb (amd64)
     runs-on: ubuntu-latest
     # Objetivo: Debian estable actual. Se compila en su contenedor porque el
     # binario enlaza con la glibc de donde se construye (ubuntu-latest es más nueva).
@@ -33,7 +33,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Dependencias del sistema (objdump para PyInstaller, git, tar)
+      - name: Dependencias del sistema (objdump para PyInstaller, git)
         run: |
           apt-get update
           apt-get install -y --no-install-recommends binutils ca-certificates git
@@ -62,33 +62,75 @@ jobs:
         run: uv sync --locked
 
       - name: Construir binario y paquete
-        run: uv run python scripts/build.py --archive
-
-      - name: Probar el binario empaquetado
-        run: |
-          mkdir -p /tmp/smoke
-          tar -xzf dist/appforge-*.tar.gz -C /tmp/smoke
-          /tmp/smoke/appforge/appforge --version
-          /tmp/smoke/appforge/appforge validate --strict
+        run: uv run python scripts/build.py
 
       - name: Subir el paquete como artefacto
         uses: actions/upload-artifact@v5
         with:
-          name: appforge-linux-x86_64
+          name: appforge-deb
           path: |
-            dist/appforge-*.tar.gz
-            dist/appforge-*.tar.gz.sha256
+            dist/appforge_*.deb
+            dist/SHA256SUMS
           if-no-files-found: error
+
+  test:
+    name: Probar en Debian 13 limpio
+    needs: build
+    runs-on: ubuntu-latest
+    container: debian:trixie-slim
+    steps:
+      - name: Descargar el paquete
+        uses: actions/download-artifact@v5
+        with:
+          name: appforge-deb
+          path: dist
+
+      - name: Instalar (con páginas man, que la imagen slim excluye)
+        run: |
+          rm -f /etc/dpkg/dpkg.cfg.d/docker
+          cd dist && sha256sum -c SHA256SUMS && cd ..
+          apt-get update
+          apt-get install -y --no-install-recommends man-db desktop-file-utils ./dist/appforge_*.deb
+
+      - name: Comprobar la instalación
+        run: |
+          set -x
+          appforge --version | grep -F "${{ needs.build.outputs.version }}"
+          test "$(readlink /usr/bin/appforge)" = /opt/appforge/appforge
+          appforge validate --strict
+          man -P cat appforge | grep -q "recetas de configuración"
+          desktop-file-validate /usr/share/applications/appforge.desktop
+          # Todo de root y sin escritura para grupo u otros.
+          test -z "$(find /opt/appforge /etc/appforge ! -user root)"
+          test -z "$(find /opt/appforge /etc/appforge -perm /022 ! -type l)"
+          # Sin terminal la TUI sale con 2; sin root, también.
+          rc=0; appforge >/tmp/out 2>&1 || rc=$?; test "$rc" = 2; grep -q "terminal" /tmp/out
+          rc=0; setpriv --reuid=nobody --regid=nogroup --clear-groups appforge >/tmp/out 2>&1 || rc=$?
+          test "$rc" = 2; grep -q "superusuario" /tmp/out
+
+      - name: Reinstalar, desinstalar y purgar
+        run: |
+          set -x
+          echo "# cambio local" >> /etc/appforge/config.toml
+          apt-get install -y --reinstall ./dist/appforge_*.deb
+          grep -q "cambio local" /etc/appforge/config.toml   # conffile respetado
+          apt-get remove -y appforge
+          test ! -e /opt/appforge && test ! -e /usr/bin/appforge
+          test -f /etc/appforge/config.toml                    # remove conserva la configuración
+          apt-get purge -y appforge
+          test ! -e /etc/appforge && test ! -e /var/log/appforge
 
   release:
     name: Publicar Release
     if: >-
       startsWith(github.ref, 'refs/tags/v') ||
       (github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main')
-    needs: build
+    needs: [build, test]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     env:
       TAG: v${{ needs.build.outputs.version }}
     steps:
@@ -107,8 +149,13 @@ jobs:
       - name: Descargar el paquete
         uses: actions/download-artifact@v5
         with:
-          name: appforge-linux-x86_64
+          name: appforge-deb
           path: dist
+
+      - name: Procedencia del paquete (attestation)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/appforge_*.deb
 
       - name: Crear la Release con el paquete
         env:
