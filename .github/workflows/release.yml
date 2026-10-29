@@ -92,33 +92,35 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends man-db desktop-file-utils ./dist/appforge_*.deb
 
-      - name: Comprobar la instalación
+      - name: Comprobar la instalación, reinstalar, desinstalar y purgar
+        shell: bash
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
-          set -x
-          appforge --version | grep -F "${{ needs.build.outputs.version }}"
-          test "$(readlink /usr/bin/appforge)" = /opt/appforge/appforge
-          appforge validate --strict
-          man -P cat appforge | grep -q "recetas de configuración"
-          desktop-file-validate /usr/share/applications/appforge.desktop
-          # Todo de root y sin escritura para grupo u otros.
-          test -z "$(find /opt/appforge /etc/appforge ! -user root)"
-          test -z "$(find /opt/appforge /etc/appforge -perm /022 ! -type l)"
-          # Sin terminal la TUI sale con 2; sin root, también.
-          rc=0; appforge >/tmp/out 2>&1 || rc=$?; test "$rc" = 2; grep -q "terminal" /tmp/out
-          rc=0; setpriv --reuid=nobody --regid=nogroup --clear-groups appforge >/tmp/out 2>&1 || rc=$?
-          test "$rc" = 2; grep -q "superusuario" /tmp/out
-
-      - name: Reinstalar, desinstalar y purgar
-        run: |
-          set -x
+          fail=0
+          # check "descripción" 'orden': anota en la ejecución lo que falle.
+          check() {
+            if ! out="$(bash -c "$2" 2>&1)"; then
+              echo "::error title=$1::$(tail -c 600 <<<"$out" | tr '\n' ' ')"
+              fail=1
+            fi
+          }
+          check "versión" 'appforge --version | grep -F "$VERSION"'
+          check "enlace /usr/bin" 'test "$(readlink /usr/bin/appforge)" = /opt/appforge/appforge'
+          check "validate" 'appforge validate --strict'
+          check "man" 'man -P cat appforge | grep -q "recetas de configuración"'
+          check "desktop" 'desktop-file-validate /usr/share/applications/appforge.desktop'
+          check "propietario root" 'test -z "$(find /opt/appforge /etc/appforge ! -user root)"'
+          check "permisos" 'test -z "$(find /opt/appforge /etc/appforge -perm /022 ! -type l)"'
+          check "sin terminal" 'rc=0; appforge >/tmp/o 2>&1 || rc=$?; cat /tmp/o; test "$rc" = 2 && grep -q terminal /tmp/o'
+          check "sin root" 'rc=0; setpriv --reuid=nobody --regid=nogroup --clear-groups appforge >/tmp/o 2>&1 || rc=$?; cat /tmp/o; test "$rc" = 2 && grep -q superusuario /tmp/o'
           echo "# cambio local" >> /etc/appforge/config.toml
-          apt-get install -y --reinstall ./dist/appforge_*.deb
-          grep -q "cambio local" /etc/appforge/config.toml   # conffile respetado
-          apt-get remove -y appforge
-          test ! -e /opt/appforge && test ! -e /usr/bin/appforge
-          test -f /etc/appforge/config.toml                    # remove conserva la configuración
-          apt-get purge -y appforge
-          test ! -e /etc/appforge && test ! -e /var/log/appforge
+          check "reinstalar" 'apt-get install -y --reinstall ./dist/appforge_*.deb'
+          check "conffile respetado" 'grep -q "cambio local" /etc/appforge/config.toml'
+          check "desinstalar" 'apt-get remove -y appforge && test ! -e /opt/appforge && test ! -e /usr/bin/appforge'
+          check "remove conserva config" 'test -f /etc/appforge/config.toml'
+          check "purgar" 'apt-get purge -y appforge && test ! -e /etc/appforge && test ! -e /var/log/appforge'
+          exit "$fail"
 
   release:
     name: Publicar Release
