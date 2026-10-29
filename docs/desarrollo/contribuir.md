@@ -44,7 +44,8 @@ Con [Poe the Poet](https://poethepoet.natn.io/) instalado globalmente hay atajos
 
 - `pytest` con `--import-mode=importlib`: los tests no importan `conftest`; las
   utilidades son fixtures (`home`, `config`, `write_entry`, `sink`).
-- `home` copia `config.toml` y `entries/` a un temporal y fija `APPFORGE_HOME`,
+- `home` copia `entries/` a un temporal con un `config.toml` por defecto (nunca el
+  del repositorio, que es configuración tuya) y fija `APPFORGE_HOME`,
   `XDG_STATE_HOME` y `APPFORGE_SUDO=""` (sin sudo real).
 - Nunca se tocan rutas reales del sistema: *dry-run* para las recetas del repositorio y
   destinos en `tmp_path` para el motor.

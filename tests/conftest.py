@@ -34,10 +34,12 @@ class Collector:
 
 @pytest.fixture
 def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Copia del proyecto real (config + entries/ollama) en un directorio temporal."""
+    """Copia de las recetas reales (entries/) con un config.toml por defecto."""
     base = tmp_path / "tool"
     base.mkdir()
-    shutil.copy(ROOT / "config.toml", base / "config.toml")
+    # config.toml propio y con los valores por defecto: el del repositorio es
+    # configuración del usuario (p. ej. [ui]) y no debe cambiar los tests.
+    (base / "config.toml").write_text('entries_dir = "entries"\n', encoding="utf-8")
     shutil.copytree(ROOT / "entries", base / "entries")
     secure(base)
     monkeypatch.setenv("APPFORGE_HOME", str(base))

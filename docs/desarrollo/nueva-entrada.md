@@ -136,7 +136,7 @@ instalar.
 ## 8. Un test (opcional)
 
 Si la receta va al repositorio, añade `tests/test_<id>.py`. La fixture `home` copia
-`config.toml` y `entries/` a un directorio temporal:
+`entries/` a un directorio temporal con un `config.toml` por defecto:
 
 ```python title="tests/test_ssh_hardening.py"
 from appforge.engine import Engine

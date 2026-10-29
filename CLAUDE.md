@@ -124,8 +124,8 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 
 - `pytest` with `--import-mode=importlib`: tests cannot import `conftest`; share helpers
   through fixtures (`home`, `config`, `write_entry`, `sink`).
-- The `home` fixture copies the real `config.toml` and `entries/` into `tmp_path` and
-  sets `APPFORGE_HOME`, `XDG_STATE_HOME` and `APPFORGE_SUDO=""`.
+- The `home` fixture copies the real `entries/` into `tmp_path` with a default
+  `config.toml` (never the repo's, which is user configuration) and sets `APPFORGE_HOME`, `XDG_STATE_HOME` and `APPFORGE_SUDO=""`.
 - Tests must never touch real system paths. Use dry-run for real entries and
   `tmp_path` destinations for engine tests.
 - TUI tests use `App.run_test()` and Pilot at 100×30; `demo_entry()` in
