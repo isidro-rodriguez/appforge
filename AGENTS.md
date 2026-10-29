@@ -57,8 +57,13 @@ mode = "0644"
 run = "rm -rf /opt/x"
 ```
 
-Extra variables in `run`/`script`: `APPFORGE_ENTRY`, `APPFORGE_ENTRY_DIR`,
+Extra variables in `run`/`script`: `APPFORGE_USER` and `APPFORGE_USER_HOME` (who ran
+`sudo appforge`; also usable in templates), `APPFORGE_ENTRY`, `APPFORGE_ENTRY_DIR`,
 `APPFORGE_DRY_RUN`. Working directory: `entries/<id>/`.
+
+Everything runs as root. When an entry writes files that belong to the user (their
+`HOME`, a directory they must write to), give them to `$APPFORGE_USER` (`chown`,
+`install -o`). Never ask for the user name as a param.
 
 ## Rules (load-bearing)
 

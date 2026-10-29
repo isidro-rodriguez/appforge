@@ -49,7 +49,7 @@ CI de tu repositorio de recetas.
 
 ```bash
 appforge validate                      # todas
-appforge validate ollama git-alias     # solo esas
+appforge validate ollama fonts         # solo esas
 appforge validate --strict             # en la CI: sin errores ni avisos
 appforge validate -d ~/mis-recetas     # otro directorio
 ```

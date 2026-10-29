@@ -45,7 +45,7 @@ Pulsa ++d++ (*dry-run*). AppForge te pide los parámetros de la receta:
 <figcaption>Los campos vacíos usan el valor por defecto que se ve en gris.</figcaption>
 </figure>
 
-Escribe tu usuario en el primero y acepta. La pantalla de progreso enseña cada
+Cambia el valor que quieras (vacío = el de por defecto) y acepta. La pantalla de progreso enseña cada
 comando que se ejecutaría (precedido de `#`) y el **diff** de cada fichero
 que se escribiría. Al terminar, ++esc++ vuelve al catálogo.
 

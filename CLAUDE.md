@@ -71,6 +71,10 @@ Debian stable (13). It **only runs as root**: no sudo handling, no unprivileged 
   (exit 2) unless `main.is_root()`; `--help`/`--version` work for anyone. Everything
   runs with the process privileges: do not reintroduce sudo, `requires_root` or
   unprivileged code paths.
+- Steps and templates get `APPFORGE_USER` / `APPFORGE_USER_HOME` from
+  `engine.invoking_user()` (`SUDO_USER`, else the process user); `entry.USER_VARS`
+  lists them for template validation. Entries use them for user-owned files instead
+  of asking for a user name.
 - Configuration is only `config.toml` next to the binary (cwd when run from source):
   no environment variables, no extra directories. Multiple entry directories may come
   later; do not add them (or mention them in docs) until asked.

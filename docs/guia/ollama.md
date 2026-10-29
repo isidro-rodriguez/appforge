@@ -10,8 +10,8 @@ enciendes. Un lanzador del escritorio hace de interruptor.
 
 ## Uso
 
-1. Aplica la receta (en la TUI, márcala y pulsa ++i++). Pide tu usuario,
-   que será el dueño de la carpeta de modelos.
+1. Aplica la receta (en la TUI, márcala y pulsa ++i++). La carpeta de modelos queda
+   a nombre del usuario que ejecutó `sudo appforge`.
 2. En el menú de aplicaciones aparece **Ollama**. Al pulsarlo arranca el servicio y
    una notificación avisa cuando responde («Servicio activo en …»).
 3. Usa `ollama run <modelo>` o cualquier cliente que apunte a `OLLAMA_HOST`.
@@ -22,7 +22,7 @@ enciendes. Un lanzador del escritorio hace de interruptor.
 | Ruta | Contenido |
 |---|---|
 | `/opt/ollama/bin/`, `lib/` | Binario y librerías del tarball oficial |
-| `/opt/ollama/models/` | Modelos (`OLLAMA_MODELS`), propiedad del usuario `owner` |
+| `/opt/ollama/models/` | Modelos (`OLLAMA_MODELS`), propiedad del usuario que ejecutó `sudo appforge` |
 | `/opt/ollama/ollama.env` | Variables de rendimiento (plantilla) |
 | `/opt/ollama/ollama-toggle.sh` | Interruptor on/off |
 | `/opt/ollama/ollama.png` | Icono |
@@ -36,7 +36,6 @@ notifica con `notify-send`. Su log está en `~/.local/state/ollama/serve.log`.
 
 | Parámetro | Por defecto | Uso |
 |---|---|---|
-| `owner` | — | Dueño de `/opt/ollama/models` |
 | `arch` | `amd64` | `amd64` o `arm64` |
 | `host` | `127.0.0.1:11434` | `OLLAMA_HOST` |
 | `keep_alive` | `30m` | `OLLAMA_KEEP_ALIVE` (`-1` = siempre cargado) |

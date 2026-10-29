@@ -128,7 +128,7 @@ async def _capture(base: Path) -> None:
         app._repaint()
         await pilot.press("d")
         await _wait(pilot, lambda: isinstance(app.screen, ParamsScreen))
-        app.screen.query_one("#p_owner", Input).value = "usuario"
+        app.screen.query_one("#p_kv_cache", Input).value = "q4_0"
         await pilot.pause(0.2)
         save(app, "parametros")
         await pilot.press("escape")
@@ -255,6 +255,8 @@ def _show_installed_paths(base: Path) -> None:
         return text
 
     tui._home_short = short  # type: ignore[assignment]
+    # Usuario genérico en la confirmación, sea quien sea quien genera las capturas.
+    tui.invoking_user = lambda: ("usuario", "/home/usuario")  # type: ignore[assignment]
 
 
 def main() -> None:

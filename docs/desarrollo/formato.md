@@ -81,11 +81,32 @@ Opcional. Tras ejecutarlo, `[check]` debe fallar.
 | Variable | Valor |
 |---|---|
 | `$<param>` | Valor de cada parámetro |
+| `APPFORGE_USER` | Usuario que ejecutó `sudo appforge` (`SUDO_USER`); `root` si se abrió sin `sudo` |
+| `APPFORGE_USER_HOME` | Su directorio personal |
 | `APPFORGE_ENTRY` | `<id>` |
 | `APPFORGE_ENTRY_DIR` | Ruta absoluta de `entries/<id>/` |
 | `APPFORGE_DRY_RUN` | `0` (en dry-run los comandos no se ejecutan) |
 
-El directorio de trabajo es `entries/<id>/` si existe.
+El directorio de trabajo es `entries/<id>/` si existe. Las plantillas también pueden
+usar `$APPFORGE_USER` y `$APPFORGE_USER_HOME`, además de los parámetros.
+
+### Ficheros del usuario
+
+Todo se ejecuta como `root`. Si una receta crea o cambia algo del usuario (en su
+`HOME`, o un directorio que debe poder escribir), usa `APPFORGE_USER` y devuélvele la
+propiedad:
+
+```toml
+[[step]]
+title = "Configuración del usuario"
+run = """
+install -D -m 0644 -o "$APPFORGE_USER" -g "$APPFORGE_USER" \
+  "$APPFORGE_ENTRY_DIR/app.conf" "$APPFORGE_USER_HOME/.config/app/app.conf"
+"""
+```
+
+`dest` de `template` y `copy` es una ruta fija, así que para el `HOME` del usuario usa
+un paso `run` o `script` como el anterior.
 
 ## Ejemplo mínimo
 

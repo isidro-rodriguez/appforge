@@ -13,7 +13,7 @@ appforge/
 ├── appforge        # binario (incluye Python y Textual)
 ├── appforge.png    # icono para el lanzador de escritorio
 ├── config.toml     # configuración
-└── entries/        # recetas de ejemplo (Ollama, alias de git)
+└── entries/        # recetas de ejemplo (Ollama, fuentes adicionales)
 ```
 
 ## Instalar

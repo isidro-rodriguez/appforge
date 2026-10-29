@@ -4,7 +4,7 @@
 
 Menú de consola que centraliza recetas de configuración repetibles: cada opción es un
 fichero TOML que instala y configura una aplicación (ejemplos incluidos: Ollama bajo
-demanda y alias de git). Para **Debian 13**.
+demanda y fuentes adicionales). Para **Debian 13**.
 
 ## 🚀 Instalación
 
