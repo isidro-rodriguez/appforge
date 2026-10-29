@@ -16,6 +16,7 @@ from typing import ClassVar
 
 from rich.console import Group
 from rich.markup import escape
+from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 from textual import events, on, work
@@ -121,6 +122,7 @@ CategoryRow .count { width: auto; padding-right: 1; color: $text-muted; }
 #fields { height: auto; max-height: 55vh; }
 ConfirmScreen, ParamsScreen { align: center middle; }
 .prompt { margin-top: 1; }
+.link { color: $text-muted; }
 .buttons { height: auto; margin-top: 1; align-horizontal: right; }
 .buttons Button { margin-left: 1; }
 
@@ -348,6 +350,20 @@ class ConfirmScreen(ModalScreen[bool]):
         self.dismiss(event.button.id == "yes")
 
 
+def param_link(url: str) -> Text:
+    """Enlace de un parámetro, pulsable en las terminales que lo admiten.
+
+    Args:
+        url: Dirección (http/https).
+
+    Returns:
+        Texto con estilo de enlace.
+    """
+    return Text.assemble(
+        ("↗ ", STYLES["muted"]), (url, Style.parse(STYLES["link"]) + Style(link=url))
+    )
+
+
 class ParamsScreen(ModalScreen[dict[str, str] | None]):
     """Formulario con los parámetros de una entrada."""
 
@@ -375,6 +391,8 @@ class ParamsScreen(ModalScreen[dict[str, str] | None]):
                     if p.default:
                         placeholder = "(por defecto)" if p.secret else p.default
                     yield Label(escape(p.prompt), classes="prompt")
+                    if p.link:
+                        yield Label(param_link(p.link), classes="link")
                     yield Input(
                         placeholder=placeholder, password=p.secret, id=f"p_{p.name}"
                     )
@@ -461,7 +479,8 @@ def entry_markdown(entry: Entry, state: State, checked: bool = True) -> str:
                 default = "_(secreto)_"
             else:
                 default = f"`{p.default}`" if p.default else "—"
-            rows.append(f"| `{p.name}` | {p.prompt} | {default} |")
+            prompt = f"{p.prompt} ([{p.link}]({p.link}))" if p.link else p.prompt
+            rows.append(f"| `{p.name}` | {prompt} | {default} |")
         parts.append("## Parámetros")
         parts.append(
             "| Nombre | Pregunta | Por defecto |\n|---|---|---|\n" + "\n".join(rows)

@@ -25,7 +25,8 @@ TOP_KEYS = {
     "step",
     "remove",
 }
-PARAM_KEYS = {"name", "prompt", "default", "secret"}
+PARAM_KEYS = {"name", "prompt", "default", "secret", "link"}
+URL = re.compile(r"https?://\S+")
 STEP_KEYS = {"title", "dest", "mode", *STEP_KINDS}
 IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 MODE = re.compile(r"0?[0-7]{3,4}")
@@ -58,12 +59,15 @@ class Param:
         prompt: Texto de la pregunta.
         default: Valor por defecto, o ``None`` si es obligatorio.
         secret: Si es ``True`` la entrada se oculta y el valor se enmascara.
+        link: Página donde elegir el valor (p. ej. las versiones publicadas), o
+            ``None``.
     """
 
     name: str
     prompt: str
     default: str | None = None
     secret: bool = False
+    link: str | None = None
 
 
 @dataclass(frozen=True)
@@ -256,9 +260,18 @@ class _Parser:
                     prompt=self.text(p, "prompt", where) or name,
                     default=None if default is None else str(default),
                     secret=self.flag(p, "secret", where),
+                    link=self._link(p, where),
                 )
             )
         return params
+
+    def _link(self, p: dict[str, Any], where: str) -> str | None:
+        """Lee ``link``: una URL http(s) o nada."""
+        link = self.text(p, "link", where)
+        if link is not None and not URL.fullmatch(link):
+            self.problems.append(f"{where}: 'link' debe ser una URL http(s)")
+            return None
+        return link
 
     def _valid_name(self, name: str, seen: set[str], where: str) -> bool:
         """Comprueba que el nombre de un parámetro sea usable."""

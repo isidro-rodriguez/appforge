@@ -13,6 +13,7 @@ def test_entry_is_valid(config) -> None:
     e = fonts(config)
     assert e.problems == []
     assert [p.name for p in e.params] == ["nerd_version"]
+    assert e.params[0].link == "https://github.com/ryanoasis/nerd-fonts/releases"
     assert [s.kind for s in e.steps] == ["run", "script", "run", "run", "script", "run"]
 
 

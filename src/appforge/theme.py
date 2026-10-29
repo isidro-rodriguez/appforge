@@ -71,6 +71,7 @@ STYLES = {
     "muted": MUTED,
     "applied": SUCCESS,
     "invalid": ERROR,
+    "link": f"underline {PRIMARY}",
 }
 
 # Ayuda y errores de la CLI (constantes ``STYLE_*`` de ``typer.rich_utils``).

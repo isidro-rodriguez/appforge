@@ -44,6 +44,10 @@ STEP = '[[step]]\nrun="true"'
         (f'name="x"\nrequires_root=true\n{STEP}', "claves desconocidas: requires_root"),
         (f'name="x"\n[[param]]\nname="a"\nsecret="sí"\n{STEP}', "true/false"),
         (f'name="x"\nparam="no"\n{STEP}', "[[param]]"),
+        (
+            f'name="x"\n[[param]]\nname="v"\nlink="javascript:x"\n{STEP}',
+            "'link' debe ser una URL http(s)",
+        ),
         (f'name="x"\ncheck="no"\n{STEP}', "tabla [check]"),
         ("name = ", "TOML inválido"),
     ],

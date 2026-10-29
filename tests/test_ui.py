@@ -109,6 +109,8 @@ async def test_dry_run_flow_keeps_selection(config: Config) -> None:
         assert app.marked == {"ollama"}
         await pilot.press("d")
         await wait_for(pilot, lambda: isinstance(app.screen, ParamsScreen))
+        links = [str(label.render()) for label in app.screen.query(".link")]
+        assert links == ["↗ https://github.com/ollama/ollama/releases"]
         app.screen.query_one("#p_kv_cache", Input).value = "q4_0"
         await pilot.click("#ok")
         await wait_for(pilot, lambda: isinstance(app.screen, ProgressScreen))
@@ -265,6 +267,11 @@ def test_entry_markdown_lists_everything(config: Config) -> None:
     assert md.startswith("# Ollama (bajo demanda)")
     assert "### Ajustes de rendimiento" in md  # clave details
     assert "| `arch` | Arquitectura (amd64 | arm64) | `amd64` |" in md
+    assert (
+        "| `version` | Versión de Ollama (etiqueta de GitHub) "
+        "([https://github.com/ollama/ollama/releases]"
+        "(https://github.com/ollama/ollama/releases)) | `v0.40.13` |"
+    ) in md
     assert "**4. Variables de entorno (optimización)** · `template`" in md
     assert "Genera `/opt/ollama/ollama.env` desde `ollama/ollama.env.tpl`" in md
     assert "## Comprobación" in md

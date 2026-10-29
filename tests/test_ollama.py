@@ -24,15 +24,17 @@ def test_entry_is_valid(config):
     e = ollama(config)
     assert e.problems == []
     assert [p.name for p in e.params] == [
+        "version",
         "arch",
         "host",
         "keep_alive",
         "kv_cache",
         "context_length",
     ]
+    assert e.params[0].link == "https://github.com/ollama/ollama/releases"
     assert [s.kind for s in e.steps] == [
         "run",
-        "run",
+        "script",
         "run",
         "template",
         "copy",

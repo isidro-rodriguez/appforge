@@ -17,8 +17,8 @@ Instala para todos los usuarios:
   (EULA) **se acepta automáticamente**.
 - Si `contrib` o `non-free` no están en tus fuentes de APT, se añaden en
   `/etc/apt/sources.list.d/appforge-fonts.sources` (no se toca `debian.sources`).
-- La versión de Nerd Fonts es un parámetro. Si la versión publica `SHA-256.txt`, la
-  descarga se verifica.
+- La versión de Nerd Fonts es un parámetro. La descarga se verifica con el
+  `SHA-256.txt` de esa versión; sin suma publicada no se instala.
 
 Desinstalar quita los paquetes, la Nerd Font y el fichero de fuentes de APT.
 """
@@ -27,6 +27,7 @@ Desinstalar quita los paquetes, la Nerd Font y el fichero de fuentes de APT.
 name = "nerd_version"
 prompt = "Versión de Nerd Fonts (etiqueta de GitHub)"
 default = "v3.4.0"
+link = "https://github.com/ryanoasis/nerd-fonts/releases"
 
 [check]
 run = """
