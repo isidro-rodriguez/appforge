@@ -101,17 +101,16 @@ jobs:
           # check "descripción" 'orden': anota en la ejecución lo que falle.
           check() {
             if ! out="$(bash -c "$2" 2>&1)"; then
-              echo "::error title=$1::$(tail -c 600 <<<"$out" | tr '\n' ' ')"
+              echo "::error title=Falla la comprobación::$1"
+              printf '%s\n' "--- $1 ---" "$out"
               fail=1
-            else
-              echo "::notice title=ok::$1"
             fi
           }
           set +e
           check "versión" 'appforge --version | grep -F "$VERSION"'
           check "enlace /usr/bin" 'test "$(readlink /usr/bin/appforge)" = /opt/appforge/appforge'
           check "validate" 'appforge validate --strict'
-          check "man" 'man -P cat appforge | grep -q "recetas de configuración"'
+          check "man" 'MANWIDTH=120 man -P cat appforge | grep -q "ESTADO DE SALIDA"'
           check "desktop" 'desktop-file-validate /usr/share/applications/appforge.desktop'
           check "propietario root" 'test -z "$(find /opt/appforge /etc/appforge ! -user root)"'
           check "permisos" 'test -z "$(find /opt/appforge /etc/appforge -perm /022 ! -type l)"'
