@@ -103,8 +103,11 @@ jobs:
             if ! out="$(bash -c "$2" 2>&1)"; then
               echo "::error title=$1::$(tail -c 600 <<<"$out" | tr '\n' ' ')"
               fail=1
+            else
+              echo "::notice title=ok::$1"
             fi
           }
+          set +e
           check "versión" 'appforge --version | grep -F "$VERSION"'
           check "enlace /usr/bin" 'test "$(readlink /usr/bin/appforge)" = /opt/appforge/appforge'
           check "validate" 'appforge validate --strict'
