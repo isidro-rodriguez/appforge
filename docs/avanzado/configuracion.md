@@ -2,9 +2,8 @@
 
 ## Dónde está
 
-AppForge lee `config.toml` del directorio del binario (`/opt/appforge/` si seguiste la
-[instalación](../guia/instalacion.md)). Todas las rutas relativas se resuelven desde
-ahí.
+AppForge lee `config.toml` del directorio del binario, el `appforge/` que
+descomprimiste. Todas las rutas relativas se resuelven desde ahí.
 
 ## `config.toml`
 

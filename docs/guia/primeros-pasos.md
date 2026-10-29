@@ -1,13 +1,38 @@
 # Primeros pasos
 
-Este recorrido usa la receta de [Ollama](ollama.md), que viene incluida. Ningún paso
-cambia nada en tu sistema hasta el final, y ese paso es opcional.
+## 1. Descarga y descomprime
 
-## 1. Abre el catálogo
+Descarga `appforge-<versión>-linux-x86_64.tar.gz` de
+[Releases](https://github.com/isidro-rodriguez/appforge/releases) y descomprímelo
+donde quieras:
 
 ```bash
-sudo appforge          # o: sudo /opt/appforge/appforge
+sudo tar -xzf appforge-<versión>-linux-x86_64.tar.gz
 ```
+
+```text
+appforge/
+├── appforge        # el programa
+├── config.toml     # configuración
+└── entries/        # recetas: las de ejemplo y las que añadas
+```
+
+Las recetas de ejemplo ([Ollama](ollama.md) y [fuentes](fuentes.md)) son eso, ejemplos:
+úsalas, cámbialas, bórralas o escribe [las tuyas](../desarrollo/nueva-entrada.md).
+
+!!! note "Con `sudo`"
+
+    AppForge solo funciona como superusuario y solo acepta recetas de `root` que nadie
+    más pueda modificar. Descomprimir con `sudo` las deja así.
+
+## 2. Abre el catálogo
+
+```bash
+sudo ./appforge/appforge
+```
+
+El resto del recorrido usa la receta de Ollama. Ningún paso cambia nada en tu sistema
+hasta el de instalar, y ese es opcional.
 
 <figure class="af-shot" markdown>
 ![Catálogo sin buscador ni categorías](../assets/images/screenshots/catalogo-simple.svg)
@@ -25,7 +50,7 @@ Cada fila tiene una **casilla** de selección, el nombre y una etiqueta:
 
 Muévete con las flechas. La ficha de la derecha resume la receta resaltada.
 
-## 2. Lee la receta completa
+## 3. Lee la receta completa
 
 Haz **doble clic** sobre *Ollama* o pulsa ++v++.
 
@@ -36,7 +61,7 @@ Haz **doble clic** sobre *Ollama* o pulsa ++v++.
 
 Es lo mismo que hay en el TOML, pero legible. ++esc++ vuelve al catálogo.
 
-## 3. Prueba sin tocar nada
+## 4. Prueba sin tocar nada
 
 Pulsa ++d++ (*dry-run*). AppForge te pide los parámetros de la receta:
 
@@ -49,7 +74,7 @@ Cambia el valor que quieras (vacío = el de por defecto) y acepta. La pantalla d
 comando que se ejecutaría (precedido de `#`) y el **diff** de cada fichero
 que se escribiría. Al terminar, ++esc++ vuelve al catálogo.
 
-## 4. Instala por lotes
+## 5. Instala por lotes
 
 Marca varias recetas con ++space++ y pulsa ++i++. AppForge pide los parámetros de
 cada una y confirma la lista antes de empezar.
@@ -67,7 +92,7 @@ Si una receta falla, el lote sigue con la siguiente y la fila queda en rojo. El
 registro dice en qué paso se detuvo; corrige y vuelve a aplicarla (los pasos se
 pueden repetir).
 
-## 5. Desinstala
+## 6. Desinstala
 
 Resalta (o marca) una receta aplicada y pulsa ++u++: se ejecuta su `[remove]`.
 

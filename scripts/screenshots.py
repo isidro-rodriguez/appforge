@@ -243,7 +243,7 @@ def _capture_cli(base: Path) -> None:
 
 
 def _show_installed_paths(base: Path) -> None:
-    """Muestra las rutas temporales como en una instalación en ``/opt/appforge``."""
+    """Muestra las rutas temporales como un ``appforge/`` descomprimido en un HOME."""
     from appforge import tui
 
     def short(path: Path) -> str:
@@ -251,7 +251,7 @@ def _show_installed_paths(base: Path) -> None:
         for name in ("ui", "plain"):
             prefix = str(base / name)
             if text.startswith(prefix + os.sep):
-                return "/opt/appforge" + text[len(prefix) :]
+                return "/home/usuario/appforge" + text[len(prefix) :]
         return text
 
     tui._home_short = short  # type: ignore[assignment]

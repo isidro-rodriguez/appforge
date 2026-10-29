@@ -22,7 +22,6 @@ extra_css = ["assets/stylesheets/appforge.css"]
 nav = [
     { "Inicio" = "index.md" },
     { "Guía" = [
-        { "Instalación" = "guia/instalacion.md" },
         { "Primeros pasos" = "guia/primeros-pasos.md" },
         { "Interfaz" = "guia/interfaz.md" },
         { "Línea de comandos" = "guia/cli.md" },

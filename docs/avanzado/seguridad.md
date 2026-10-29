@@ -21,8 +21,8 @@ aplicar:
 El directorio de recetas entero se comprueba igual. Para arreglar permisos:
 
 ```bash
-sudo chown -R root:root /opt/appforge/entries
-sudo chmod -R go-w /opt/appforge/entries
+sudo chown -R root:root appforge/entries
+sudo chmod -R go-w appforge/entries
 ```
 
 ## Qué garantiza al ejecutar

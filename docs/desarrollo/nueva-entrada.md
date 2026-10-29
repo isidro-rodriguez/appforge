@@ -103,10 +103,10 @@ run = "rm -f /etc/ssh/sshd_config.d/50-appforge.conf && systemctl reload ssh"
 ## 7. Comprueba la receta
 
 ```bash
-cd /opt/appforge
+cd appforge
 sudo chown -R root:root entries && sudo chmod -R go-w entries  # recetas solo de root
-sudo appforge validate --strict ssh-hardening   # sin errores ni avisos → código 0
-sudo appforge                                   # TUI: márcala y pulsa d (dry-run)
+sudo ./appforge validate --strict ssh-hardening   # sin errores ni avisos → código 0
+sudo ./appforge                                 # TUI: márcala y pulsa d (dry-run)
 ```
 
 `validate` no ejecuta nada: comprueba el formato, los ficheros de `ssh-hardening/`,

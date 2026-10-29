@@ -21,7 +21,7 @@ fichero TOML que puedes revisar, repetir y deshacer desde un único menú.
 </p>
 
 <div class="af-hero__actions" markdown>
-[Empezar](guia/instalacion.md){ .md-button .md-button--primary }
+[Empezar](guia/primeros-pasos.md){ .md-button .md-button--primary }
 [Crear una receta](desarrollo/nueva-entrada.md){ .md-button }
 </div>
 
@@ -124,6 +124,6 @@ sin servicio de arranque, con un lanzador que lo enciende y apaga y ajustes de
 memoria pensados para GPU de consumo.
 
 <div class="af-hero__actions" markdown>
-[Instalar AppForge](guia/instalacion.md){ .md-button .md-button--primary }
+[Empezar](guia/primeros-pasos.md){ .md-button .md-button--primary }
 [Ver todas las opciones](avanzado/configuracion.md){ .md-button }
 </div>

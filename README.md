@@ -6,29 +6,20 @@ Menú de consola que centraliza recetas de configuración repetibles: cada opci�
 fichero TOML que instala y configura una aplicación (ejemplos incluidos: Ollama bajo
 demanda y fuentes adicionales). Para **Debian 13**.
 
-## 🚀 Instalación
+## 🚀 Uso
 
 Descarga `appforge-<versión>-linux-x86_64.tar.gz` de
-[Releases](https://github.com/isidro-rodriguez/appforge/releases) y extráelo como
-superusuario:
+[Releases](https://github.com/isidro-rodriguez/appforge/releases), descomprímelo y
+ábrelo como superusuario:
 
 ```bash
-sudo tar -xzf appforge-<versión>-linux-x86_64.tar.gz -C /opt
-sudo ln -s /opt/appforge/appforge /usr/local/bin/appforge
+sudo tar -xzf appforge-<versión>-linux-x86_64.tar.gz
+sudo ./appforge/appforge                    # TUI: espacio marca, i instala, d dry-run, v detalle
+sudo ./appforge/appforge validate --strict  # revisa las recetas sin ejecutarlas
 ```
 
-Contiene el binario, `config.toml` y `entries/` con las recetas de ejemplo.
-
-## 🛠️ Uso
-
-AppForge solo funciona como superusuario.
-
-```bash
-sudo appforge                       # TUI: espacio marca, i instala, d dry-run, v detalle
-sudo appforge validate --strict     # revisa las recetas sin ejecutarlas
-```
-
-El buscador y el panel de categorías se activan en `/opt/appforge/config.toml` (`[ui]`).
+Trae el binario, `config.toml` y `entries/` con recetas de ejemplo: úsalas, cámbialas o
+añade las tuyas. El buscador y las categorías se activan en `config.toml` (`[ui]`).
 
 ## 📚 Documentación
 
