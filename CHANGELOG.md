@@ -7,6 +7,36 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-29
+
+### Added
+
+- Paquete **`.deb`** como forma de distribución: binario en `/opt/appforge` con
+  enlace en `/usr/bin/appforge`, configuración y recetas en `/etc/appforge` (se
+  conservan tus cambios al actualizar), registro en `/var/log/appforge`, página
+  `man appforge`, lanzador en el menú de aplicaciones (abre una terminal con `sudo`)
+  e iconos. Cada Release se prueba en un Debian 13 limpio y publica `SHA256SUMS` y
+  la procedencia del paquete (`gh attestation verify`).
+- Clave opcional `link` en `[[param]]`: la TUI la muestra bajo la pregunta y la
+  página de detalle la enlaza.
+- Desde el código, `uv run appforge` sin root pide la contraseña de `sudo` y se
+  relanza.
+- Documentación del modelo de confianza (AppForge no es un sandbox) y de los fallos
+  parciales.
+
+### Changed
+
+- Ollama se instala de una **versión fija** (parámetro `version`, `v0.40.13` por
+  defecto, con enlace a sus Releases) y se verifica con su `sha256sum.txt` oficial;
+  sin suma no se instala. Si esa versión ya está instalada no se descarga de nuevo.
+- La Nerd Font de la receta de fuentes exige su `SHA-256.txt` y su parámetro enlaza a
+  las Releases de Nerd Fonts.
+- `config.toml` se rechaza si es un enlace simbólico o lo pueden modificar otros.
+
+### Removed
+
+- Paquete `.tar.gz` y `scripts/build.py --archive`: lo sustituye el `.deb`.
+
 ## [0.6.1] - 2026-10-29
 
 ### Changed
