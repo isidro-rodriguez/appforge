@@ -7,6 +7,29 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-29
+
+### Added
+
+- Página de detalle de cada entrada (doble clic o `v`) con la descripción larga, los
+  parámetros, cada paso con su comando o destino, `[check]` y `[remove]`, para saber
+  exactamente qué hará antes de instalar.
+- Clave opcional `details` (Markdown) en las entradas; la de Ollama la usa.
+- Sitio de documentación con Zensical y el tema de la aplicación: portada, guía de
+  uso con capturas, uso avanzado, sección para desarrolladores con tutorial de
+  recetas y referencia de la API.
+- Publicación automática del sitio en GitHub Pages.
+- `scripts/screenshots.py` para regenerar las capturas de la TUI.
+
+### Changed
+
+- Un clic simple en la lista solo resalta la entrada; se marca con espacio o Enter.
+
+### Fixed
+
+- La TUI ya no se cierra con `NoMatches` al borrar en el buscador mientras termina
+  una comprobación en segundo plano.
+
 ## [0.2.0] - 2026-10-29
 
 ### Added
