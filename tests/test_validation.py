@@ -113,3 +113,22 @@ def test_ui_options(tmp_path: Path) -> None:
     cfg.write_text('entries_dir = "entries"\nui = 1\n')
     with pytest.raises(ConfigError, match="tabla \\[ui\\]"):
         load_config(tmp_path)
+
+
+def test_sudo_user_files_are_trusted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    from appforge.entry import insecure_reason
+
+    f = tmp_path / "x.toml"
+    f.write_text("")
+    f.chmod(0o644)
+    real = f.stat()
+    monkeypatch.setattr(os, "getuid", lambda: 4242)  # como si fuéramos otro (root)
+    monkeypatch.delenv("SUDO_UID", raising=False)
+    if real.st_uid != 0:
+        assert "propietario ajeno" in (insecure_reason(f) or "")
+    monkeypatch.setenv("SUDO_UID", str(real.st_uid))  # quien llamó a sudo
+    assert insecure_reason(f) is None

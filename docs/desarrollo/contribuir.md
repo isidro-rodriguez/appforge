@@ -24,9 +24,8 @@ sudo .venv/bin/appforge                        # TUI con las recetas de entries/
 sudo .venv/bin/appforge validate --strict
 ```
 
-Las recetas deben ser de `root` para que AppForge las acepte como superusuario
-(`sudo chown -R root:root entries`). Si prefieres no cambiar el propietario en tu
-copia de trabajo, usa los tests: el motor se prueba sin `root`.
+Acepta las recetas de tu copia de trabajo porque son tuyas (`SUDO_UID`); solo deben
+no ser escribibles por grupo ni otros (`chmod -R go-w entries`).
 
 ## Calidad
 

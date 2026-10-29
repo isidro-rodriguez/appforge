@@ -130,11 +130,28 @@ class Entry:
 # --------------------------------------------------------------------------- #
 # Seguridad: las entradas ejecutan comandos, así que se tratan como código.
 # --------------------------------------------------------------------------- #
+def trusted_uids() -> set[int]:
+    """Propietarios de los que se aceptan entradas.
+
+    ``root``, el usuario del proceso y quien lanzó AppForge con ``sudo``
+    (``SUDO_UID``): ese usuario ya puede ejecutar cualquier cosa como root, así
+    que sus ficheros no dan más acceso del que tiene.
+
+    Returns:
+        Los uid de confianza.
+    """
+    uids = {0, os.getuid()}
+    sudo_uid = os.environ.get("SUDO_UID", "")
+    if sudo_uid.isdigit():
+        uids.add(int(sudo_uid))
+    return uids
+
+
 def insecure_reason(path: Path) -> str | None:
     """Indica por qué ``path`` no es de fiar para cargar código de él.
 
-    Un fichero es inseguro si pertenece a otro usuario distinto de root o del
-    usuario actual, o si es escribible por el grupo o por otros.
+    Un fichero es inseguro si su propietario no está en :func:`trusted_uids`,
+    o si es escribible por el grupo o por otros.
 
     Args:
         path: Fichero o directorio a comprobar.
@@ -146,7 +163,7 @@ def insecure_reason(path: Path) -> str | None:
         st = path.stat()
     except OSError as e:
         return f"{path}: {e.strerror}"
-    if st.st_uid not in (0, os.getuid()):
+    if st.st_uid not in trusted_uids():
         return f"{path}: propietario ajeno (uid {st.st_uid})"
     if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
         return f"{path}: escribible por grupo u otros ({stat.filemode(st.st_mode)})"

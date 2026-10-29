@@ -7,6 +7,14 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+
+- Se aceptan las entradas cuyo propietario es quien ejecutó `sudo` (`SUDO_UID`),
+  además de `root`: el paquete se puede descomprimir sin `sudo`. Siguen rechazándose
+  las de otros usuarios y las escribibles por grupo u otros.
+- La documentación ya no tiene página de instalación: Primeros pasos indica
+  descargar y descomprimir el paquete.
+
 ## [0.6.0] - 2026-10-29
 
 ### Added

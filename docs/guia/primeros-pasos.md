@@ -7,7 +7,7 @@ Descarga `appforge-<versión>-linux-x86_64.tar.gz` de
 donde quieras:
 
 ```bash
-sudo tar -xzf appforge-<versión>-linux-x86_64.tar.gz
+tar -xzf appforge-<versión>-linux-x86_64.tar.gz
 ```
 
 ```text
@@ -20,12 +20,9 @@ appforge/
 Las recetas de ejemplo ([Ollama](ollama.md) y [fuentes](fuentes.md)) son eso, ejemplos:
 úsalas, cámbialas, bórralas o escribe [las tuyas](../desarrollo/nueva-entrada.md).
 
-!!! note "Con `sudo`"
-
-    AppForge solo funciona como superusuario y solo acepta recetas de `root` que nadie
-    más pueda modificar. Descomprimir con `sudo` las deja así.
-
 ## 2. Abre el catálogo
+
+AppForge solo funciona como superusuario:
 
 ```bash
 sudo ./appforge/appforge

@@ -13,7 +13,7 @@ Descarga `appforge-<versión>-linux-x86_64.tar.gz` de
 ábrelo como superusuario:
 
 ```bash
-sudo tar -xzf appforge-<versión>-linux-x86_64.tar.gz
+tar -xzf appforge-<versión>-linux-x86_64.tar.gz
 sudo ./appforge/appforge                    # TUI: espacio marca, i instala, d dry-run, v detalle
 sudo ./appforge/appforge validate --strict  # revisa las recetas sin ejecutarlas
 ```

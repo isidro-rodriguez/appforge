@@ -81,8 +81,9 @@ Debian stable (13). It **only runs as root**: no sudo handling, no unprivileged 
 - Before overwriting a file, copy it to `<dest>.backup` in the same directory with the
   original's mode, replacing any previous backup; the sink event lands in the run log
   (`<base>/logs/appforge.log`). Identical content means "sin cambios", no backup.
-- Security checks in `entry.py` (owner, group/other writable, symlinks, `..`, reserved
-  param names) are part of the contract. Do not relax them without asking.
+- Security checks in `entry.py` (owner in `trusted_uids()` = root, process user or
+  `SUDO_UID`; group/other writable, symlinks, `..`, reserved param names) are part of
+  the contract. Do not relax them without asking.
 - Scope limit: four step kinds, no conditionals, loops or inter-entry dependencies.
   Push complex logic into an entry `script`. Ask before extending the format.
 - **The CLI does not duplicate the TUI.** Everything interactive (browse, apply,
