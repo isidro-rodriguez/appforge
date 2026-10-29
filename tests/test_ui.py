@@ -11,8 +11,10 @@ from appforge.tui import (
     AppRow,
     CategoryRow,
     ConfirmScreen,
+    DetailScreen,
     ParamsScreen,
     ProgressScreen,
+    entry_markdown,
 )
 
 SIZE = (100, 30)
@@ -222,3 +224,36 @@ async def test_repaint_before_rows_are_composed(home: Path, demo: Path) -> None:
         await pilot.pause()
         assert rows(app) == ["alpha"]
         assert app.query(AppRow).first().query_one(".tag", Label).visual
+
+
+async def test_double_click_opens_detail_page(config: Config) -> None:
+    app = AppForgeApp(config)
+    async with app.run_test(size=SIZE) as pilot:
+        await settle(app, pilot)
+        row = app.query(AppRow).first()
+        await pilot.click(row)
+        await pilot.pause()
+        assert app.marked == set()  # un clic simple ya no marca
+        await pilot.click(row, times=2)
+        await wait_for(pilot, lambda: isinstance(app.screen, DetailScreen))
+        screen = app.screen
+        assert isinstance(screen, DetailScreen)
+        assert screen.entry.id == "ollama"
+        await pilot.press("escape")
+        await wait_for(pilot, lambda: not isinstance(app.screen, DetailScreen))
+        await pilot.press("v")
+        await wait_for(pilot, lambda: isinstance(app.screen, DetailScreen))
+
+
+def test_entry_markdown_lists_everything(config: Config) -> None:
+    from appforge.entry import load_entries
+
+    entries, _ = load_entries(config.entries_dir)
+    md = entry_markdown(entries[0], False)
+    assert md.startswith("# Ollama (bajo demanda)")
+    assert "### Ajustes de rendimiento" in md  # clave details
+    assert "| `owner` | Usuario que ejecutará Ollama" in md
+    assert "**4. Variables de entorno (optimización)** · `template`" in md
+    assert "Genera `/opt/ollama/ollama.env` desde `ollama/ollama.env.tpl`" in md
+    assert "## Comprobación" in md
+    assert "| no aplicada | IA | sí | `ollama.toml` |" in md

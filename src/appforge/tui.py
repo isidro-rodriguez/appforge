@@ -18,11 +18,12 @@ from rich.console import Group
 from rich.markup import escape
 from rich.table import Table
 from rich.text import Text
-from textual import on, work
+from textual import events, on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
+from textual.message import Message
 from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
@@ -31,6 +32,7 @@ from textual.widgets import (
     Label,
     ListItem,
     ListView,
+    Markdown,
     ProgressBar,
     RichLog,
     Static,
@@ -67,6 +69,7 @@ _VERBS = {
 _MAIN_ACTIONS = {
     "toggle_mark",
     "run",
+    "show_details",
     "focus_search",
     "leave_search",
     "reload",
@@ -133,6 +136,10 @@ ItemRow .time { width: 9; content-align: right middle; color: $text-muted; }
 #progress-bar Bar { width: 1fr; }
 #progress-bar Bar > .bar--bar { color: $primary; background: $panel; }
 #progress-bar Bar > .bar--complete { color: $success; }
+#detail-page { height: 1fr; padding: 0 2; }
+#detail-page Markdown { background: $background; }
+#detail-page MarkdownH1 { content-align: left middle; color: $accent; }
+#detail-page MarkdownH2, #detail-page MarkdownH3 { color: $accent; }
 #registro { height: 1fr; }
 #registro RichLog { background: $background; scrollbar-size-vertical: 1; }
 """
@@ -184,9 +191,28 @@ class AppRow(ListItem):
             yield Label(escape(self.entry.name), classes="name")
             yield Label("", classes="tag")
 
+    class Clicked(Message):
+        """Clic sobre una fila; ``chain`` es 2 en un doble clic."""
+
+        def __init__(self, row: "AppRow", chain: int) -> None:
+            """Crea el mensaje para ``row``."""
+            super().__init__()
+            self.row = row
+            self.chain = chain
+
     def on_mount(self) -> None:
         """Pinta el último estado recibido antes de estar montada."""
         self._paint()
+
+    def on_click(self, event: events.Click) -> None:
+        """Resalta la fila; el doble clic abre su detalle.
+
+        Evita el comportamiento de ``ListItem`` (seleccionar con un clic), que
+        marcaría y desmarcaría la entrada en cada doble clic.
+        """
+        event.prevent_default()
+        event.stop()
+        self.post_message(self.Clicked(self, event.chain))
 
     def render_state(self, marked: bool, state: State, checked: bool) -> None:
         """Pinta la casilla y la etiqueta.
@@ -393,6 +419,109 @@ class ParamsScreen(ModalScreen[dict[str, str] | None]):
     @on(Button.Pressed, "#cancel")
     def action_cancel(self) -> None:
         """Cierra sin valores."""
+        self.dismiss(None)
+
+
+def _md_code(code: str, lang: str = "bash") -> str:
+    """Bloque de código Markdown con una valla que no choca con el contenido."""
+    fence = "````" if "```" in code else "```"
+    return f"{fence}{lang}\n{code.strip()}\n{fence}"
+
+
+def entry_markdown(entry: Entry, state: State, checked: bool = True) -> str:
+    """Página de detalle de una entrada en Markdown.
+
+    Args:
+        entry: Entrada a describir.
+        state: Resultado de ``[check]``.
+        checked: ``False`` mientras ``[check]`` no ha terminado.
+
+    Returns:
+        El documento Markdown.
+    """
+    if not checked:
+        status = "comprobando…"
+    else:
+        status = {True: "aplicada", False: "no aplicada"}.get(state, "sin [check]")
+    parts = [f"# {entry.name}"]
+    if entry.description:
+        parts.append(entry.description)
+    parts.append(
+        "| Estado | Categoría | Root | Fichero |\n|---|---|---|---|\n"
+        f"| {status} | {entry.category or '—'} | "
+        f"{'sí' if entry.requires_root else 'no'} | `{entry.path.name}` |"
+    )
+    if entry.problems:
+        parts.append("## Problemas")
+        parts.append("\n".join(f"- {p}" for p in entry.problems))
+    parts.append("## Descripción")
+    parts.append(entry.details or "_Esta entrada no tiene descripción detallada._")
+    if entry.params:
+        rows = []
+        for p in entry.params:
+            if p.secret:
+                default = "_(secreto)_"
+            else:
+                default = f"`{p.default}`" if p.default else "—"
+            rows.append(f"| `{p.name}` | {p.prompt} | {default} |")
+        parts.append("## Parámetros")
+        parts.append(
+            "| Nombre | Pregunta | Por defecto |\n|---|---|---|\n" + "\n".join(rows)
+        )
+    parts.append("## Pasos")
+    for i, step in enumerate(entry.steps, 1):
+        parts.append(f"**{i}. {step.title}** · `{step.kind}`")
+        if step.kind == "run":
+            parts.append(_md_code(step.value))
+        elif step.kind == "script":
+            parts.append(f"Ejecuta `{entry.id}/{step.value}` con bash.")
+        else:
+            mode = f" (modo `{step.mode:04o}`)" if step.mode is not None else ""
+            verb = "Genera" if step.kind == "template" else "Copia"
+            parts.append(f"{verb} `{step.dest}` desde `{entry.id}/{step.value}`{mode}.")
+    if entry.check:
+        parts.append("## Comprobación")
+        parts.append(_md_code(entry.check))
+    if entry.remove:
+        parts.append("## Eliminación")
+        parts.append(_md_code(entry.remove))
+    return "\n\n".join(parts) + "\n"
+
+
+class DetailScreen(Screen[None]):
+    """Página con la descripción detallada de una entrada."""
+
+    BINDINGS: ClassVar[list[BindingType]] = [("escape,q,v", "close", "Volver")]
+
+    def __init__(self, entry: Entry, state: State, checked: bool) -> None:
+        """Crea la página para ``entry``.
+
+        Args:
+            entry: Entrada a mostrar.
+            state: Resultado de ``[check]``.
+            checked: ``False`` mientras ``[check]`` no ha terminado.
+        """
+        super().__init__()
+        self.entry = entry
+        self.state = state
+        self.checked = checked
+
+    def compose(self) -> ComposeResult:
+        """Compone cabecera y documento."""
+        yield TopBar("Detalle")
+        panel = VerticalScroll(classes="panel", id="detail-page")
+        panel.border_title = "Ficha"
+        panel.border_subtitle = self.entry.path.name
+        with panel:
+            yield Markdown(entry_markdown(self.entry, self.state, self.checked))
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Da el foco al documento para desplazarlo con el teclado."""
+        self.query_one("#detail-page").focus()
+
+    def action_close(self) -> None:
+        """Vuelve al catálogo."""
         self.dismiss(None)
 
 
@@ -693,6 +822,7 @@ class AppForgeApp(App[None]):
         Binding("i", "run('apply', False)", "Instalar"),
         Binding("u", "run('remove', False)", "Desinstalar"),
         Binding("d", "run('apply', True)", "Dry-run"),
+        Binding("v", "show_details", "Ver"),
         Binding("slash", "focus_search", "Buscar"),
         Binding("tab", "focus_next", "Cambiar panel", priority=True),
         Binding("escape", "leave_search", "", show=False),
@@ -867,6 +997,25 @@ class AppForgeApp(App[None]):
     def app_highlighted(self) -> None:
         """Actualiza el detalle al moverse por la lista."""
         self._show_detail()
+
+    @on(AppRow.Clicked)
+    def app_clicked(self, event: AppRow.Clicked) -> None:
+        """Clic: resalta la fila. Doble clic: abre su página de detalle."""
+        apps = self.query_one("#apps", ListView)
+        rows = list(self.query(AppRow))
+        if event.row in rows:
+            apps.index = rows.index(event.row)
+        apps.focus()
+        if event.chain >= 2:
+            self.action_show_details()
+
+    def action_show_details(self) -> None:
+        """Abre la página de detalle de la entrada resaltada."""
+        entry = self.current_entry()
+        if entry is None:
+            return
+        checked = entry.id in self.checked
+        self.push_screen(DetailScreen(entry, self.states.get(entry.id), checked))
 
     @on(ListView.Selected, "#apps")
     def app_selected(self) -> None:

@@ -18,6 +18,7 @@ FILE_KINDS = ("template", "copy", "script")
 TOP_KEYS = {
     "name",
     "description",
+    "details",
     "category",
     "requires_root",
     "param",
@@ -93,6 +94,7 @@ class Entry:
         path: Ruta del fichero TOML.
         name: Nombre que se muestra en el menú.
         description: Descripción de una línea.
+        details: Descripción larga en Markdown para la página de detalle.
         category: Categoría para el panel de categorías; vacía si no tiene.
         requires_root: Si los pasos se ejecutan con privilegios.
         params: Parámetros que se piden antes de aplicar.
@@ -106,6 +108,7 @@ class Entry:
     path: Path
     name: str
     description: str = ""
+    details: str = ""
     category: str = ""
     requires_root: bool = False
     params: list[Param] = field(default_factory=list)
@@ -380,6 +383,7 @@ def load_entry(path: Path) -> Entry:
     parser.unknown(data, TOP_KEYS, "entrada")
     entry.name = parser.text(data, "name", "entrada", required=True) or path.stem
     entry.description = parser.text(data, "description", "entrada") or ""
+    entry.details = (parser.text(data, "details", "entrada") or "").strip()
     entry.category = (parser.text(data, "category", "entrada") or "").strip()
     entry.requires_root = parser.flag(data, "requires_root", "entrada")
     entry.params = parser.params(data.get("param"))
