@@ -7,6 +7,23 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-30
+
+### Added
+
+- `type = "cidr"` (redes con prefijo) y límites `min`/`max` en `type = "int"`, con
+  los validadores de acodo 0.4.
+
+### Changed
+
+- **Incompatible:** cada `[[param]]` exige `type`. Los valores fijos pasan a
+  `type = "choice"` con `choices`. Lo que escribe el usuario debe cumplir el tipo; si
+  deja el campo vacío vale el `default` de la receta, que se acepta tal cual (puede
+  ser un marcador como `-`). Revisa tus recetas con `appforge validate`.
+- Las rutas de `type = "path"` se validan con `valid_path` de acodo.
+- Recetas incluidas: todos los parámetros con tipo; `allow_from` del cortafuegos es
+  `cidr` y `context_length` de Ollama, `int` con mínimo 512.
+
 ## [0.12.2] - 2026-10-30
 
 ### Fixed
