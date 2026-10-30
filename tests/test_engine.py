@@ -14,10 +14,12 @@ name = "Demo"
 [[param]]
 name = "who"
 prompt = "Quién"
+type = "text"
 default = "mundo"
 [[param]]
 name = "token"
 prompt = "Token"
+type = "text"
 secret = true
 [check]
 run = "grep -q hola {dest}/saludo.txt && test -f {dest}/bin/tool.sh"
@@ -217,6 +219,7 @@ def test_param_values_reach_bash_literally(
 name = "Literal"
 [[param]]
 name = "v"
+type = "text"
 [[step]]
 run = 'printf %s "$v" > {out}'
 """,

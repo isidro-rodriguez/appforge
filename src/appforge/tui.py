@@ -374,6 +374,7 @@ _TYPE_HINTS = {
     "email": "nombre@dominio",
     "path": "/ruta/absoluta",
     "ip": "dirección IP",
+    "cidr": "red/prefijo, p. ej. 192.168.1.0/24",
     "url": "https://…",
     "domain": "ejemplo.org",
 }
@@ -403,7 +404,11 @@ def param_field(param: Param) -> Input | Select[str]:
     if param.default:
         placeholder = "(por defecto)" if param.secret else param.default
     else:
-        placeholder = _TYPE_HINTS.get(param.type, "")
+        placeholder = (
+            param.int_range()
+            if param.type == "int"
+            else _TYPE_HINTS.get(param.type, "")
+        )
     return Input(
         placeholder=placeholder,
         password=param.secret,
@@ -561,7 +566,12 @@ def entry_markdown(entry: Entry, state: State, checked: bool = True) -> str:
             else:
                 default = f"`{p.default}`" if p.default else "—"
             prompt = f"{p.prompt} ([{p.link}]({p.link}))" if p.link else p.prompt
-            kind = " · ".join(f"`{c}`" for c in p.choices) if p.choices else p.type
+            if p.choices:
+                kind = " · ".join(f"`{c}`" for c in p.choices)
+            elif p.type == "int" and (p.minimum is not None or p.maximum is not None):
+                kind = f"int ({p.int_range().removeprefix('un número entero ')})"
+            else:
+                kind = p.type
             rows.append(f"| `{p.name}` | {prompt} | {kind} | {default} |")
         parts.append("## Parámetros")
         parts.append(

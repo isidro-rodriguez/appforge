@@ -274,7 +274,7 @@ def test_entry_markdown_lists_everything(config: Config) -> None:
     assert md.startswith("# Ollama (bajo demanda)")
     assert "### Ajustes de rendimiento" in md  # details.md
     assert "| `arch` | Arquitectura | `amd64` · `arm64` | `amd64` |" in md
-    assert "| `context_length` | OLLAMA_CONTEXT_LENGTH | int | `8192` |" in md
+    assert "| `context_length` | OLLAMA_CONTEXT_LENGTH | int (≥ 512) | `8192` |" in md
     assert (
         "| `version` | Versión de Ollama (etiqueta de GitHub) "
         "([https://github.com/ollama/ollama/releases]"
@@ -299,6 +299,7 @@ type = "bool"
 [[param]]
 name = "color"
 prompt = "Color"
+type = "choice"
 choices = ["rojo", "azul"]
 default = "azul"
 [[param]]

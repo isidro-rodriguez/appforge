@@ -88,7 +88,7 @@ def resolve_values(entry: Entry, given: dict[str, str]) -> dict[str, str]:
 
     Raises:
         EngineError: Si se da un parámetro desconocido, falta uno sin valor
-            por defecto o un valor no cumple su ``type`` o ``choices``.
+            por defecto o un valor escrito no cumple su ``type``.
 
     Examples:
         >>> from pathlib import Path
@@ -104,13 +104,16 @@ def resolve_values(entry: Entry, given: dict[str, str]) -> dict[str, str]:
     missing = []
     invalid = []
     for p in entry.params:
-        value = given.get(p.name) or p.default
-        if not value:
-            missing.append(p.name)
-        elif reason := p.error(value):
-            invalid.append(f"{p.name} {reason}")
+        typed = given.get(p.name)
+        if typed:  # lo escrito por el usuario debe cumplir su tipo
+            if reason := p.error(typed):
+                invalid.append(f"{p.name} {reason}")
+            else:
+                values[p.name] = p.normalize(typed)
+        elif p.default:  # el de la receta se acepta tal cual
+            values[p.name] = p.default
         else:
-            values[p.name] = p.normalize(value)
+            missing.append(p.name)
     if missing:
         raise EngineError(f"Faltan parámetros: {', '.join(missing)}")
     if invalid:

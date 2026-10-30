@@ -18,11 +18,15 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
-from acodo.utils.converters import to_bool, to_int, to_path
+from acodo.utils.converters import to_bool
 from acodo.utils.validators import (
+    valid_bool,
+    valid_cidr,
     valid_domain,
     valid_email,
+    valid_int,
     valid_ip,
+    valid_path,
     valid_port,
     valid_url,
 )
@@ -42,7 +46,17 @@ TOP_KEYS = {
     "step",
     "remove",
 }
-PARAM_KEYS = {"name", "prompt", "default", "secret", "link", "type", "choices"}
+PARAM_KEYS = {
+    "name",
+    "prompt",
+    "type",
+    "default",
+    "choices",
+    "min",
+    "max",
+    "secret",
+    "link",
+}
 URL = re.compile(r"https?://\S+")
 STEP_KEYS = {"title", "dest", "mode", *STEP_KINDS}
 IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -67,28 +81,22 @@ RESERVED_PREFIX = "APPFORGE_"
 USER_VARS = ("APPFORGE_USER", "APPFORGE_USER_HOME")
 
 
-def _is_int(value: str) -> bool:
-    return to_int(value) is not None
-
-
-def _is_bool(value: str) -> bool:
-    return to_bool(value) is not None
-
-
-def _is_abs_path(value: str) -> bool:
-    path = to_path(value)
-    return path is not None and value.startswith("/")
+def _abs_path(value: str) -> bool:
+    return valid_path(value, absolute=True)
 
 
 # type de un parámetro: (comprobación, qué se espera, para el mensaje de error).
+# ``int`` (por sus límites) y ``choice`` (por su lista) se comprueban aparte.
 PARAM_TYPES: dict[str, tuple[Any, str]] = {
     "text": (None, "texto"),
-    "bool": (_is_bool, "sí o no"),
-    "int": (_is_int, "un número entero"),
+    "bool": (valid_bool, "sí o no"),
+    "choice": (None, "uno de los valores"),
+    "int": (None, "un número entero"),
     "port": (valid_port, "un puerto (1-65535)"),
     "email": (valid_email, "un email"),
-    "path": (_is_abs_path, "una ruta absoluta"),
+    "path": (_abs_path, "una ruta absoluta"),
     "ip": (valid_ip, "una dirección IP"),
+    "cidr": (valid_cidr, "una red con prefijo (p. ej. 192.168.1.0/24)"),
     "url": (valid_url, "una URL"),
     "domain": (valid_domain, "un nombre de dominio"),
 }
@@ -108,7 +116,9 @@ class Param:
             ``None``.
         type: Tipo del valor (clave de :data:`PARAM_TYPES`); ``bool`` llega a
             los pasos como ``yes``/``no``.
-        choices: Valores permitidos; vacío si se admite cualquiera del tipo.
+        choices: Valores permitidos (solo ``type = "choice"``).
+        minimum: Mínimo de un ``int``, o ``None``.
+        maximum: Máximo de un ``int``, o ``None``.
     """
 
     name: str
@@ -118,6 +128,8 @@ class Param:
     link: str | None = None
     type: str = "text"
     choices: tuple[str, ...] = ()
+    minimum: int | None = None
+    maximum: int | None = None
 
     def normalize(self, value: str) -> str:
         """Forma canónica de ``value`` (``yes``/``no`` en un ``bool``).
@@ -137,7 +149,7 @@ class Param:
         return value.strip() if self.type != "text" else value
 
     def error(self, value: str) -> str | None:
-        """Por qué ``value`` no vale para este parámetro.
+        """Por qué ``value`` (escrito por el usuario) no vale para este parámetro.
 
         Args:
             value: Valor no vacío.
@@ -148,17 +160,39 @@ class Param:
         Examples:
             >>> Param("p", "P", type="port").error("80") is None
             True
-            >>> Param("p", "P", choices=("a", "b")).error("c")
+            >>> Param("p", "P", type="choice", choices=("a", "b")).error("c")
             'debe ser uno de: a, b'
+            >>> Param("n", "N", type="int", minimum=1, maximum=9).error("10")
+            'debe ser un número entero entre 1 y 9'
         """
-        if self.choices:
+        value = value.strip() if self.type != "text" else value
+        if self.type == "choice":
             if value in self.choices:
                 return None
             return f"debe ser uno de: {', '.join(self.choices)}"
+        if self.type == "int":
+            if valid_int(value, self.minimum, self.maximum):
+                return None
+            return f"debe ser {self.int_range()}"
         check, expected = PARAM_TYPES.get(self.type, (None, ""))
-        if check is not None and not check(value.strip()):
+        if check is not None and not check(value):
             return f"debe ser {expected}"
         return None
+
+    def int_range(self) -> str:
+        """Descripción de un ``int`` con sus límites, para mensajes y la ficha.
+
+        Returns:
+            P. ej. ``un número entero entre 1 y 9`` o ``un número entero ≥ 1``.
+        """
+        lo, hi = self.minimum, self.maximum
+        if lo is not None and hi is not None:
+            return f"un número entero entre {lo} y {hi}"
+        if lo is not None:
+            return f"un número entero ≥ {lo}"
+        if hi is not None:
+            return f"un número entero ≤ {hi}"
+        return "un número entero"
 
 
 @dataclass(frozen=True)
@@ -358,13 +392,17 @@ class _Parser:
                 link=self._link(p, where),
                 type=self._type(p, where),
                 choices=self._choices(p, where),
+                minimum=self._bound(p, "min", where),
+                maximum=self._bound(p, "max", where),
             )
             params.append(self._check_param(param, where))
         return params
 
     def _type(self, p: dict[str, Any], where: str) -> str:
-        """Lee ``type`` (por defecto ``text``)."""
-        kind = self.text(p, "type", where) or "text"
+        """Lee ``type``, obligatorio."""
+        kind = self.text(p, "type", where, required=True)
+        if kind is None:
+            return "text"
         if kind not in PARAM_TYPES:
             self.problems.append(
                 f"{where}: 'type' desconocido: {kind} "
@@ -390,20 +428,55 @@ class _Parser:
             return ()
         return tuple(raw)
 
+    def _bound(self, p: dict[str, Any], key: str, where: str) -> int | None:
+        """Lee ``min``/``max``: un entero."""
+        value = p.get(key)
+        if value is None:
+            return None
+        if not isinstance(value, int) or isinstance(value, bool):
+            self.problems.append(f"{where}: '{key}' debe ser un número entero")
+            return None
+        return value
+
     def _check_param(self, param: Param, where: str) -> Param:
-        """Combinaciones inválidas y ``default`` que no cumple su tipo."""
-        if param.choices and param.type != "text":
-            self.problems.append(f"{where}: 'choices' y 'type' no se combinan")
-        if param.secret and (param.choices or param.type == "bool"):
-            self.problems.append(f"{where}: 'secret' solo vale con texto libre")
-        if param.default is None:
-            if param.type == "bool":  # una casilla siempre tiene valor
-                param = replace(param, default=BOOL_VALUES[1])
-            return param
-        if reason := param.error(param.default):
-            self.problems.append(f"{where}: 'default' {reason}")
-            return param
-        return replace(param, default=param.normalize(param.default))
+        """Claves que no casan con el tipo.
+
+        El ``default`` lo pone la receta y se acepta tal cual (puede ser un
+        marcador como ``-``), salvo donde el campo no podría mostrarlo: una
+        casilla (``bool``) o un desplegable (``choice``).
+        """
+        if param.type == "choice" and not param.choices:
+            self.problems.append(f"{where}: type = \"choice\" necesita 'choices'")
+        if param.choices and param.type != "choice":
+            self.problems.append(f"{where}: 'choices' solo vale con type = \"choice\"")
+        has_bounds = param.minimum is not None or param.maximum is not None
+        if has_bounds and param.type != "int":
+            self.problems.append(f"{where}: 'min'/'max' solo valen con type = \"int\"")
+        if (
+            param.minimum is not None
+            and param.maximum is not None
+            and param.minimum > param.maximum
+        ):
+            self.problems.append(f"{where}: 'min' es mayor que 'max'")
+        if param.secret and param.type != "text":
+            self.problems.append(f"{where}: 'secret' solo vale con type = \"text\"")
+        if param.type == "bool":
+            if param.default is None:  # una casilla siempre tiene valor
+                return replace(param, default=BOOL_VALUES[1])
+            if not valid_bool(param.default):
+                self.problems.append(f"{where}: 'default' debe ser true o false")
+                return param
+            return replace(param, default=param.normalize(param.default))
+        if (
+            param.type == "choice"
+            and param.choices
+            and param.default is not None
+            and param.default not in param.choices
+        ):
+            self.problems.append(
+                f"{where}: 'default' debe ser uno de: {', '.join(param.choices)}"
+            )
+        return param
 
     def _link(self, p: dict[str, Any], where: str) -> str | None:
         """Lee ``link``: una URL http(s) o nada."""

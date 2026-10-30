@@ -15,6 +15,7 @@ name = "Buena"
 description = "Escribe un fichero"
 [[param]]
 name = "who"
+type = "text"
 default = "mundo"
 [check]
 run = "test -f /tmp/x"
@@ -159,6 +160,7 @@ def test_warnings(write_entry, config) -> None:
 name = "Ollama (bajo demanda)"
 [[param]]
 name = "nadie"
+type = "text"
 default = "x"
 [[step]]
 run = "true"

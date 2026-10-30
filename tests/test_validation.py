@@ -37,15 +37,21 @@ STEP = '[[step]]\nrun="true"'
         ('name="x"\n[[step]]\ncopy="/etc/passwd"\ndest="/tmp/x"', "relativo"),
         ('name="x"\n[[step]]\ncopy="nada"\ndest="/tmp/x"', "falta el fichero"),
         (f'name="x"\n{STEP}\ndest="/tmp/x"', "solo valen en template/copy"),
-        (f'name="x"\n[[param]]\nname="PATH"\n{STEP}', "reservado"),
-        (f'name="x"\n[[param]]\nname="APPFORGE_X"\n{STEP}', "reservado"),
-        (f'name="x"\n[[param]]\nname="a b"\n{STEP}', "nombre inválido"),
-        (f'name="x"\n[[param]]\nname="a"\n[[param]]\nname="a"\n{STEP}', "duplicado"),
+        (f'name="x"\n[[param]]\nname="PATH"\ntype="text"\n{STEP}', "reservado"),
+        (f'name="x"\n[[param]]\nname="APPFORGE_X"\ntype="text"\n{STEP}', "reservado"),
+        (f'name="x"\n[[param]]\nname="a b"\ntype="text"\n{STEP}', "nombre inválido"),
+        (
+            f'name="x"\n[[param]]\nname="a"\ntype="text"\n[[param]]\nname="a"\ntype="text"\n{STEP}',
+            "duplicado",
+        ),
         (f'name="x"\nrequires_root=true\n{STEP}', "claves desconocidas: requires_root"),
-        (f'name="x"\n[[param]]\nname="a"\nsecret="sí"\n{STEP}', "true/false"),
+        (
+            f'name="x"\n[[param]]\nname="a"\ntype="text"\nsecret="sí"\n{STEP}',
+            "true/false",
+        ),
         (f'name="x"\nparam="no"\n{STEP}', "[[param]]"),
         (
-            f'name="x"\n[[param]]\nname="v"\nlink="javascript:x"\n{STEP}',
+            f'name="x"\n[[param]]\nname="v"\ntype="text"\nlink="javascript:x"\n{STEP}',
             "'link' debe ser una URL http(s)",
         ),
         (f'name="x"\ncheck="no"\n{STEP}', "tabla [check]"),
@@ -230,17 +236,20 @@ def test_own_files_are_not_unused(config, write_entry) -> None:
 @pytest.mark.parametrize(
     ("param", "expected"),
     [
+        ("", "falta 'type'"),
         ('type = "color"', "'type' desconocido: color"),
-        ('choices = ["solo"]', "dos o más textos distintos"),
-        ('choices = ["a", "a"]', "dos o más textos distintos"),
-        ('choices = ["a", "b"]\ntype = "int"', "'choices' y 'type' no se combinan"),
-        ('type = "bool"\nsecret = true', "'secret' solo vale con texto libre"),
-        ('type = "int"\ndefault = "diez"', "'default' debe ser un número entero"),
-        ('choices = ["a", "b"]\ndefault = "c"', "'default' debe ser uno de: a, b"),
-        ('type = "email"\ndefault = "hola"', "'default' debe ser un email"),
+        ('type = "choice"', "necesita 'choices'"),
+        ('type = "choice"\nchoices = ["solo"]', "dos o más textos distintos"),
+        ('type = "choice"\nchoices = ["a", "a"]', "dos o más textos distintos"),
+        ('type = "text"\nchoices = ["a", "b"]', "'choices' solo vale con type"),
+        ('type = "port"\nmin = 1', "'min'/'max' solo valen con type"),
+        ('type = "int"\nmin = 9\nmax = 1', "'min' es mayor que 'max'"),
+        ('type = "int"\nmin = "1"', "'min' debe ser un número entero"),
+        ('type = "bool"\nsecret = true', "'secret' solo vale con type"),
+        ('type = "bool"\ndefault = "quizá"', "'default' debe ser true o false"),
         (
-            'type = "path"\ndefault = "rel/ativa"',
-            "'default' debe ser una ruta absoluta",
+            'type = "choice"\nchoices = ["a", "b"]\ndefault = "c"',
+            "'default' debe ser uno de",
         ),
     ],
 )
@@ -257,15 +266,28 @@ def test_typed_values_are_checked_and_normalized(config, write_entry) -> None:
         'name = "Tipos"\n'
         '[[param]]\nname = "on"\ntype = "bool"\ndefault = true\n'
         '[[param]]\nname = "off"\ntype = "bool"\n'
-        '[[param]]\nname = "n"\ntype = "int"\ndefault = "3"\n'
+        '[[param]]\nname = "n"\ntype = "int"\nmin = 1\nmax = 9\ndefault = "3"\n'
         '[[param]]\nname = "mail"\ntype = "email"\n'
-        '[[step]]\nrun = "echo $on $off $n $mail"\n',
+        '[[param]]\nname = "net"\ntype = "cidr"\ndefault = "-"\n'
+        '[[step]]\nrun = "echo $on $off $n $mail $net"\n',
     )
     entry = get_entry(config, "tipos")
     assert entry.valid, entry.problems
     values = resolve_values(entry, {"mail": "a@b.org", "off": "Sí"})
-    assert values == {"on": "yes", "off": "yes", "n": "3", "mail": "a@b.org"}
-    with pytest.raises(EngineError, match="n debe ser un número entero"):
-        resolve_values(entry, {"mail": "a@b.org", "n": "3.5"})
+    # El default de la receta se acepta tal cual, aunque sea un marcador («-»).
+    assert values == {
+        "on": "yes",
+        "off": "yes",
+        "n": "3",
+        "mail": "a@b.org",
+        "net": "-",
+    }
+    assert resolve_values(entry, {"mail": "a@b.org", "net": "10.0.0.0/8"})["net"] == (
+        "10.0.0.0/8"
+    )
+    with pytest.raises(EngineError, match="n debe ser un número entero entre 1 y 9"):
+        resolve_values(entry, {"mail": "a@b.org", "n": "10"})
     with pytest.raises(EngineError, match="mail debe ser un email"):
         resolve_values(entry, {"mail": "nadie"})
+    with pytest.raises(EngineError, match="net debe ser una red"):
+        resolve_values(entry, {"mail": "a@b.org", "net": "10.0.0.1"})
