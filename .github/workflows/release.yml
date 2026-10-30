@@ -1,6 +1,7 @@
 # .github/workflows/release.yml
-# Construye el paquete .deb de AppForge, lo prueba en un Debian 13 limpio y lo
-# publica con SHA256SUMS y procedencia (attestation) de GitHub.
+# Construye AppForge (binario + config.toml + entries/) en un .tar.gz, lo prueba en
+# un Debian 13 limpio extraído en /opt/appforge y lo publica con SHA256SUMS y
+# procedencia (attestation) de GitHub.
 # - Etiqueta vX.Y.Z → publica la Release.
 # - Ejecución manual → deja el paquete como artefacto; con «publish» en main,
 #   además crea la etiqueta vX.Y.Z (versión de pyproject.toml) y la Release.
@@ -25,7 +26,7 @@ concurrency:
 
 jobs:
   build:
-    name: Construir .deb (amd64)
+    name: Construir .tar.gz (x86_64)
     runs-on: ubuntu-latest
     # Objetivo: Debian estable actual. Se compila en su contenedor porque el
     # binario enlaza con la glibc de donde se construye (ubuntu-latest es más nueva).
@@ -67,9 +68,9 @@ jobs:
       - name: Subir el paquete como artefacto
         uses: actions/upload-artifact@v5
         with:
-          name: appforge-deb
+          name: appforge-tar
           path: |
-            dist/appforge_*.deb
+            dist/appforge-*.tar.gz
             dist/SHA256SUMS
           if-no-files-found: error
 
@@ -82,17 +83,15 @@ jobs:
       - name: Descargar el paquete
         uses: actions/download-artifact@v5
         with:
-          name: appforge-deb
+          name: appforge-tar
           path: dist
 
-      - name: Instalar (con páginas man, que la imagen slim excluye)
+      - name: Instalar en /opt/appforge
         run: |
-          rm -f /etc/dpkg/dpkg.cfg.d/docker
           cd dist && sha256sum -c SHA256SUMS && cd ..
-          apt-get update
-          apt-get install -y --no-install-recommends man-db desktop-file-utils ./dist/appforge_*.deb
+          tar -xzf dist/appforge-*.tar.gz -C /opt
 
-      - name: Comprobar la instalación, reinstalar, desinstalar y purgar
+      - name: Comprobar la instalación
         shell: bash
         env:
           VERSION: ${{ needs.build.outputs.version }}
@@ -107,21 +106,16 @@ jobs:
             fi
           }
           set +e
-          check "versión" 'appforge --version | grep -F "$VERSION"'
-          check "enlace /usr/bin" 'test "$(readlink /usr/bin/appforge)" = /opt/appforge/appforge'
-          check "validate" 'appforge validate --strict'
-          check "man" 'MANWIDTH=120 man -P cat appforge | grep -q "ESTADO DE SALIDA"'
-          check "desktop" 'desktop-file-validate /usr/share/applications/appforge.desktop'
-          check "propietario root" 'test -z "$(find /opt/appforge /etc/appforge ! -user root)"'
-          check "permisos" 'test -z "$(find /opt/appforge /etc/appforge -perm /022 ! -type l)"'
+          A=/opt/appforge/appforge
+          check "versión" "$A --version | grep -F \"$VERSION\""
+          check "contenido" 'test -x /opt/appforge/appforge && test -f /opt/appforge/config.toml && test -d /opt/appforge/entries'
+          check "validate" "$A validate --strict"
+          check "propietario root" 'test -z "$(find /opt/appforge ! -user root)"'
+          check "permisos" 'test -z "$(find /opt/appforge -perm /022)"'
+          check "enlace en el PATH" "ln -s $A /usr/local/bin/appforge && appforge --version"
           check "sin terminal" 'rc=0; appforge >/tmp/o 2>&1 || rc=$?; cat /tmp/o; test "$rc" = 2 && grep -q terminal /tmp/o'
           check "sin root" 'rc=0; setpriv --reuid=nobody --regid=nogroup --clear-groups appforge >/tmp/o 2>&1 || rc=$?; cat /tmp/o; test "$rc" = 2 && grep -q superusuario /tmp/o'
-          echo "# cambio local" >> /etc/appforge/config.toml
-          check "reinstalar" 'apt-get install -y --reinstall ./dist/appforge_*.deb'
-          check "conffile respetado" 'grep -q "cambio local" /etc/appforge/config.toml'
-          check "desinstalar" 'apt-get remove -y appforge && test ! -e /opt/appforge && test ! -e /usr/bin/appforge'
-          check "remove conserva config" 'test -f /etc/appforge/config.toml'
-          check "purgar" 'apt-get purge -y appforge && test ! -e /etc/appforge && test ! -e /var/log/appforge'
+          check "registro junto al binario" 'test ! -e /var/log/appforge && test ! -e /etc/appforge'
           exit "$fail"
 
   release:
@@ -153,13 +147,13 @@ jobs:
       - name: Descargar el paquete
         uses: actions/download-artifact@v5
         with:
-          name: appforge-deb
+          name: appforge-tar
           path: dist
 
       - name: Procedencia del paquete (attestation)
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: dist/appforge_*.deb
+          subject-path: dist/appforge-*.tar.gz
 
       - name: Crear la Release con el paquete
         env:

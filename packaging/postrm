@@ -1,6 +1,0 @@
-#!/bin/sh
-# Al purgar, borra el registro que AppForge escribe en tiempo de ejecución.
-set -e
-if [ "$1" = purge ]; then
-  rm -rf /var/log/appforge
-fi

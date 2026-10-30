@@ -2,17 +2,17 @@
 # Prueba una receta en una máquina virtual (o contenedor) desechable con incus.
 #
 # Uso:
-#   scripts/try-entry.sh RECETA [--distro D] [--container] [--keep] [--deb RUTA]
+#   scripts/try-entry.sh RECETA [--distro D] [--container] [--keep] [--tar RUTA]
 #
 #   RECETA       id en ./entries (mi-receta) o ruta a su .toml (…/mi-receta.toml);
 #                su subdirectorio <id>/, si existe, va con ella.
-#   --distro D   imagen de incus (por defecto debian/13; p. ej. ubuntu/25.04).
+#   --distro D   imagen de incus (por defecto debian/13; p. ej. ubuntu/26.04).
 #   --container  contenedor en lugar de VM: más rápido, sin systemd ni KVM.
 #   --keep       no borrar la máquina de prueba al salir.
-#   --deb RUTA   paquete a instalar (por defecto, el más reciente de dist/).
+#   --tar RUTA   paquete appforge-*.tar.gz (por defecto, el más reciente de dist/).
 #   --no-tui     solo prepara, sube y valida la receta (p. ej. en una CI).
 #
-# La primera vez por distro crea una base (appforge-base-…) con el .deb instalado,
+# La primera vez por distro crea una base (appforge-base-…) con AppForge en /opt,
 # un usuario «usuario» con sudo y una instantánea «limpio»; después solo la clona.
 # La TUI se abre como «usuario» con sudo, así que APPFORGE_USER es «usuario».
 set -euo pipefail
@@ -21,7 +21,7 @@ distro="debian/13"
 kind="vm"
 keep=0
 tui=1
-deb=""
+pkg=""
 entry=""
 
 die() { echo "try-entry: $*" >&2; exit 1; }
@@ -34,7 +34,7 @@ while [ $# -gt 0 ]; do
     --container) kind="container"; shift ;;
     --keep) keep=1; shift ;;
     --no-tui) tui=0; shift ;;
-    --deb) deb="${2:?falta la ruta del .deb}"; shift 2 ;;
+    --tar) pkg="${2:?falta la ruta del .tar.gz}"; shift 2 ;;
     -h | --help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) die "opción desconocida: $1" ;;
     *) [ -z "$entry" ] || die "solo una receta"; entry="$1"; shift ;;
@@ -66,13 +66,13 @@ if [ "$kind" = vm ] && ! grep -q virtual-machine <<<"$info"; then
   die "incus no admite VM todavía. Con qemu-system-x86 y ovmf instalados, reinicia incus
   para que detecte QEMU: sudo systemctl restart incus (o usa --container)"
 fi
-if [ -z "$deb" ]; then
-  for f in dist/appforge_*_amd64.deb; do  # el más reciente
-    if [ -f "$f" ] && { [ -z "$deb" ] || [ "$f" -nt "$deb" ]; }; then deb="$f"; fi
+if [ -z "$pkg" ]; then
+  for f in dist/appforge-*-linux-x86_64.tar.gz; do  # el más reciente
+    if [ -f "$f" ] && { [ -z "$pkg" ] || [ "$f" -nt "$pkg" ]; }; then pkg="$f"; fi
   done
-  [ -n "$deb" ] || die "no hay .deb en dist/: constrúyelo (uv run python scripts/build.py) o usa --deb"
+  [ -n "$pkg" ] || die "no hay paquete en dist/: constrúyelo (uv run python scripts/build.py) o usa --tar"
 fi
-[ -f "$deb" ] || die "no existe $deb"
+[ -f "$pkg" ] || die "no existe $pkg"
 
 say "Validando $id en este equipo"
 # Sobre una copia sin escritura para grupo/otros: aquí interesa el contenido. Los
@@ -106,7 +106,7 @@ base="appforge-base-$slug"
 try="appforge-try"
 flag=()
 [ "$kind" = vm ] && flag=(--vm)
-deb_sum="$(sha256sum "$deb" | cut -d' ' -f1)"
+pkg_sum="$(sha256sum "$pkg" | cut -d' ' -f1)"
 
 wait_ready() {  # espera a poder ejecutar órdenes y a tener red
   local name="$1" ok=0
@@ -133,8 +133,8 @@ wait_ready() {  # espera a poder ejecutar órdenes y a tener red
 }
 
 if incus info "$base" >/dev/null 2>&1; then
-  if [ "$(incus config get "$base" user.appforge.deb)" != "$deb_sum" ]; then
-    say "El .deb ha cambiado: rehaciendo $base"
+  if [ "$(incus config get "$base" user.appforge.pkg)" != "$pkg_sum" ]; then
+    say "El paquete ha cambiado: rehaciendo $base"
     incus delete -f "$base"
   fi
 fi
@@ -144,19 +144,21 @@ if ! incus info "$base" >/dev/null 2>&1; then
   incus launch "images:$distro" "$base" "${flag[@]}" \
     || die "no se pudo crear ($kind) $distro (¿hay imagen? incus image list images: $distro)"
   wait_ready "$base"
-  incus file push "$deb" "$base/tmp/appforge.deb"
+  incus file push "$pkg" "$base/tmp/appforge.tar.gz"
   incus exec "$base" -- sh -c '
     set -e
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -q
-    apt-get install -y -q /tmp/appforge.deb
-    rm -f /tmp/appforge.deb
+    apt-get install -y -q sudo
+    tar -xzf /tmp/appforge.tar.gz -C /opt
+    ln -sf /opt/appforge/appforge /usr/local/bin/appforge
+    rm -f /tmp/appforge.tar.gz
     id usuario >/dev/null 2>&1 || useradd -m -s /bin/bash usuario
     echo "usuario ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/usuario
     chmod 0440 /etc/sudoers.d/usuario'
   incus stop "$base"
   incus snapshot create "$base" limpio
-  incus config set "$base" user.appforge.deb="$deb_sum"
+  incus config set "$base" user.appforge.pkg="$pkg_sum"
 fi
 
 # --- Copia desechable --------------------------------------------------------
@@ -176,9 +178,9 @@ incus start "$try"
 wait_ready "$try"
 
 say "Subiendo $id"
-incus file push "$toml" "$try/etc/appforge/entries/"
-[ -d "$files_dir" ] && incus file push -r "$files_dir" "$try/etc/appforge/entries/"
-incus exec "$try" -- sh -c 'chown -R root:root /etc/appforge/entries && chmod -R go-w /etc/appforge/entries'
+incus file push "$toml" "$try/opt/appforge/entries/"
+[ -d "$files_dir" ] && incus file push -r "$files_dir" "$try/opt/appforge/entries/"
+incus exec "$try" -- sh -c 'chown -R root:root /opt/appforge/entries && chmod -R go-w /opt/appforge/entries'
 
 say "Validando $id en $distro"
 if [ "$tui" = 0 ]; then
@@ -191,4 +193,4 @@ say "Abriendo AppForge como «usuario» con sudo (q para salir)"
 incus exec -t "$try" -- su - usuario -c "TERM='${TERM:-xterm-256color}' sudo appforge" || true
 
 say "Final del registro"
-incus exec "$try" -- tail -n 20 /var/log/appforge/appforge.log 2>/dev/null || echo "(sin registro)"
+incus exec "$try" -- tail -n 20 /opt/appforge/logs/appforge.log 2>/dev/null || echo "(sin registro)"

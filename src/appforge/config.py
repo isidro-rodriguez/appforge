@@ -14,9 +14,6 @@ APP_NAME = "appforge"
 CONFIG_FILE = "config.toml"
 _CONFIG_KEYS = {"entries_dir", "ui"}
 LOGS_DIR = "logs"
-# Instalación del paquete .deb: configuración y entradas en /etc, registro en /var/log.
-SYSTEM_CONFIG_DIR = Path("/etc/appforge")
-SYSTEM_LOGS_DIR = Path("/var/log/appforge")
 _UI_KEYS = {"search", "categories"}
 
 
@@ -53,27 +50,22 @@ class Config:
 
     @property
     def logs_dir(self) -> Path:
-        """Directorio del registro de ejecuciones.
-
-        ``/var/log/appforge`` en la instalación del paquete; ``<base_dir>/logs``
-        desde el código.
-        """
-        if self.base_dir == SYSTEM_CONFIG_DIR:
-            return SYSTEM_LOGS_DIR
+        """Directorio del registro de ejecuciones: ``<base_dir>/logs``."""
         return self.base_dir / LOGS_DIR
 
 
 def base_dir() -> Path:
     """Devuelve el directorio donde se busca ``config.toml``.
 
-    El binario empaquetado (``sys.frozen``, instalado con el ``.deb``) usa
-    ``/etc/appforge``; desde el código, el directorio de trabajo.
+    El binario empaquetado (``sys.frozen``) usa su propio directorio (p. ej.
+    ``/opt/appforge``, aunque se lance desde un enlace); desde el código, el
+    directorio de trabajo.
 
     Returns:
         Ruta absoluta del directorio base.
     """
     if getattr(sys, "frozen", False):
-        return SYSTEM_CONFIG_DIR
+        return Path(sys.executable).resolve().parent
     return Path.cwd()
 
 
