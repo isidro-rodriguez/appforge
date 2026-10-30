@@ -57,8 +57,13 @@ command -v incus >/dev/null || die "falta incus (sudo apt install incus)"
 if [ "$kind" = vm ] && [ ! -e /dev/kvm ]; then
   die "sin /dev/kvm no hay VM: activa la virtualización o usa --container"
 fi
-if [ "$kind" = vm ] && ! incus info 2>/dev/null | grep -q virtual-machine; then
-  die "incus no puede crear VM: instala qemu-system-x86 y ovmf (o usa --container)"
+if ! info="$(incus info 2>&1)"; then
+  die "no puedo usar incus: $(head -n 1 <<<"$info")
+  ¿Estás en el grupo incus-admin en esta sesión? (id -nG; newgrp incus-admin o vuelve a entrar)"
+fi
+if [ "$kind" = vm ] && ! grep -q virtual-machine <<<"$info"; then
+  die "incus no admite VM todavía. Con qemu-system-x86 y ovmf instalados, reinicia incus
+  para que detecte QEMU: sudo systemctl restart incus (o usa --container)"
 fi
 if [ -z "$deb" ]; then
   for f in dist/appforge_*_amd64.deb; do  # el más reciente

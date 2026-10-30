@@ -55,6 +55,12 @@ incus admin init --minimal
 Las VM necesitan virtualización por hardware (`/dev/kvm`). Sin ella, usa
 `--container`.
 
+| Mensaje del script | Solución |
+|---|---|
+| `no puedo usar incus: … permission denied` | Tu sesión no tiene el grupo `incus-admin`: `newgrp incus-admin` o vuelve a iniciar sesión |
+| `incus no admite VM todavía` | incus detecta QEMU al arrancar: `sudo systemctl restart incus` tras instalar `qemu-system-x86` y `ovmf` |
+| `sin /dev/kvm no hay VM` | Activa la virtualización en la BIOS/UEFI o usa `--container` |
+
 ## Límites
 
 - Las imágenes no traen escritorio: lanzadores, notificaciones y similares no se ven.
