@@ -1,0 +1,81 @@
+name = "Servidor SSH (endurecido)"
+description = "OpenSSH con acceso solo para tu usuario, sin root y, por defecto, solo con claves"
+category = "Red"
+details = """
+Instala `openssh-server` y escribe el endurecimiento en
+`/etc/ssh/sshd_config.d/50-appforge.conf`, sin editar `sshd_config`:
+
+| Ajuste | Valor |
+|---|---|
+| `Port` | Parámetro (22) |
+| `PermitRootLogin` | `no` |
+| `PasswordAuthentication` | Parámetro (`no`) |
+| `KbdInteractiveAuthentication` | `no` |
+| `X11Forwarding` | `no` |
+| `MaxAuthTries` | `3` |
+| `AllowUsers` | El usuario que ejecutó `sudo appforge` |
+
+### Para no quedarte fuera
+
+- Con `PasswordAuthentication no`, la receta **falla antes de tocar nada** si tu
+  `~/.ssh/authorized_keys` no existe o está vacío. Copia antes tu clave pública
+  (`ssh-copy-id` desde el otro equipo) o aplica la receta con `yes`.
+- La configuración se valida con `sshd -t` antes de recargar el servicio; si no es
+  válida, se restaura la anterior y la receta falla.
+- Si ufw está activo, se abre `<puerto>/tcp`. Al cambiar de puerto, la regla del
+  anterior se queda: bórrala tú con `sudo ufw delete allow 22/tcp`.
+- En `sshd_config.d` gana el primer valor leído: si otro fichero anterior a
+  `50-appforge.conf` fija lo mismo, la receta avisa con el valor efectivo
+  (`sshd -T`).
+
+Desinstalar borra `50-appforge.conf` y recarga el servicio; no desinstala OpenSSH
+ni cierra el puerto en ufw.
+"""
+
+[[param]]
+name = "port"
+prompt = "Puerto de escucha"
+default = "22"
+
+[[param]]
+name = "password_auth"
+prompt = "¿Permitir contraseña? (no | yes)"
+default = "no"
+
+[check]
+# Comprueba el endurecimiento fijo; el puerto y la contraseña dependen de lo aplicado.
+run = """
+conf=/etc/ssh/sshd_config.d/50-appforge.conf
+systemctl is-active --quiet ssh \
+  && grep -qx 'PermitRootLogin no' "$conf" \
+  && grep -qx 'KbdInteractiveAuthentication no' "$conf" \
+  && grep -qx 'MaxAuthTries 3' "$conf" \
+  && grep -qx "AllowUsers $APPFORGE_USER" "$conf"
+"""
+
+[[step]]
+title = "Comprobaciones previas (parámetros, claves autorizadas)"
+script = "preflight.sh"
+
+[[step]]
+title = "Instalar OpenSSH"
+run = "DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server"
+
+[[step]]
+title = "Endurecimiento en sshd_config.d"
+template = "50-appforge.conf.tpl"
+dest = "/etc/ssh/sshd_config.d/50-appforge.conf"
+mode = "0644"
+
+[[step]]
+title = "Validar (sshd -t), abrir el puerto en ufw y recargar"
+script = "apply.sh"
+
+[remove]
+# No desinstala OpenSSH ni toca ufw.
+run = """
+rm -f /etc/ssh/sshd_config.d/50-appforge.conf
+if systemctl is-active --quiet ssh; then
+  sshd -t && systemctl reload ssh
+fi
+"""
