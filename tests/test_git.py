@@ -26,6 +26,7 @@ def test_entry_is_valid(config) -> None:
         ("user_email", None),
         ("default_branch", "main"),
         ("editor", "-"),
+        ("aliases", "yes"),
     ]
     assert [s.kind for s in e.steps] == ["run", "script", "copy", "run", "script"]
 
@@ -82,3 +83,49 @@ def test_invalid_params_stop_before_configuring(home: Path, values, message) -> 
     r = subprocess.run(["bash", str(script)], env=env, capture_output=True, text=True)
     assert r.returncode == 1
     assert message in r.stderr
+
+
+def git_aliases(config) -> dict[str, str]:
+    conf = config.entries_dirs[0] / "git" / "aliases.conf"
+    lines = [ln for ln in conf.read_text().splitlines() if ln and not ln.startswith("#")]
+    return dict(ln.split(" ", 1) for ln in lines)
+
+
+@pytest.mark.skipif(not shutil.which("git"), reason="git no instalado")
+def test_aliases_do_not_hide_git_commands(config) -> None:
+    r = subprocess.run(
+        ["git", "--list-cmds=builtins,main,others"], capture_output=True, text=True
+    )
+    commands = set(r.stdout.split())
+    assert "status" in commands
+    assert not commands & set(git_aliases(config))
+
+
+@pytest.mark.skipif(not shutil.which("git"), reason="git no instalado")
+def test_bundle_pull_alias(config, tmp_path: Path) -> None:
+    env = {
+        **os.environ,
+        "HOME": str(tmp_path),
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_AUTHOR_NAME": "u",
+        "GIT_AUTHOR_EMAIL": "u@example.com",
+        "GIT_COMMITTER_NAME": "u",
+        "GIT_COMMITTER_EMAIL": "u@example.com",
+    }
+
+    def sh(*args: str, cwd: Path = tmp_path) -> None:
+        subprocess.run(args, cwd=cwd, env=env, check=True, capture_output=True)
+
+    for name, value in git_aliases(config).items():
+        sh("git", "config", "--global", f"alias.{name}", value)
+    src, dst = tmp_path / "src", tmp_path / "dst"
+    sh("git", "init", "-q", "-b", "main", str(src))
+    (src / "a").write_text("1\n")
+    sh("git", "a", "a", cwd=src)
+    sh("git", "c", "-qm", "uno", cwd=src)
+    sh("git", "clone", "-q", str(src), str(dst))
+    (src / "a").write_text("2\n")
+    sh("git", "c", "-qam", "dos", cwd=src)
+    sh("git", "bc", str(tmp_path / "x.bundle"), "main", cwd=src)
+    sh("git", "bundle-pull", str(tmp_path / "x.bundle"), cwd=dst)
+    assert (dst / "a").read_text() == "2\n"

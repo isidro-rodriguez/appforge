@@ -7,6 +7,11 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+
+- Receta `git`: parámetro `aliases` (sí por defecto) que añade alias de git a
+  `~/.gitconfig` (`git st`, `git lg`, `git bundle-pull`…).
+
 ## [0.13.0] - 2026-10-30
 
 ### Added

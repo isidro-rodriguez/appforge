@@ -7,7 +7,7 @@ página resume el conjunto y cómo combinarlas.
 
 | Receta | Id | Categoría | Descripción | Parámetros |
 |---|---|---|---|---|
-| Git y GitHub CLI | `git` | Desarrollo | git, gh (repositorio oficial) y tu configuración global de git | `user_name`, `user_email`, `default_branch`, `editor` |
+| Git y GitHub CLI | `git` | Desarrollo | git, gh (repositorio oficial) y tu configuración global de git | `user_name`, `user_email`, `default_branch`, `editor`, `aliases` |
 | Neovim (IDE de terminal) | `nvim` | Desarrollo | Neovim en /opt/nvim como vi y vim, configurado como IDE ligero con plugins de la comunidad | `version`, `ts_version`, `arch` |
 | Fuentes adicionales | `fonts` | Escritorio | Fuentes de Microsoft, Ubuntu, Fira Code y JetBrainsMono Nerd Font | `nerd_version` |
 | Ollama (bajo demanda) | `ollama` | IA | Ollama en /opt/ollama, sin servicio de arranque; lanzador on/off con notificación | `version`, `arch`, `host`, `keep_alive`, `kv_cache`, `context_length` |

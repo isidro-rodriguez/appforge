@@ -24,6 +24,12 @@ prompt = "Editor de git (core.editor; - = no cambiar)"
 type = "text"
 default = "-"
 
+[[param]]
+name = "aliases"
+prompt = "Añadir alias de git (git st, git lg, git bundle-pull…)"
+type = "bool"
+default = true
+
 [check]
 # El email no tiene valor por defecto: se comprueba que esté configurado.
 run = """

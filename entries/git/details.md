@@ -18,6 +18,27 @@ y el repositorio va en `/etc/apt/sources.list.d/github-cli.sources` con `Signed-
 | `pull.rebase` | `false` (merge al hacer `pull`) |
 | `core.editor` | Parámetro; `-` = no se toca |
 | Credenciales de github.com | `gh` (`gh auth setup-git`) |
+| `alias.*` | Ver «Alias de git»; parámetro (sí) |
+
+### Alias de git
+
+Con el parámetro de alias activado (por defecto), se añaden a `~/.gitconfig`:
+
+| Alias | Equivale a |
+|---|---|
+| `git st` | `git status -sb` |
+| `git a` / `git c` / `git d` / `git p` | `add` / `commit` / `diff` / `push` |
+| `git ds` | `git diff --staged` |
+| `git lg` | `git log --oneline --graph --decorate -20` |
+| `git pl` | `git pull --ff-only` |
+| `git sw` | `git switch` |
+| `git bc` | `git bundle create` |
+| `git bundle-pull fichero.bundle [rama]` | Verifica el bundle y hace `pull --ff-only` de esa rama (`main` por defecto) |
+
+Ninguno se llama como un comando de git, porque git ignora esos alias. Reaplicar la
+receta restablece sus valores. Para quitar uno:
+`git config --global --unset alias.<nombre>`. Desactivar el parámetro no borra los
+que ya existan.
 
 ### Iniciar sesión en GitHub
 

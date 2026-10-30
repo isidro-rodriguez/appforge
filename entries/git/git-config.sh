@@ -31,6 +31,15 @@ if [ -n "$editor" ]; then
   as_user git config --global core.editor "$editor"
 fi
 
+# Alias de aliases.conf (<nombre> <valor>); git config sustituye el valor anterior.
+if [ "$aliases" = yes ]; then
+  while read -r name value; do
+    case "$name" in "" | "#"*) continue ;; esac
+    as_user git config --global "alias.$name" "$value"
+  done <"$APPFORGE_ENTRY_DIR/aliases.conf"
+  echo "alias de git instalados (lista: git config --global --get-regexp '^alias')"
+fi
+
 # gh como gestor de credenciales de github.com; --force porque el usuario aún
 # no ha hecho `gh auth login`.
 as_user gh auth setup-git --hostname github.com --force
