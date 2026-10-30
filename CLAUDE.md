@@ -15,8 +15,9 @@ entries (`entries/*.toml`), follow [AGENTS.md](AGENTS.md) instead.
 ## What AppForge is
 
 A console launcher shipped as a `.tar.gz` extracted into `/opt/appforge`: one
-self-contained folder with the PyInstaller binary, `config.toml` and `entries/` (one TOML
-per menu option), plus `logs/` at runtime. No `.deb`, man page or desktop launcher: the
+self-contained folder with the PyInstaller binary, `config.toml`, `appforge-entries/`
+(shipped examples, from the repo's `entries/`), `custom-entries/` (the user's) and
+`.manifest.json`, plus `logs/` at runtime. One TOML per menu option. No `.deb`, man page or desktop launcher: the
 single folder is deliberate, keep it that way. Each entry declares params, a `[check]`, ordered
 steps (`run`, `script`, `template`, `copy`) and an optional `[remove]`. Target: current
 Debian stable (13). It **only runs as root**: no sudo handling in the engine, no unprivileged cases.
@@ -30,15 +31,16 @@ Debian stable (13). It **only runs as root**: no sudo handling in the engine, no
 ├── AGENTS.md               # Guide for agents adding entries
 ├── CLAUDE.md               # This file
 ├── CHANGELOG.md            # Keep a Changelog
-├── config.toml             # entries_dir = "entries"
+├── config.toml             # development config: entries_dirs = ["entries"]
 ├── docs/                   # Zensical site (Spanish): guia/, avanzado/, desarrollo/
 ├── docs_templates/         # Zensical overrides (favicons, mkdocstrings in Spanish)
-├── entries/                # Example entries (→ /opt/appforge/entries); ollama.toml is the reference
+├── entries/                # Example entries (→ /opt/appforge/appforge-entries); ollama.toml is the reference
 ├── pyproject.toml          # Deps, build (uv_build), ruff, ty, pytest, poe
 ├── README.md               # Minimal overview
 ├── scripts/
 │   ├── backup.py           # git bundle
 │   ├── build.py            # PyInstaller --onefile → dist/appforge/ + .tar.gz + SHA256SUMS
+│   ├── dist/config.toml    # config.toml shipped in the package
 │   ├── screenshots.py      # TUI and CLI SVG screenshots for the docs
 │   └── try-entry.sh        # try an entry in a disposable incus VM/container
 ├── src/appforge/
@@ -51,6 +53,7 @@ Debian stable (13). It **only runs as root**: no sudo handling in the engine, no
 │   ├── runlog.py           # Run log <base>/logs/appforge.log (acodo.logger, daily)
 │   ├── theme.py            # Palette from the icon; Textual and Rich themes
 │   ├── tui.py              # Textual app (catalog, detail page, batches, progress)
+│   ├── update.py           # `appforge update`: download, verify, manifest-based merge
 │   ├── validate.py         # `appforge validate`: whole-directory checks, never runs entries
 │   ├── resources/          # Icon PNGs (README logo, docs favicons; not shipped)
 │   └── py.typed
@@ -80,10 +83,18 @@ Debian stable (13). It **only runs as root**: no sudo handling in the engine, no
   lists them for template validation. Entries use them for user-owned files instead
   of asking for a user name.
 - Configuration is only `config.toml` next to the binary (resolved through symlinks;
-  cwd when run from source); logs go to `<base>/logs`. No environment
-  variables, no extra directories. `config.toml` is rejected if it is a symlink or
-  insecure. Multiple entry directories may come
-  later; do not add them (or mention them in docs) until asked.
+  cwd when run from source); logs go to `<base>/logs`. No environment variables.
+  `config.toml` is rejected if it is a symlink or insecure.
+- `entries_dirs` lists the entry directories in order; `entry.load_catalog` merges
+  them and the **last one wins** on a repeated id (recorded in `Catalog.overrides`,
+  reported by `validate`). An entry's files live in `<its dir>/<id>/`.
+- `appforge update` never overwrites user changes: it compares the installed
+  `.manifest.json`, the new one and the disk (`update.plan_update`). Unchanged
+  package files are replaced, modified ones kept (new version as `.new`), deleted
+  ones not recreated; `custom-entries/`, `logs/` and non-package files are never
+  touched; the binary is replaced last. It needs root (not with `--dry-run`) and only
+  runs on the packaged binary (`main.installed_dir()`). Downloads are verified with
+  the release's `SHA256SUMS`.
 - Before overwriting a file, copy it to `<dest>.backup` in the same directory with the
   original's mode, replacing any previous backup; the sink event lands in the run log
   (`Config.logs_dir`). Identical content means "sin cambios", no backup.
@@ -94,7 +105,7 @@ Debian stable (13). It **only runs as root**: no sudo handling in the engine, no
   Push complex logic into an entry `script`. Ask before extending the format.
 - **The CLI does not duplicate the TUI.** Everything interactive (browse, apply,
   remove, dry-run) lives in the TUI, which already runs in any console. The CLI
-  (Typer) only has what does not fit there: `validate` and `--version`. Do not add a
+  (Typer) only has what does not fit there: `validate`, `update` and `--version`. Do not add a
   command the TUI already covers.
 - `appforge validate` never runs entry code: it reads files and calls `bash -n`.
   Errors make it exit 1; warnings only with `--strict`.

@@ -13,15 +13,18 @@ Todo AppForge queda en una carpeta:
 
 ```text
 /opt/appforge/
-├── appforge        # el programa
-├── config.toml     # configuración
-├── entries/        # recetas: las de ejemplo y las que añadas
-└── logs/           # registro de ejecuciones (se crea al usarlo)
+├── appforge            # el programa
+├── config.toml         # configuración
+├── appforge-entries/   # recetas de ejemplo
+├── custom-entries/     # tus recetas
+└── logs/               # registro de ejecuciones (se crea al usarlo)
 ```
 
 Las recetas de ejemplo ([Ollama](ollama.md) y [fuentes](fuentes.md), entre otras) son
-eso, ejemplos: úsalas, cámbialas, bórralas o escribe
-[las tuyas](../desarrollo/nueva-entrada.md).
+eso, ejemplos: úsalas, cámbialas o bórralas. [Las tuyas](../desarrollo/nueva-entrada.md)
+van en `custom-entries/`. Para actualizar AppForge más adelante basta
+`sudo /opt/appforge/appforge update`: conserva lo que hayas cambiado
+([detalles](cli.md#appforge-update)).
 
 Para comprobar que el paquete procede del proyecto, mira
 [Seguridad](../avanzado/seguridad.md#verificar-el-paquete).

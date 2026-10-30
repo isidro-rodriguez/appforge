@@ -16,7 +16,7 @@ desconfía por defecto.
 
 | Uso | Dónde están las recetas | Quién puede cambiarlas |
 |---|---|---|
-| **Instalación** (normal) | `/opt/appforge/entries/` | Solo `root` (extraído con `sudo tar`) |
+| **Instalación** (normal) | `/opt/appforge/appforge-entries/` y `custom-entries/` | Solo `root` (extraído con `sudo tar`) |
 | **Desarrollo** (desde el código) | `entries/` de tu copia del repositorio | Tú, que ya ejecutas con `sudo` |
 
 ## Qué rechaza
@@ -73,6 +73,8 @@ repositorio a partir de un commit concreto.
 sha256sum -c SHA256SUMS
 gh attestation verify appforge-<versión>-linux-x86_64.tar.gz --repo isidro-rodriguez/appforge
 ```
+
+`appforge update` hace la misma comprobación de `SHA256SUMS` antes de instalar nada.
 
 ## Descargas de las recetas
 

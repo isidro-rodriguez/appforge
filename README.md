@@ -20,8 +20,9 @@ sudo /opt/appforge/appforge                 # TUI: espacio marca, i instala, d d
 /opt/appforge/appforge validate --strict    # revisa las recetas (sin sudo)
 ```
 
-Todo queda en `/opt/appforge/`: el programa, `config.toml`, las recetas en `entries/`
-(las de ejemplo y las tuyas) y el registro en `logs/`.
+Todo queda en `/opt/appforge/`: el programa, `config.toml`, las recetas de ejemplo en
+`appforge-entries/`, las tuyas en `custom-entries/` y el registro en `logs/`. Para
+actualizar sin perder tus cambios: `sudo /opt/appforge/appforge update`.
 
 ## 📚 Documentación
 

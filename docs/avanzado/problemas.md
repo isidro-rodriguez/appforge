@@ -15,7 +15,7 @@ Mensajes habituales, su causa y qué hacer.
     de `root` con `sudo chmod 644 /opt/appforge/config.toml`.
 
 `El directorio de entradas no existe: …`
-:   `entries_dir` apunta a una carpeta que no existe. Es relativo a la carpeta de
+:   Un directorio de `entries_dirs` no existe. Son relativos a la carpeta de
     AppForge.
 
 `claves desconocidas en [ui]: …` / `[ui].search debe ser true/false`

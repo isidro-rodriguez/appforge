@@ -11,7 +11,7 @@ incluye Python y Textual). En `dist/` quedan:
 
 | Fichero | Contenido |
 |---|---|
-| `appforge/` | `appforge` (binario), `config.toml` y `entries/`, lista para copiar |
+| `appforge/` | `appforge` (binario), `config.toml` (de `scripts/dist/`), `appforge-entries/` (las recetas de `entries/`), `custom-entries/` vacío y `.manifest.json`, lista para copiar |
 | `appforge-<versión>-linux-x86_64.tar.gz` | Esa carpeta empaquetada, con los ficheros a nombre de `root` y sin escritura para grupo ni otros |
 | `SHA256SUMS` | Suma del `.tar.gz` para `sha256sum -c` |
 
@@ -19,6 +19,15 @@ Se instala extrayéndolo con `sudo tar -xzf … -C /opt`: así queda en `/opt/ap
 `root`. El binario busca `config.toml` en su propia carpeta, aunque se lance desde un
 enlace, y escribe el registro en `logs/` dentro de ella. Desde el código usa el
 directorio de trabajo (ver [Contribuir](contribuir.md#ejecutar-desde-el-código)).
+
+### Manifiesto
+
+`.manifest.json` guarda la versión y la suma SHA-256 de cada fichero del paquete tal
+como se instala. `appforge update` lo compara con el del paquete nuevo y con lo que hay
+en disco para saber qué cambió el usuario (ver
+[`appforge update`](../guia/cli.md#appforge-update) y `src/appforge/update.py`). Por eso
+la configuración que se distribuye vive en `scripts/dist/config.toml`, separada del
+`config.toml` de desarrollo de la raíz.
 
 ## Publicación automática
 

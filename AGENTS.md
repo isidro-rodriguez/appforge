@@ -3,6 +3,11 @@
 Guide for agents that add or edit **menu entries** in `entries/`. Changing the engine,
 CLI or TUI is out of scope here: see [CLAUDE.md](CLAUDE.md).
 
+The repo's `entries/` ships in the package as `/opt/appforge/appforge-entries/`.
+End users put their own recipes in `/opt/appforge/custom-entries/` (listed later in
+`entries_dirs`, so a recipe there with the same id replaces the shipped one; it must
+carry its own `<id>/` files directory). Recipes for the project go in `entries/`.
+
 ## Language
 
 - Entry content shown to the user (`name`, `description`, `details`, `prompt`, `title`,

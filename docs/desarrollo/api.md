@@ -12,6 +12,8 @@ Generada a partir de los docstrings del código.
         - Step
         - load_entry
         - load_entries
+        - load_catalog
+        - Catalog
         - insecure_reason
 
 ## Validación
@@ -21,9 +23,24 @@ Generada a partir de los docstrings del código.
       members:
         - Validation
         - Report
+        - validate_dirs
         - validate_dir
         - validate_entry
         - bash_syntax_error
+
+## Actualización
+
+::: appforge.update
+    options:
+      members:
+        - Plan
+        - plan_update
+        - apply_update
+        - read_manifest
+        - check_sum
+        - latest_release
+        - download
+        - extract
 
 ## Motor
 

@@ -6,6 +6,7 @@
 flowchart LR
     main[main.py<br/>CLI] -.->|sin comando| tui[tui.py<br/>TUI]
     main -->|validate| validate[validate.py<br/>validación]
+    main -->|update| update[update.py<br/>actualización]
     tui --> engine[engine.py<br/>motor]
     validate --> entry
     tui --> entry[entry.py<br/>recetas]
@@ -18,12 +19,13 @@ flowchart LR
 | Módulo | Responsabilidad |
 |---|---|
 | `config.py` | Directorio base y `config.toml` (incluida la tabla `[ui]`) |
-| `entry.py` | Carga y valida recetas. **Nunca lanza excepción**: acumula `problems` |
+| `entry.py` | Carga y valida recetas y combina los directorios (`load_catalog`: con id repetido, gana el último). **Nunca lanza excepción**: acumula `problems` |
 | `engine.py` | Ejecuta `[check]`, pasos y `[remove]`: copias `.backup`, *dry-run*, cancelación |
 | `runlog.py` | Registro en fichero con rotación diaria (`acodo.logger`) |
 | `theme.py` | Paleta sacada del icono; temas de Textual y de Rich |
 | `validate.py` | `appforge validate`: sintaxis de bash, referencias a ficheros, ficheros y parámetros sin usar. No ejecuta nada |
-| `main.py` | CLI ([Typer](https://typer.tiangolo.com/)): `validate` y `--version`. Sin comando carga la TUI de forma perezosa |
+| `update.py` | `appforge update`: descarga y verifica el paquete y, con el manifiesto, distingue lo que el usuario cambió (se conserva; lo nuevo va a `.new`) |
+| `main.py` | CLI ([Typer](https://typer.tiangolo.com/)): `validate`, `update` y `--version`. Sin comando carga la TUI de forma perezosa |
 | `tui.py` | Catálogo, página de detalle, diálogos y pantalla de progreso |
 
 La referencia de cada función está en la [API](api.md).

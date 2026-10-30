@@ -2,9 +2,12 @@
 
 Referencia completa. Para un recorrido paso a paso, ver [Crear una receta](nueva-entrada.md).
 
-Cada opción del catálogo es un fichero `entries/<id>.toml`. Si necesita ficheros adicionales
-(plantillas, scripts, iconos) van en `entries/<id>/`. El `<id>` es el nombre del fichero
-sin extensión y es lo que se usa en la CLI (`appforge validate <id>`).
+Cada opción del catálogo es un fichero `<id>.toml` en uno de los
+[directorios de recetas](../avanzado/configuracion.md#directorios-de-recetas) (las tuyas,
+en `custom-entries/`). Si necesita ficheros adicionales (plantillas, scripts, iconos) van
+en el subdirectorio `<id>/` **del mismo directorio**. El `<id>` es el nombre del fichero
+sin extensión y es lo que se usa en la CLI (`appforge validate <id>`); si dos
+directorios tienen el mismo `<id>`, vale el del último.
 
 ```text
 entries/

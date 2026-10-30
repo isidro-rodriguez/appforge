@@ -41,7 +41,7 @@ Qué hace:
    `/opt/appforge` (con un enlace en `/usr/local/bin`), crea un
    usuario `usuario` con `sudo` y guarda la instantánea `limpio`. Las siguientes veces
    solo la clona (segundos); si el paquete cambia, la rehace.
-3. Clona la base en `appforge-try`, sube la receta a `/opt/appforge/entries/` y la
+3. Clona la base en `appforge-try`, sube la receta a `/opt/appforge/custom-entries/` y la
    valida en la distro de destino.
 4. Abre AppForge como `usuario` con `sudo` (así `APPFORGE_USER` es `usuario`): aplica,
    comprueba que sale `aplicada`, vuelve a aplicar («sin cambios») y desinstala.
