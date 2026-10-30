@@ -20,7 +20,7 @@ Todo AppForge queda en una carpeta:
 └── logs/               # registro de ejecuciones (se crea al usarlo)
 ```
 
-Las recetas de ejemplo ([Ollama](ollama.md) y [fuentes](fuentes.md), entre otras) son
+Las [recetas de ejemplo](recetas.md) son
 eso, ejemplos: úsalas, cámbialas o bórralas. [Las tuyas](../desarrollo/nueva-entrada.md)
 van en `custom-entries/`. Para actualizar AppForge más adelante basta
 `sudo /opt/appforge/appforge update`: conserva lo que hayas cambiado

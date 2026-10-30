@@ -169,7 +169,7 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 - TUI tests use `App.run_test()` and Pilot at 100×30; `demo_entry()` in
   `tests/test_ui.py` builds non-root entries that write under `tmp_path`, and an
   autouse fixture keeps only `ollama` from the repo entries.
-- Every repo entry has a dry-run test (`tests/test_ollama.py`, `tests/test_fonts.py`).
+- Every repo entry has a dry-run test (`tests/test_<id>.py`, e.g. `tests/test_fonts.py`).
 - Linux only (CI runs on `ubuntu-latest`).
 
 ## Agent workflow

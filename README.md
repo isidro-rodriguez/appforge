@@ -3,8 +3,8 @@
 # appforge
 
 Menú de consola que centraliza recetas de configuración repetibles: cada opción es un
-fichero TOML que instala y configura una aplicación (ejemplos incluidos: Ollama bajo
-demanda y fuentes adicionales). Para **Debian 13**.
+fichero TOML que instala y configura una aplicación (ejemplos incluidos: Ollama,
+Docker, Incus, cortafuegos, servidor SSH, Git, Neovim, fuentes…). Para **Debian 13**.
 
 > AppForge no es un sandbox: cada receta es código que se ejecuta como `root`.
 > Revisa las que no hayas escrito antes de aplicarlas.
