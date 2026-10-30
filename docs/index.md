@@ -43,35 +43,35 @@ preguntar, qué ejecutar y cómo comprobar que quedó bien.
 
 <div class="grid cards" markdown>
 
--   :lucide-list-checks:{ .lg } **Siempre sabes qué está aplicado**
+- :lucide-list-checks:{ .lg } **Siempre sabes qué está aplicado**
 
-    Cada receta trae su propia comprobación. El catálogo marca con *aplicada* lo
-    que ya está en tu sistema; no hay ficheros de estado que se desincronicen.
+  Cada receta trae su propia comprobación. El catálogo marca con _aplicada_ lo
+  que ya está en tu sistema; no hay ficheros de estado que se desincronicen.
 
--   :lucide-eye:{ .lg } **Mira antes de tocar**
+- :lucide-eye:{ .lg } **Mira antes de tocar**
 
-    El *dry-run* enseña cada comando y el diff de cada fichero que se va a
-    escribir. Nada cambia hasta que confirmas.
+  El _dry-run_ enseña cada comando y el diff de cada fichero que se va a
+  escribir. Nada cambia hasta que confirmas.
 
--   :lucide-shield-check:{ .lg } **Seguro por defecto**
+- :lucide-shield-check:{ .lg } **Seguro por defecto**
 
-    Secretos enmascarados, copia `.backup` antes de sobrescribir y recetas
-    rechazadas si alguien más puede editarlas.
+  Secretos enmascarados, copia `.backup` antes de sobrescribir y recetas
+  rechazadas si alguien más puede editarlas.
 
--   :lucide-layers:{ .lg } **Por lotes y cancelable**
+- :lucide-layers:{ .lg } **Por lotes y cancelable**
 
-    Marca varias recetas e instálalas seguidas, con progreso, registro en vivo
-    y `ctrl+c` que corta de verdad el comando en curso.
+  Marca varias recetas e instálalas seguidas, con progreso, registro en vivo
+  y `ctrl+c` que corta de verdad el comando en curso.
 
--   :lucide-file-code:{ .lg } **Recetas legibles**
+- :lucide-file-code:{ .lg } **Recetas legibles**
 
-    TOML con cuatro tipos de paso (`run`, `script`, `template`, `copy`). Sin
-    condicionales ni bucles: si cabe en una nota, cabe en una receta.
+  TOML con cuatro tipos de paso (`run`, `script`, `template`, `copy`). Sin
+  condicionales ni bucles: si cabe en una nota, cabe en una receta.
 
--   :lucide-package:{ .lg } **Un solo binario**
+- :lucide-package:{ .lg } **Un solo binario**
 
-    Copia la carpeta con el binario, `config.toml` y tus recetas a otro equipo y
-    funciona igual. `appforge validate` revisa las recetas en tu CI.
+  Copia la carpeta con el binario, `config.toml` y tus recetas a otro equipo y
+  funciona igual. `appforge validate` revisa las recetas en tu CI.
 
 </div>
 
@@ -116,14 +116,3 @@ preguntar, qué ejecutar y cómo comprobar que quedó bien.
     ![Progreso de una instalación por lotes](assets/images/screenshots/progreso.svg)
     <figcaption>Progreso por receta, barra global y registro etiquetado por tipo de paso.</figcaption>
     </figure>
-
-## Incluye
-
-La receta **[Ollama bajo demanda](guia/ollama.md)**: modelos de lenguaje en local
-sin servicio de arranque, con un lanzador que lo enciende y apaga y ajustes de
-memoria pensados para GPU de consumo.
-
-<div class="af-hero__actions" markdown>
-[Empezar](guia/primeros-pasos.md){ .md-button .md-button--primary }
-[Ver todas las opciones](avanzado/configuracion.md){ .md-button }
-</div>
