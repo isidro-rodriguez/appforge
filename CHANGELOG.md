@@ -7,11 +7,16 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-10-30
+
 ### Fixed
 
 - `scripts/try-entry.sh` se detiene si el paquete de `dist/` es de otra versión que el
   código (antes probaba la receta con un AppForge antiguo, que rechazaba claves nuevas
   como `type` o `choices`) y avisa si `src/` cambió después de construirlo.
+- En los diálogos, ++tab++ y ++shift+tab++ pasan de un campo a otro (la tecla
+  estaba reservada al catálogo y no hacía nada); el formulario empieza en el primer
+  campo.
 
 ### Changed
 
