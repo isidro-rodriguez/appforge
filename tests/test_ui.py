@@ -4,7 +4,16 @@ import shutil
 from pathlib import Path
 
 import pytest
-from textual.widgets import Input, Label, ListView, ProgressBar, RichLog
+from textual.widgets import (
+    Button,
+    Checkbox,
+    Input,
+    Label,
+    ListView,
+    ProgressBar,
+    RichLog,
+    Select,
+)
 
 from appforge.config import Config, load_config
 from appforge.tui import (
@@ -109,7 +118,7 @@ async def test_dry_run_flow_keeps_selection(config: Config) -> None:
         await wait_for(pilot, lambda: isinstance(app.screen, ParamsScreen))
         links = [str(label.render()) for label in app.screen.query(".link")]
         assert links == ["↗ https://github.com/ollama/ollama/releases"]
-        app.screen.query_one("#p_kv_cache", Input).value = "q4_0"
+        app.screen.query_one("#p_kv_cache", Select).value = "q4_0"
         await pilot.click("#ok")
         await wait_for(pilot, lambda: isinstance(app.screen, ProgressScreen))
         screen = app.screen
@@ -264,13 +273,63 @@ def test_entry_markdown_lists_everything(config: Config) -> None:
     md = entry_markdown(entries[0], False)
     assert md.startswith("# Ollama (bajo demanda)")
     assert "### Ajustes de rendimiento" in md  # details.md
-    assert "| `arch` | Arquitectura (amd64 | arm64) | `amd64` |" in md
+    assert "| `arch` | Arquitectura | `amd64` · `arm64` | `amd64` |" in md
+    assert "| `context_length` | OLLAMA_CONTEXT_LENGTH | int | `8192` |" in md
     assert (
         "| `version` | Versión de Ollama (etiqueta de GitHub) "
         "([https://github.com/ollama/ollama/releases]"
-        "(https://github.com/ollama/ollama/releases)) | `v0.40.13` |"
+        "(https://github.com/ollama/ollama/releases)) | text | `v0.40.13` |"
     ) in md
     assert "**4. Variables de entorno (optimización)** · `template`" in md
     assert "Genera `/opt/ollama/ollama.env` desde `ollama/ollama.env.tpl`" in md
     assert "## Comprobación" in md
     assert "| no aplicada | IA | `entries/ollama/` |" in md
+
+
+async def test_typed_params_form(config: Config, write_entry, tmp_path: Path) -> None:
+    """Casilla para bool, desplegable para choices y campos que rechazan valores."""
+    write_entry(
+        "tipada",
+        f"""
+name = "Tipada"
+[[param]]
+name = "flag"
+prompt = "Activar"
+type = "bool"
+[[param]]
+name = "color"
+prompt = "Color"
+choices = ["rojo", "azul"]
+default = "azul"
+[[param]]
+name = "port"
+prompt = "Puerto"
+type = "port"
+[[step]]
+run = "echo $flag $color $port > {tmp_path}/out"
+""",
+    )
+    app = AppForgeApp(config)
+    async with app.run_test(size=SIZE) as pilot:
+        await settle(app, pilot)
+        app.marked = {"tipada"}
+        await pilot.press("d")
+        await wait_for(pilot, lambda: isinstance(app.screen, ParamsScreen))
+        screen = app.screen
+        assert isinstance(screen, ParamsScreen)
+        assert screen.query_one("#p_flag", Checkbox).value is False
+        assert screen.query_one("#p_color", Select).value == "azul"
+        port = screen.query_one("#p_port", Input)
+        port.value = "70000"
+        screen.query_one("#ok", Button).press()  # el aviso puede tapar el botón
+        await pilot.pause()
+        assert app.screen is screen  # valor no válido: no se cierra
+        assert port.has_class("-invalid")
+        port.value = "2222"
+        screen.query_one("#p_flag", Checkbox).value = True
+        screen.query_one("#ok", Button).press()  # el aviso puede tapar el botón
+        await wait_for(pilot, lambda: isinstance(app.screen, ProgressScreen))
+        progress = app.screen
+        assert isinstance(progress, ProgressScreen)
+        await wait_for(pilot, lambda: not progress.running)
+        assert "# echo $flag $color $port" in log_text(progress)

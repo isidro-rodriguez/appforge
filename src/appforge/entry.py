@@ -14,9 +14,18 @@ import stat
 import string
 import tomllib
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
+
+from acodo.utils.converters import to_bool, to_int, to_path
+from acodo.utils.validators import (
+    valid_domain,
+    valid_email,
+    valid_ip,
+    valid_port,
+    valid_url,
+)
 
 STEP_KINDS = ("run", "template", "copy", "script")
 FILE_KINDS = ("template", "copy", "script")
@@ -33,7 +42,7 @@ TOP_KEYS = {
     "step",
     "remove",
 }
-PARAM_KEYS = {"name", "prompt", "default", "secret", "link"}
+PARAM_KEYS = {"name", "prompt", "default", "secret", "link", "type", "choices"}
 URL = re.compile(r"https?://\S+")
 STEP_KEYS = {"title", "dest", "mode", *STEP_KINDS}
 IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -58,6 +67,34 @@ RESERVED_PREFIX = "APPFORGE_"
 USER_VARS = ("APPFORGE_USER", "APPFORGE_USER_HOME")
 
 
+def _is_int(value: str) -> bool:
+    return to_int(value) is not None
+
+
+def _is_bool(value: str) -> bool:
+    return to_bool(value) is not None
+
+
+def _is_abs_path(value: str) -> bool:
+    path = to_path(value)
+    return path is not None and value.startswith("/")
+
+
+# type de un parámetro: (comprobación, qué se espera, para el mensaje de error).
+PARAM_TYPES: dict[str, tuple[Any, str]] = {
+    "text": (None, "texto"),
+    "bool": (_is_bool, "sí o no"),
+    "int": (_is_int, "un número entero"),
+    "port": (valid_port, "un puerto (1-65535)"),
+    "email": (valid_email, "un email"),
+    "path": (_is_abs_path, "una ruta absoluta"),
+    "ip": (valid_ip, "una dirección IP"),
+    "url": (valid_url, "una URL"),
+    "domain": (valid_domain, "un nombre de dominio"),
+}
+BOOL_VALUES = ("yes", "no")  # lo que reciben los pasos de un parámetro bool
+
+
 @dataclass(frozen=True)
 class Param:
     """Parámetro que se pide al usuario antes de aplicar una entrada.
@@ -69,6 +106,9 @@ class Param:
         secret: Si es ``True`` la entrada se oculta y el valor se enmascara.
         link: Página donde elegir el valor (p. ej. las versiones publicadas), o
             ``None``.
+        type: Tipo del valor (clave de :data:`PARAM_TYPES`); ``bool`` llega a
+            los pasos como ``yes``/``no``.
+        choices: Valores permitidos; vacío si se admite cualquiera del tipo.
     """
 
     name: str
@@ -76,6 +116,49 @@ class Param:
     default: str | None = None
     secret: bool = False
     link: str | None = None
+    type: str = "text"
+    choices: tuple[str, ...] = ()
+
+    def normalize(self, value: str) -> str:
+        """Forma canónica de ``value`` (``yes``/``no`` en un ``bool``).
+
+        Args:
+            value: Valor introducido.
+
+        Returns:
+            El valor que reciben los pasos.
+
+        Examples:
+            >>> Param("a", "A", type="bool").normalize("Sí")
+            'yes'
+        """
+        if self.type == "bool" and (b := to_bool(value)) is not None:
+            return BOOL_VALUES[0] if b else BOOL_VALUES[1]
+        return value.strip() if self.type != "text" else value
+
+    def error(self, value: str) -> str | None:
+        """Por qué ``value`` no vale para este parámetro.
+
+        Args:
+            value: Valor no vacío.
+
+        Returns:
+            El motivo, o ``None`` si es válido.
+
+        Examples:
+            >>> Param("p", "P", type="port").error("80") is None
+            True
+            >>> Param("p", "P", choices=("a", "b")).error("c")
+            'debe ser uno de: a, b'
+        """
+        if self.choices:
+            if value in self.choices:
+                return None
+            return f"debe ser uno de: {', '.join(self.choices)}"
+        check, expected = PARAM_TYPES.get(self.type, (None, ""))
+        if check is not None and not check(value.strip()):
+            return f"debe ser {expected}"
+        return None
 
 
 @dataclass(frozen=True)
@@ -267,16 +350,60 @@ class _Parser:
             if default is not None and not isinstance(default, (str, int, float, bool)):
                 self.problems.append(f"{where}: 'default' debe ser escalar")
                 default = None
-            params.append(
-                Param(
-                    name=name,
-                    prompt=self.text(p, "prompt", where) or name,
-                    default=None if default is None else str(default),
-                    secret=self.flag(p, "secret", where),
-                    link=self._link(p, where),
-                )
+            param = Param(
+                name=name,
+                prompt=self.text(p, "prompt", where) or name,
+                default=None if default is None else str(default),
+                secret=self.flag(p, "secret", where),
+                link=self._link(p, where),
+                type=self._type(p, where),
+                choices=self._choices(p, where),
             )
+            params.append(self._check_param(param, where))
         return params
+
+    def _type(self, p: dict[str, Any], where: str) -> str:
+        """Lee ``type`` (por defecto ``text``)."""
+        kind = self.text(p, "type", where) or "text"
+        if kind not in PARAM_TYPES:
+            self.problems.append(
+                f"{where}: 'type' desconocido: {kind} "
+                f"(admitidos: {', '.join(PARAM_TYPES)})"
+            )
+            return "text"
+        return kind
+
+    def _choices(self, p: dict[str, Any], where: str) -> tuple[str, ...]:
+        """Lee ``choices``: lista de dos o más textos distintos."""
+        raw = p.get("choices")
+        if raw is None:
+            return ()
+        if (
+            not isinstance(raw, list)
+            or len(raw) < 2
+            or not all(isinstance(c, str) and c.strip() for c in raw)
+            or len(set(raw)) != len(raw)
+        ):
+            self.problems.append(
+                f"{where}: 'choices' debe ser una lista de dos o más textos distintos"
+            )
+            return ()
+        return tuple(raw)
+
+    def _check_param(self, param: Param, where: str) -> Param:
+        """Combinaciones inválidas y ``default`` que no cumple su tipo."""
+        if param.choices and param.type != "text":
+            self.problems.append(f"{where}: 'choices' y 'type' no se combinan")
+        if param.secret and (param.choices or param.type == "bool"):
+            self.problems.append(f"{where}: 'secret' solo vale con texto libre")
+        if param.default is None:
+            if param.type == "bool":  # una casilla siempre tiene valor
+                param = replace(param, default=BOOL_VALUES[1])
+            return param
+        if reason := param.error(param.default):
+            self.problems.append(f"{where}: 'default' {reason}")
+            return param
+        return replace(param, default=param.normalize(param.default))
 
     def _link(self, p: dict[str, Any], where: str) -> str | None:
         """Lee ``link``: una URL http(s) o nada."""

@@ -12,7 +12,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, cast
 
 from rich.console import Group
 from rich.markup import escape
@@ -26,8 +26,10 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
 from textual.message import Message
 from textual.screen import ModalScreen, Screen
+from textual.validation import Function
 from textual.widgets import (
     Button,
+    Checkbox,
     Footer,
     Input,
     Label,
@@ -36,13 +38,14 @@ from textual.widgets import (
     Markdown,
     ProgressBar,
     RichLog,
+    Select,
     Static,
 )
 
 from appforge import __version__
 from appforge.config import Config
 from appforge.engine import Engine, EngineError, invoking_user, resolve_values
-from appforge.entry import Entry, Step, load_catalog
+from appforge.entry import BOOL_VALUES, Entry, Param, Step, load_catalog
 from appforge.runlog import RunLog, step_tag
 from appforge.theme import (
     ANVIL_DARK,
@@ -364,6 +367,54 @@ class ConfirmScreen(ModalScreen[bool]):
         self.dismiss(event.button.id == "yes")
 
 
+# Pista del campo vacío según el tipo del parámetro.
+_TYPE_HINTS = {
+    "int": "número entero",
+    "port": "puerto (1-65535)",
+    "email": "nombre@dominio",
+    "path": "/ruta/absoluta",
+    "ip": "dirección IP",
+    "url": "https://…",
+    "domain": "ejemplo.org",
+}
+
+
+def param_field(param: Param) -> Input | Select[str]:
+    """Campo del formulario para ``param``: desplegable o texto validado.
+
+    Args:
+        param: Parámetro que no es ``bool`` (ese va en una casilla).
+
+    Returns:
+        Un ``Select`` si tiene ``choices``; si no, un ``Input`` que marca en
+        rojo los valores que no cumplen su ``type``.
+    """
+    field_id = f"p_{param.name}"
+    if param.choices:
+        options: list[tuple[str, str]] = [(c, c) for c in param.choices]
+        select: Select[str] = Select(
+            options,
+            value=param.default if param.default else Select.NULL,
+            allow_blank=param.default is None,
+            prompt="Elige…",
+            id=field_id,
+        )
+        return select
+    if param.default:
+        placeholder = "(por defecto)" if param.secret else param.default
+    else:
+        placeholder = _TYPE_HINTS.get(param.type, "")
+    return Input(
+        placeholder=placeholder,
+        password=param.secret,
+        type="integer" if param.type in ("int", "port") else "text",
+        validators=[
+            Function(lambda v: not v or param.error(v) is None, "valor no válido")
+        ],
+        id=field_id,
+    )
+
+
 def param_link(url: str) -> Text:
     """Enlace de un parámetro, pulsable en las terminales que lo admiten.
 
@@ -401,26 +452,35 @@ class ParamsScreen(ModalScreen[dict[str, str] | None]):
             yield Label(f"[b]{escape(self.entry.name)}[/b]: parámetros{suffix}")
             with VerticalScroll(id="fields"):
                 for p in self.entry.params:
-                    placeholder = ""
-                    if p.default:
-                        placeholder = "(por defecto)" if p.secret else p.default
+                    if p.type == "bool":
+                        yield Checkbox(
+                            escape(p.prompt),
+                            value=p.default == BOOL_VALUES[0],
+                            id=f"p_{p.name}",
+                            classes="prompt",
+                        )
+                        continue
                     yield Label(escape(p.prompt), classes="prompt")
                     if p.link:
                         yield Label(param_link(p.link), classes="link")
-                    yield Input(
-                        placeholder=placeholder, password=p.secret, id=f"p_{p.name}"
-                    )
+                    yield param_field(p)
             # Fuera del scroll: los botones siempre visibles.
             with Horizontal(classes="buttons"):
                 yield Button("Aceptar", variant="primary", id="ok")
                 yield Button("Cancelar", id="cancel")
 
     def _values(self) -> dict[str, str]:
-        """Valores escritos en el formulario."""
-        return {
-            p.name: self.query_one(f"#p_{p.name}", Input).value
-            for p in self.entry.params
-        }
+        """Valores del formulario (vacío = el de por defecto)."""
+        values = {}
+        for p in self.entry.params:
+            widget = self.query_one(f"#p_{p.name}")
+            if isinstance(widget, Checkbox):
+                values[p.name] = BOOL_VALUES[0] if widget.value else BOOL_VALUES[1]
+            elif isinstance(widget, Select):
+                values[p.name] = "" if widget.is_blank() else str(widget.value)
+            else:
+                values[p.name] = cast(Input, widget).value
+        return values
 
     def _submit(self) -> None:
         """Valida y cierra con los valores."""
@@ -494,10 +554,12 @@ def entry_markdown(entry: Entry, state: State, checked: bool = True) -> str:
             else:
                 default = f"`{p.default}`" if p.default else "—"
             prompt = f"{p.prompt} ([{p.link}]({p.link}))" if p.link else p.prompt
-            rows.append(f"| `{p.name}` | {prompt} | {default} |")
+            kind = " · ".join(f"`{c}`" for c in p.choices) if p.choices else p.type
+            rows.append(f"| `{p.name}` | {prompt} | {kind} | {default} |")
         parts.append("## Parámetros")
         parts.append(
-            "| Nombre | Pregunta | Por defecto |\n|---|---|---|\n" + "\n".join(rows)
+            "| Nombre | Pregunta | Tipo | Por defecto |\n|---|---|---|---|\n"
+            + "\n".join(rows)
         )
     parts.append("## Pasos")
     for i, step in enumerate(entry.steps, 1):

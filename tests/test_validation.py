@@ -224,3 +224,48 @@ def test_own_files_are_not_unused(config, write_entry) -> None:
     write_entry("limpia", f'name = "Limpia"\ndescription = "d"\n{STEP}')
     warnings = validate_entry(get_entry(config, "limpia")).warnings
     assert not [w for w in warnings if "sin usar" in w]
+
+
+# -- Tipos de parámetro ------------------------------------------------------- #
+@pytest.mark.parametrize(
+    ("param", "expected"),
+    [
+        ('type = "color"', "'type' desconocido: color"),
+        ('choices = ["solo"]', "dos o más textos distintos"),
+        ('choices = ["a", "a"]', "dos o más textos distintos"),
+        ('choices = ["a", "b"]\ntype = "int"', "'choices' y 'type' no se combinan"),
+        ('type = "bool"\nsecret = true', "'secret' solo vale con texto libre"),
+        ('type = "int"\ndefault = "diez"', "'default' debe ser un número entero"),
+        ('choices = ["a", "b"]\ndefault = "c"', "'default' debe ser uno de: a, b"),
+        ('type = "email"\ndefault = "hola"', "'default' debe ser un email"),
+        (
+            'type = "path"\ndefault = "rel/ativa"',
+            "'default' debe ser una ruta absoluta",
+        ),
+    ],
+)
+def test_invalid_param_types(problems, param: str, expected: str) -> None:
+    toml = f'name="x"\n[[param]]\nname="p"\n{param}\n[[step]]\nrun="echo $p"'
+    assert any(expected in p for p in problems(toml)), problems(toml)
+
+
+def test_typed_values_are_checked_and_normalized(config, write_entry) -> None:
+    from appforge.engine import EngineError, resolve_values
+
+    write_entry(
+        "tipos",
+        'name = "Tipos"\n'
+        '[[param]]\nname = "on"\ntype = "bool"\ndefault = true\n'
+        '[[param]]\nname = "off"\ntype = "bool"\n'
+        '[[param]]\nname = "n"\ntype = "int"\ndefault = "3"\n'
+        '[[param]]\nname = "mail"\ntype = "email"\n'
+        '[[step]]\nrun = "echo $on $off $n $mail"\n',
+    )
+    entry = get_entry(config, "tipos")
+    assert entry.valid, entry.problems
+    values = resolve_values(entry, {"mail": "a@b.org", "off": "Sí"})
+    assert values == {"on": "yes", "off": "yes", "n": "3", "mail": "a@b.org"}
+    with pytest.raises(EngineError, match="n debe ser un número entero"):
+        resolve_values(entry, {"mail": "a@b.org", "n": "3.5"})
+    with pytest.raises(EngineError, match="mail debe ser un email"):
+        resolve_values(entry, {"mail": "nadie"})

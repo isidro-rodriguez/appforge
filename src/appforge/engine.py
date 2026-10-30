@@ -87,8 +87,8 @@ def resolve_values(entry: Entry, given: dict[str, str]) -> dict[str, str]:
         Un valor por cada parámetro de la entrada.
 
     Raises:
-        EngineError: Si se da un parámetro desconocido o falta uno sin
-            valor por defecto.
+        EngineError: Si se da un parámetro desconocido, falta uno sin valor
+            por defecto o un valor no cumple su ``type`` o ``choices``.
 
     Examples:
         >>> from pathlib import Path
@@ -102,14 +102,19 @@ def resolve_values(entry: Entry, given: dict[str, str]) -> dict[str, str]:
         raise EngineError(f"Parámetros desconocidos: {', '.join(sorted(unknown))}")
     values: dict[str, str] = {}
     missing = []
+    invalid = []
     for p in entry.params:
         value = given.get(p.name) or p.default
-        if value:
-            values[p.name] = value
-        else:
+        if not value:
             missing.append(p.name)
+        elif reason := p.error(value):
+            invalid.append(f"{p.name} {reason}")
+        else:
+            values[p.name] = p.normalize(value)
     if missing:
         raise EngineError(f"Faltan parámetros: {', '.join(missing)}")
+    if invalid:
+        raise EngineError(f"Valores no válidos: {'; '.join(invalid)}")
     return values
 
 
