@@ -7,6 +7,13 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+
+- Documentación: la portada usa la receta del servidor SSH en los tres pasos de
+  «Cómo funciona» y la parrilla de tarjetas queda alineada. Las capturas solo
+  muestran recetas reales (el progreso es un *dry-run*); se retiran las entradas de
+  demostración.
+
 ## [0.10.0] - 2026-10-30
 
 ### Added

@@ -67,7 +67,7 @@ Muévete con las flechas. La ficha de la derecha resume la receta resaltada.
 Haz **doble clic** sobre *Ollama* o pulsa ++v++.
 
 <figure class="af-shot" markdown>
-![Página de detalle de Ollama](../assets/images/screenshots/detalle.svg)
+![Página de detalle de Ollama](../assets/images/screenshots/detalle-ollama.svg)
 <figcaption>La ficha completa: descripción, parámetros, cada paso, comprobación y eliminación.</figcaption>
 </figure>
 
@@ -97,8 +97,8 @@ cada una y confirma la lista antes de empezar.
 </figure>
 
 <figure class="af-shot" markdown>
-![Lote completado](../assets/images/screenshots/progreso-final.svg)
-<figcaption>Las recetas que terminan bien se desmarcan. ++ctrl+c++ cancela; ++l++ abre el registro completo.</figcaption>
+![Lote completado en dry-run](../assets/images/screenshots/progreso-final.svg)
+<figcaption>El mismo lote en <em>dry-run</em>. Al instalar, las recetas que terminan bien se desmarcan. ++ctrl+c++ cancela; ++l++ abre el registro completo.</figcaption>
 </figure>
 
 Si una receta falla, el lote sigue con la siguiente y la fila queda en rojo. El

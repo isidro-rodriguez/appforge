@@ -5,7 +5,7 @@ lenguaje en local **sin servicio de arranque**: no ocupa memoria ni GPU hasta qu
 enciendes. Un lanzador del escritorio hace de interruptor.
 
 <figure class="af-shot" markdown>
-![Página de detalle de la receta de Ollama](../assets/images/screenshots/detalle.svg)
+![Página de detalle de la receta de Ollama](../assets/images/screenshots/detalle-ollama.svg)
 </figure>
 
 ## Uso
