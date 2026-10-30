@@ -1,6 +1,6 @@
 [project]
 name = "appforge"
-version = "0.7.0"
+version = "0.8.0"
 description = "Lanzador de recetas de configuración con menú de consola"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -79,7 +79,7 @@ help = "Copia de seguridad del repositorio con git bundle"
 cmd = "python scripts/backup.py"
 
 [tool.poe.tasks.build]
-help = "Binario PyInstaller y paquete .deb en dist/ (en Debian)"
+help = "Binario PyInstaller, config y entradas en dist/ (carpeta y .tar.gz)"
 cmd = "python scripts/build.py"
 
 [tool.poe.tasks.screenshots]

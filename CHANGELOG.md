@@ -7,6 +7,8 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-30
+
 ### Added
 
 - Receta **Neovim (IDE de terminal)**: Neovim en `/opt/nvim` (versión fija,
@@ -15,6 +17,20 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   autocompletado, buscador, git y formateo) y su página «Receta incluida: Neovim».
 - `scripts/try-entry.sh`: prueba una receta en una VM o contenedor desechable con
   incus, en Debian 13 u otra distro, y su página «Probar una receta».
+
+### Changed
+
+- Vuelve el paquete `.tar.gz` que se extrae en `/opt/appforge`: todo en una carpeta
+  (programa, `config.toml`, `entries/` y el registro en `logs/`). El binario encuentra
+  su configuración aunque se lance desde un enlace. La Release se prueba extraída en
+  un Debian 13 limpio y publica `SHA256SUMS` y su procedencia.
+- `scripts/try-entry.sh` usa ese paquete (`--tar` en lugar de `--deb`).
+
+### Removed
+
+- Paquete `.deb`, con su configuración en `/etc/appforge` y su registro en
+  `/var/log/appforge`: repartía la aplicación por el sistema y la hacía más opaca.
+- Página `man appforge`, lanzador de escritorio e iconos instalados.
 
 ## [0.7.0] - 2026-10-29
 
