@@ -72,6 +72,20 @@ if [ -z "$pkg" ]; then
   [ -n "$pkg" ] || die "no hay paquete en dist/: constrúyelo (uv run python scripts/build.py) o usa --tar"
 fi
 [ -f "$pkg" ] || die "no existe $pkg"
+# El paquete lleva el programa que valida y aplica la receta: si es de otra versión
+# que el código (p. ej. sin las claves nuevas del formato), la prueba no vale.
+pkg_version="$(basename "$pkg" | sed -n 's/^appforge-\(.*\)-linux-.*\.tar\.gz$/\1/p')"
+if [ -f pyproject.toml ] && [ -d src/appforge ]; then
+  src_version="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml | head -n 1)"
+  if [ -n "$pkg_version" ] && [ "$pkg_version" != "$src_version" ]; then
+    die "el paquete es la versión $pkg_version y el código la $src_version.
+  Reconstrúyelo (uv run python scripts/build.py) o indica otro con --tar"
+  fi
+  if [ -n "$(find src -newer "$pkg" -type f -print -quit)" ]; then
+    echo "Aviso: hay cambios en src/ posteriores a $(basename "$pkg"); reconstrúyelo si afectan a la prueba"
+  fi
+fi
+say "Paquete: $(basename "$pkg")"
 
 say "Validando $id en este equipo"
 # Sobre una copia sin escritura para grupo/otros: aquí interesa el contenido. Los

@@ -7,6 +7,12 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `scripts/try-entry.sh` se detiene si el paquete de `dist/` es de otra versión que el
+  código (antes probaba la receta con un AppForge antiguo, que rechazaba claves nuevas
+  como `type` o `choices`) y avisa si `src/` cambió después de construirlo.
+
 ## [0.12.1] - 2026-10-30
 
 ### Changed

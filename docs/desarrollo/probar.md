@@ -29,7 +29,7 @@ scripts/try-entry.sh ruta/a/mi-receta/ --tar appforge-0.8.0-linux-x86_64.tar.gz
 | `--distro D` | Imagen de incus (por defecto `debian/13`). Lista: `incus image list images: debian` |
 | `--container` | Contenedor en lugar de VM: no necesita KVM, pero no tiene systemd completo |
 | `--keep` | No borra la máquina de prueba; entra con `incus exec appforge-try -- bash` |
-| `--tar RUTA` | Paquete `appforge-*.tar.gz` a instalar (por defecto, el más reciente de `dist/`) |
+| `--tar RUTA` | Paquete `appforge-*.tar.gz` a instalar (por defecto, el más reciente de `dist/`). Desde el repositorio debe ser de la misma versión que el código: si no, el script se detiene y pide reconstruirlo (`uv run python scripts/build.py`) |
 | `--no-tui` | Solo prepara, sube y valida la receta (p. ej. en una CI) |
 
 Qué hace:
