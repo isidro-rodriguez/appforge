@@ -1,0 +1,7 @@
+# Instalado por AppForge (receta docker). Solo Debian 13 (trixie), amd64.
+Types: deb
+URIs: https://download.docker.com/linux/debian
+Suites: trixie
+Components: stable
+Architectures: amd64
+Signed-By: /etc/apt/keyrings/docker.asc

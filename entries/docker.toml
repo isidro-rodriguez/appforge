@@ -1,0 +1,82 @@
+name = "Docker Engine"
+description = "Docker CE desde el repositorio oficial de Docker, con Buildx y Compose"
+category = "Virtualización"
+details = """
+Instala Docker Engine desde el
+[repositorio APT oficial de Docker](https://docs.docker.com/engine/install/debian/):
+`docker-ce`, `docker-ce-cli`, `containerd.io`, `docker-buildx-plugin` y
+`docker-compose-plugin`.
+
+### Repositorio firmado
+
+- La clave se descarga a `/etc/apt/keyrings/docker.asc` y **se comprueba su huella**
+  antes de usarla; si no coincide, la receta falla.
+- El repositorio se declara en `/etc/apt/sources.list.d/docker.sources` (formato
+  deb822) con `Signed-By`: esa clave solo vale para este repositorio.
+
+Si tenías `docker.io` u otros paquetes de Debian que chocan con los de Docker, APT
+los sustituye.
+
+### ⚠ Antes de usarlo
+
+- Tu usuario entra en el grupo `docker`, lo que **equivale a ser root** en la
+  máquina. Cierra sesión y vuelve a entrar para usar `docker` sin `sudo`.
+- Docker **publica puertos saltándose ufw**: un `-p 8080:80` queda abierto aunque
+  ufw lo deniegue. Publica en `127.0.0.1:8080:80` si solo lo usas en local.
+- Docker pone la política `FORWARD` de iptables en `DROP` y deja sin red a las
+  instancias de **Incus** en la misma máquina.
+
+Desinstalar quita los paquetes, el repositorio y la clave. **Conserva**
+`/var/lib/docker` (imágenes, contenedores y volúmenes) y `/etc/docker`.
+"""
+
+[check]
+run = """
+systemctl is-active --quiet docker && timeout 10 docker version >/dev/null 2>&1
+"""
+
+[[step]]
+title = "Herramientas (curl, gpg)"
+run = "DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gpg"
+
+[[step]]
+title = "Clave del repositorio (huella verificada)"
+script = "apt-key.sh"
+
+[[step]]
+title = "Repositorio de Docker (deb822)"
+copy = "docker.sources"
+dest = "/etc/apt/sources.list.d/docker.sources"
+mode = "0644"
+
+[[step]]
+title = "Instalar Docker Engine"
+run = """
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+systemctl enable --now docker
+"""
+
+[[step]]
+title = "Añadir el usuario al grupo docker"
+run = """
+if [ "$APPFORGE_USER" = root ]; then
+  echo "root no necesita el grupo docker"
+else
+  usermod -aG docker "$APPFORGE_USER"
+fi
+if systemctl is-active --quiet incus 2>/dev/null; then
+  echo "Aviso: Incus está activo; Docker puede dejar sin red a sus instancias (política FORWARD)" >&2
+fi
+"""
+
+[remove]
+# Conserva /var/lib/docker (imágenes, contenedores, volúmenes) y /etc/docker.
+run = """
+DEBIAN_FRONTEND=noninteractive apt-get remove -y \
+  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
+  docker-ce-rootless-extras || true
+rm -f /etc/apt/sources.list.d/docker.sources /etc/apt/keyrings/docker.asc
+apt-get update || true
+"""
