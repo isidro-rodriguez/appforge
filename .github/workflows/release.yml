@@ -108,13 +108,15 @@ jobs:
           set +e
           A=/opt/appforge/appforge
           check "versión" "$A --version | grep -F \"$VERSION\""
-          check "contenido" 'test -x /opt/appforge/appforge && test -f /opt/appforge/config.toml && test -d /opt/appforge/entries'
+          check "contenido" 'test -x /opt/appforge/appforge && test -f /opt/appforge/config.toml && test -d /opt/appforge/appforge-entries && test -d /opt/appforge/custom-entries && test -f /opt/appforge/.manifest.json'
           check "validate" "$A validate --strict"
           check "propietario root" 'test -z "$(find /opt/appforge ! -user root)"'
           check "permisos" 'test -z "$(find /opt/appforge -perm /022)"'
           check "enlace en el PATH" "ln -s $A /usr/local/bin/appforge && appforge --version"
           check "sin terminal" 'rc=0; appforge >/tmp/o 2>&1 || rc=$?; cat /tmp/o; test "$rc" = 2 && grep -q terminal /tmp/o'
           check "sin root" 'rc=0; setpriv --reuid=nobody --regid=nogroup --clear-groups appforge >/tmp/o 2>&1 || rc=$?; cat /tmp/o; test "$rc" = 2 && grep -q superusuario /tmp/o'
+          check "update (plan)" "$A update --from dist/appforge-*.tar.gz --force --dry-run | grep -F Dry-run"
+          check "update conserva cambios" 'echo "# mío" >> /opt/appforge/config.toml && /opt/appforge/appforge update --from dist/appforge-*.tar.gz --force && grep -q "# mío" /opt/appforge/config.toml && /opt/appforge/appforge validate --strict'
           check "registro junto al binario" 'test ! -e /var/log/appforge && test ! -e /etc/appforge'
           exit "$fail"
 
