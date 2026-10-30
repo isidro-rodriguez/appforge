@@ -13,6 +13,11 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   código (antes probaba la receta con un AppForge antiguo, que rechazaba claves nuevas
   como `type` o `choices`) y avisa si `src/` cambió después de construirlo.
 
+### Changed
+
+- `scripts/try-entry.sh` sin receta abre la TUI en la máquina de prueba con las
+  recetas del paquete.
+
 ## [0.12.1] - 2026-10-30
 
 ### Changed

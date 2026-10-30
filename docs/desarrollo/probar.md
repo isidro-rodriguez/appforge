@@ -16,6 +16,7 @@ te deja probarla en la TUI y al salir la borra. Sirve para cualquier distro con 
 en incus, no solo Debian.
 
 ```bash
+scripts/try-entry.sh                                  # TUI con las recetas del paquete
 scripts/try-entry.sh mi-receta                        # VM con Debian 13
 scripts/try-entry.sh mi-receta --distro ubuntu/26.04   # otra distro
 scripts/try-entry.sh mi-receta --container             # contenedor: más rápido
@@ -25,7 +26,7 @@ scripts/try-entry.sh ruta/a/mi-receta/ --tar appforge-0.8.0-linux-x86_64.tar.gz
 
 | Opción | Efecto |
 |---|---|
-| `RECETA` | Id en `./entries` o ruta a su carpeta (con `entry.toml` y `details.md`) |
+| `RECETA` | Id en `./entries` o ruta a su carpeta (con `entry.toml` y `details.md`). Sin ella, abre la TUI con las recetas del paquete (con `--no-tui`, las valida todas) |
 | `--distro D` | Imagen de incus (por defecto `debian/13`). Lista: `incus image list images: debian` |
 | `--container` | Contenedor en lugar de VM: no necesita KVM, pero no tiene systemd completo |
 | `--keep` | No borra la máquina de prueba; entra con `incus exec appforge-try -- bash` |

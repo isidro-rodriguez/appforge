@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
-# Prueba una receta en una máquina virtual (o contenedor) desechable con incus.
+# Prueba una receta (o AppForge tal cual) en una máquina virtual o contenedor
+# desechable con incus.
 #
 # Uso:
-#   scripts/try-entry.sh RECETA [--distro D] [--container] [--keep] [--tar RUTA]
+#   scripts/try-entry.sh [RECETA] [--distro D] [--container] [--keep] [--tar RUTA]
 #
 #   RECETA       id en ./entries (mi-receta) o ruta a su carpeta (…/mi-receta/,
-#                con entry.toml y details.md).
+#                con entry.toml y details.md). Sin ella, abre la TUI con las
+#                recetas del paquete.
 #   --distro D   imagen de incus (por defecto debian/13; p. ej. ubuntu/26.04).
 #   --container  contenedor en lugar de VM: más rápido, sin systemd ni KVM.
 #   --keep       no borrar la máquina de prueba al salir.
 #   --tar RUTA   paquete appforge-*.tar.gz (por defecto, el más reciente de dist/).
-#   --no-tui     solo prepara, sube y valida la receta (p. ej. en una CI).
+#   --no-tui     solo prepara, sube y valida la receta (sin receta, todas) (p. ej.
+#                en una CI).
 #
 # La primera vez por distro crea una base (appforge-base-…) con AppForge en /opt,
 # un usuario «usuario» con sudo y una instantánea «limpio»; después solo la clona.
@@ -35,22 +38,23 @@ while [ $# -gt 0 ]; do
     --keep) keep=1; shift ;;
     --no-tui) tui=0; shift ;;
     --tar) pkg="${2:?falta la ruta del .tar.gz}"; shift 2 ;;
-    -h | --help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h | --help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) die "opción desconocida: $1" ;;
     *) [ -z "$entry" ] || die "solo una receta"; entry="$1"; shift ;;
   esac
 done
-[ -n "$entry" ] || die "indica la receta (scripts/try-entry.sh --help)"
-
-# --- Receta ------------------------------------------------------------------
-if [[ "$entry" == */* ]]; then
-  files_dir="${entry%/}"
-else
-  files_dir="entries/$entry"
+# --- Receta (opcional) -------------------------------------------------------
+id=""
+if [ -n "$entry" ]; then
+  if [[ "$entry" == */* ]]; then
+    files_dir="${entry%/}"
+  else
+    files_dir="entries/$entry"
+  fi
+  [ -f "$files_dir/entry.toml" ] || die "no existe $files_dir/entry.toml"
+  files_dir="$(cd "$files_dir" && pwd)"
+  id="$(basename "$files_dir")"
 fi
-[ -f "$files_dir/entry.toml" ] || die "no existe $files_dir/entry.toml"
-files_dir="$(cd "$files_dir" && pwd)"
-id="$(basename "$files_dir")"
 
 # --- Requisitos --------------------------------------------------------------
 command -v incus >/dev/null || die "falta incus (sudo apt install incus)"
@@ -87,7 +91,7 @@ if [ -f pyproject.toml ] && [ -d src/appforge ]; then
 fi
 say "Paquete: $(basename "$pkg")"
 
-say "Validando $id en este equipo"
+validate_here() {
 # Sobre una copia sin escritura para grupo/otros: aquí interesa el contenido. Los
 # permisos de tu copia de trabajo dependen de tu umask (git no los guarda) y en la
 # máquina de prueba se fijan al subir la receta.
@@ -110,6 +114,11 @@ if [ "${#validator[@]}" -gt 0 ]; then
   [ "$rc" = 0 ] || die "la receta no pasa la validación"
 fi
 rm -rf "$check_dir"
+}
+if [ -n "$id" ]; then
+  say "Validando $id en este equipo"
+  validate_here
+fi
 
 # --- Máquina base ------------------------------------------------------------
 slug="$(tr -c 'a-zA-Z0-9\n' '-' <<<"$distro")"  # incus: solo letras, números y -
@@ -189,16 +198,20 @@ incus copy "$base/limpio" "$try"
 incus start "$try"
 wait_ready "$try"
 
-say "Subiendo $id"
-incus file push -r "$files_dir" "$try/opt/appforge/custom-entries/"
-incus exec "$try" -- sh -c 'chown -R root:root /opt/appforge/custom-entries && chmod -R go-w /opt/appforge/custom-entries'
+if [ -n "$id" ]; then
+  say "Subiendo $id"
+  incus file push -r "$files_dir" "$try/opt/appforge/custom-entries/"
+  incus exec "$try" -- sh -c 'chown -R root:root /opt/appforge/custom-entries && chmod -R go-w /opt/appforge/custom-entries'
+fi
 
-say "Validando $id en $distro"
+say "Validando ${id:-las recetas del paquete} en $distro"
+validate_args=(appforge validate --strict)
+[ -z "$id" ] || validate_args+=("$id")
 if [ "$tui" = 0 ]; then
-  incus exec "$try" -- appforge validate --strict "$id"
+  incus exec "$try" -- "${validate_args[@]}"
   exit 0
 fi
-incus exec "$try" -- appforge validate --strict "$id" || echo "(sigue: revisa los avisos)"
+incus exec "$try" -- "${validate_args[@]}" || echo "(sigue: revisa los avisos)"
 
 say "Abriendo AppForge como «usuario» con sudo (q para salir)"
 incus exec -t "$try" -- su - usuario -c "TERM='${TERM:-xterm-256color}' sudo appforge" || true
