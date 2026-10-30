@@ -1,0 +1,38 @@
+# ~/.bash_aliases — instalado por AppForge (receta bash-aliases).
+# Lo carga ~/.bashrc. Si lo editas, reaplicar la receta lo sustituye (con copia
+# en ~/.bash_aliases.backup); pon tus alias propios en otro fichero.
+
+# --- Listados ---------------------------------------------------------------
+alias ls='ls --color=auto'
+alias ll='ls -lh'
+alias la='ls -lAh'
+alias l='ls -CF'
+alias lt='ls -lhtr'          # por fecha, lo más reciente al final
+
+# --- Búsqueda ---------------------------------------------------------------
+alias grep='grep --color=auto'
+
+# --- Navegación -------------------------------------------------------------
+alias ..='cd ..'
+alias ...='cd ../..'
+
+# --- Tamaños legibles -------------------------------------------------------
+alias df='df -h'
+alias du='du -h'
+alias free='free -h'
+
+# --- Copiar y mover con confirmación ----------------------------------------
+alias cp='cp -i'
+alias mv='mv -i'
+
+# --- APT ---------------------------------------------------------------------
+alias update='sudo apt update'
+alias upgrade='sudo apt update && sudo apt full-upgrade'
+
+# --- systemd -----------------------------------------------------------------
+alias sc='sudo systemctl'
+alias scs='systemctl status'
+alias failed='systemctl --failed'
+alias jf='journalctl -f'            # seguir el diario
+alias jfu='journalctl -fu'          # seguir un servicio: jfu ssh
+alias jerr='journalctl -p err -b'   # errores desde el arranque
