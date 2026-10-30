@@ -13,6 +13,7 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Receta **Servidor SSH (endurecido)** (`ssh-server`): OpenSSH con `50-appforge.conf` en `sshd_config.d`, validado con `sshd -t`; no se aplica sin claves autorizadas si se desactiva la contraseña. Abre su puerto en ufw si está activo.
 - Receta **Incus (contenedores y VM)** (`incus`): paquete de Debian 13 (con QEMU y OVMF opcionales), `incus admin init --minimal` si hace falta, usuario en `incus-admin` y reglas de ufw para `incusbr0`.
 - Receta **Docker Engine** (`docker`): repositorio APT oficial con clave de huella verificada y `.sources` deb822 con `Signed-By`; usuario en el grupo `docker`. Desinstalar conserva `/var/lib/docker`.
+- Receta **Git y GitHub CLI** (`git`): `gh` desde su repositorio APT oficial (clave verificada), configuración global de git del usuario y `gh` como gestor de credenciales.
 
 ## [0.9.0] - 2026-10-30
 

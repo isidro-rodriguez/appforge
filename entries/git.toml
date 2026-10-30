@@ -1,0 +1,97 @@
+name = "Git y GitHub CLI"
+description = "git, gh (repositorio oficial) y tu configuración global de git"
+category = "Desarrollo"
+details = """
+Instala `git` (Debian) y [GitHub CLI](https://cli.github.com) (`gh`) desde su
+repositorio APT oficial, y configura git para tu usuario.
+
+### Repositorio de GitHub CLI
+
+Mismo patrón que la receta de Docker: la clave se descarga a
+`/etc/apt/keyrings/githubcli-archive-keyring.gpg` tras **comprobar su huella**
+(publicadas en la
+[guía de instalación](https://github.com/cli/cli/blob/trunk/docs/install_linux.md)),
+y el repositorio va en `/etc/apt/sources.list.d/github-cli.sources` con `Signed-By`.
+
+### Configuración global (`~/.gitconfig`)
+
+| Ajuste | Valor |
+|---|---|
+| `user.name`, `user.email` | Parámetros |
+| `init.defaultBranch` | Parámetro (`main`) |
+| `pull.rebase` | `false` (merge al hacer `pull`) |
+| `core.editor` | Parámetro; `-` = no se toca |
+| Credenciales de github.com | `gh` (`gh auth setup-git`) |
+
+### Iniciar sesión en GitHub
+
+La receta no inicia sesión. Después de aplicarla, como tu usuario (sin `sudo`):
+
+```bash
+gh auth login
+```
+
+Desde entonces `git push` y `git pull` contra github.com usan las credenciales de
+`gh`.
+
+Desinstalar quita `gh`, su repositorio y su clave. **No** desinstala `git` ni toca
+tu `~/.gitconfig`.
+"""
+
+[[param]]
+name = "user_name"
+prompt = "Nombre para los commits (user.name)"
+
+[[param]]
+name = "user_email"
+prompt = "Email para los commits (user.email)"
+
+[[param]]
+name = "default_branch"
+prompt = "Rama inicial de los repositorios nuevos"
+default = "main"
+
+[[param]]
+name = "editor"
+prompt = "Editor de git (core.editor; - = no cambiar)"
+default = "-"
+
+[check]
+# El email no tiene valor por defecto: se comprueba que esté configurado.
+run = """
+command -v git >/dev/null && command -v gh >/dev/null \
+  && HOME="$APPFORGE_USER_HOME" git config --global --get user.email | grep -q '@'
+"""
+
+[[step]]
+title = "Instalar git y herramientas (curl, gpg)"
+run = "DEBIAN_FRONTEND=noninteractive apt-get install -y git ca-certificates curl gpg"
+
+[[step]]
+title = "Clave del repositorio de GitHub CLI (huella verificada)"
+script = "apt-key.sh"
+
+[[step]]
+title = "Repositorio de GitHub CLI (deb822)"
+copy = "github-cli.sources"
+dest = "/etc/apt/sources.list.d/github-cli.sources"
+mode = "0644"
+
+[[step]]
+title = "Instalar GitHub CLI"
+run = """
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y gh
+"""
+
+[[step]]
+title = "Configuración global de git del usuario"
+script = "git-config.sh"
+
+[remove]
+# Conserva git y el ~/.gitconfig del usuario.
+run = """
+DEBIAN_FRONTEND=noninteractive apt-get remove -y gh || true
+rm -f /etc/apt/sources.list.d/github-cli.sources /etc/apt/keyrings/githubcli-archive-keyring.gpg
+apt-get update || true
+"""
