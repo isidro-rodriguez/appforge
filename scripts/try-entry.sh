@@ -74,13 +74,29 @@ fi
 [ -f "$deb" ] || die "no existe $deb"
 
 say "Validando $id en este equipo"
+# Sobre una copia sin escritura para grupo/otros: aquí interesa el contenido. Los
+# permisos de tu copia de trabajo dependen de tu umask (git no los guarda) y en la
+# máquina de prueba se fijan al subir la receta.
+check_dir="$(mktemp -d)"
+mkdir "$check_dir/entries"
+cp "$toml" "$check_dir/entries/"
+[ -d "$files_dir" ] && cp -r "$files_dir" "$check_dir/entries/"
+chmod -R go-w "$check_dir"
 if command -v uv >/dev/null && [ -f pyproject.toml ]; then
-  uv run appforge validate --strict --dir "$entries_dir" "$id"
+  validator=(uv run appforge)
 elif command -v appforge >/dev/null; then
-  appforge validate --strict --dir "$entries_dir" "$id"
+  validator=(appforge)
 else
+  validator=()
   echo "(sin appforge ni uv aquí: se valida solo dentro)"
 fi
+if [ "${#validator[@]}" -gt 0 ]; then
+  rc=0
+  "${validator[@]}" validate --strict --dir "$check_dir/entries" "$id" || rc=$?
+  rm -rf "$check_dir"
+  [ "$rc" = 0 ] || die "la receta no pasa la validación"
+fi
+rm -rf "$check_dir"
 
 # --- Máquina base ------------------------------------------------------------
 slug="$(tr -c 'a-zA-Z0-9\n' '-' <<<"$distro")"  # incus: solo letras, números y -

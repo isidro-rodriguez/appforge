@@ -34,7 +34,9 @@ scripts/try-entry.sh ruta/a/mi-receta.toml --deb appforge_0.7.0_amd64.deb
 
 Qué hace:
 
-1. Valida la receta en tu equipo: si falla, para antes de crear nada.
+1. Valida la receta en tu equipo: si falla, para antes de crear nada. Valida una copia
+   sin escritura para grupo y otros, así que los permisos de tu copia de trabajo (que
+   dependen de tu `umask`; git no los guarda) no la hacen fallar.
 2. La primera vez por distro crea `appforge-base-<distro>`: instala el `.deb`, crea un
    usuario `usuario` con `sudo` y guarda la instantánea `limpio`. Las siguientes veces
    solo la clona (segundos); si el `.deb` cambia, la rehace.
