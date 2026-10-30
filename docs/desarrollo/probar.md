@@ -62,6 +62,30 @@ Las VM necesitan virtualización por hardware (`/dev/kvm`). Sin ella, usa
 | `no puedo usar incus: … permission denied` | Tu sesión no tiene el grupo `incus-admin`: `newgrp incus-admin` o vuelve a iniciar sesión |
 | `incus no admite VM todavía` | incus detecta QEMU al arrancar: `sudo systemctl restart incus` tras instalar `qemu-system-x86` y `ovmf` |
 | `sin /dev/kvm no hay VM` | Activa la virtualización en la BIOS/UEFI o usa `--container` |
+| `no tiene red` | Ver abajo |
+
+### Sin red en la máquina
+
+incus da red a sus máquinas con el puente `incusbr0` y su propio DHCP/DNS. Si un
+cortafuegos descarta ese tráfico, la máquina arranca pero no recibe IP o no sale a
+Internet.
+
+```bash
+incus exec appforge-try -- ip -4 addr          # sin IP 10.x: el DHCP está bloqueado
+sudo nft list ruleset | grep -iE "policy drop|ufw|firewalld|docker"
+```
+
+| Causa | Solución |
+|---|---|
+| **ufw** activo (entrada y reenvío en `drop`) | `sudo ufw allow in on incusbr0`, `sudo ufw route allow in on incusbr0` y `sudo ufw route allow out on incusbr0` |
+| **firewalld** activo | `sudo firewall-cmd --zone=trusted --change-interface=incusbr0 --permanent` y `sudo firewall-cmd --reload` |
+| **Docker** instalado: pone la cadena `FORWARD` de iptables en `DROP` | `sudo iptables -I DOCKER-USER -i incusbr0 -j ACCEPT` y `sudo iptables -I DOCKER-USER -o incusbr0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT` |
+
+Tras abrir el puente, borra la base que se quedó sin red
+(`incus delete -f appforge-base-debian-13-vm`) y repite.
+
+Las reglas de iptables de Docker no sobreviven a un reinicio; para hacerlas
+permanentes, guárdalas con `iptables-persistent` o el mecanismo que uses.
 
 ## Límites
 

@@ -25,6 +25,7 @@ deb=""
 entry=""
 
 die() { echo "try-entry: $*" >&2; exit 1; }
+trap 'echo; die "interrumpido"' INT
 say() { printf '\033[1m==> %s\033[0m\n' "$*"; }
 
 while [ $# -gt 0 ]; do
@@ -117,11 +118,18 @@ wait_ready() {  # espera a poder ejecutar órdenes y a tener red
   done
   echo
   [ "$ok" = 1 ] || die "$name no responde tras 3 min. Mira: incus info $name --show-log"
-  echo "    esperando red"
-  # shellcheck disable=SC2016  # se expande dentro de la máquina
-  incus exec "$name" -- sh -c \
-    'for i in $(seq 60); do getent hosts deb.debian.org >/dev/null && exit 0; sleep 2; done; exit 1' \
-    || die "$name no tiene red (¿un cortafuegos o Docker bloquea el puente incusbr0?)"
+  printf '    esperando red'
+  ok=0
+  for _ in $(seq 30); do  # 2 min como mucho, aunque el DNS no responda
+    if incus exec "$name" -- timeout 3 getent hosts deb.debian.org >/dev/null 2>&1; then
+      ok=1; break
+    fi
+    printf '.'
+    sleep 1
+  done
+  echo
+  [ "$ok" = 1 ] || die "$name no tiene red. Suele ser un cortafuegos o Docker bloqueando
+  el puente de incus; ver «Sin red en la máquina» en docs/desarrollo/probar.md"
 }
 
 if incus info "$base" >/dev/null 2>&1; then
