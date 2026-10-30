@@ -17,10 +17,11 @@ import re
 import shutil
 import subprocess
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from appforge.entry import FILE_KINDS, Entry, load_entries
+from appforge.entry import FILE_KINDS, Entry, load_catalog
 
 ENTRY_DIR_REF = re.compile(r"\$\{?APPFORGE_ENTRY_DIR\}?/([A-Za-z0-9._\-/]+)")
 
@@ -190,6 +191,45 @@ def validate_entry(entry: Entry) -> Report:
     return report
 
 
+def validate_dirs(entries_dirs: Sequence[Path]) -> Validation:
+    """Valida el catálogo que forman varios directorios de entradas.
+
+    Si un id está en varios directorios se valida la entrada que vale (la del
+    último) y se avisa de la sustitución.
+
+    Args:
+        entries_dirs: Directorios con los ``*.toml``, en orden.
+
+    Returns:
+        Los informes de cada entrada y los de los directorios.
+    """
+    missing = [f"{d}: no es un directorio" for d in entries_dirs if not d.is_dir()]
+    if missing:
+        return Validation(reports=[], errors=missing)
+    catalog = load_catalog(entries_dirs)
+    entries = catalog.entries
+    result = Validation(reports=[validate_entry(e) for e in entries])
+    result.errors.extend(catalog.problems)
+    # Los problemas del directorio ya se copiaron a cada entrada: no repetirlos.
+    for r in result.reports:
+        r.errors = [e for e in r.errors if e not in catalog.problems]
+    result.warnings.extend(catalog.overrides)
+    if not entries:
+        names = ", ".join(str(d) for d in entries_dirs)
+        result.warnings.append(f"{names}: no hay ninguna entrada (*.toml)")
+    for folder in entries_dirs:
+        ids = {p.stem for p in folder.glob("*.toml")}
+        for d in sorted(p for p in folder.iterdir() if p.is_dir()):
+            if d.name not in ids and not d.name.startswith("."):
+                result.warnings.append(
+                    f"{folder.name}/{d.name}/: subdirectorio sin {d.name}.toml"
+                )
+    for name, count in Counter(e.name for e in entries).items():
+        if count > 1:
+            result.warnings.append(f"nombre repetido en {count} entradas: {name}")
+    return result
+
+
 def validate_dir(entries_dir: Path) -> Validation:
     """Valida todas las entradas de un directorio.
 
@@ -199,21 +239,4 @@ def validate_dir(entries_dir: Path) -> Validation:
     Returns:
         Los informes de cada entrada y los del directorio.
     """
-    if not entries_dir.is_dir():
-        return Validation(reports=[], errors=[f"{entries_dir}: no es un directorio"])
-    entries, dir_problems = load_entries(entries_dir)
-    result = Validation(reports=[validate_entry(e) for e in entries])
-    result.errors.extend(dir_problems)
-    # Los problemas del directorio ya se copiaron a cada entrada: no repetirlos.
-    for r in result.reports:
-        r.errors = [e for e in r.errors if e not in dir_problems]
-    if not entries:
-        result.warnings.append(f"{entries_dir}: no hay ninguna entrada (*.toml)")
-    ids = {e.id for e in entries}
-    for d in sorted(p for p in entries_dir.iterdir() if p.is_dir()):
-        if d.name not in ids and not d.name.startswith("."):
-            result.warnings.append(f"{d.name}/: subdirectorio sin {d.name}.toml")
-    for name, count in Counter(e.name for e in entries).items():
-        if count > 1:
-            result.warnings.append(f"nombre repetido en {count} entradas: {name}")
-    return result
+    return validate_dirs([entries_dir])

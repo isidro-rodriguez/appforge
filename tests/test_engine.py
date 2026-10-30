@@ -45,7 +45,7 @@ DEMO_FILES = {
 
 
 def get_entry(config: Config, name: str) -> Entry:
-    entries, _ = load_entries(config.entries_dir)
+    entries, _ = load_entries(config.entries_dirs[0])
     return next(e for e in entries if e.id == name)
 
 

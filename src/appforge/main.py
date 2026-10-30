@@ -235,12 +235,12 @@ def validate(
             show_default=False,
         ),
     ] = None,
-    entries_dir: Annotated[
-        Path | None,
+    entries_dirs: Annotated[
+        list[Path] | None,
         typer.Option(
             "--dir",
             "-d",
-            help="Directorio de entradas. Por defecto, el de config.toml.",
+            help="Directorio de entradas (repetible). Por defecto, los de config.toml.",
             file_okay=False,
             metavar="DIR",
             show_default=False,
@@ -255,14 +255,14 @@ def validate(
 
     Args:
         ids: Ids de las entradas; vacío para todas.
-        entries_dir: Directorio a validar en lugar del configurado.
+        entries_dirs: Directorios a validar en lugar de los configurados.
         strict: Tratar los avisos como errores.
     """
-    from appforge.validate import validate_dir
+    from appforge.validate import validate_dirs
 
     out, err = make_consoles()
-    folder = entries_dir if entries_dir is not None else _load_config().entries_dir
-    result = validate_dir(folder.resolve())
+    folders = list(entries_dirs or _load_config().entries_dirs)
+    result = validate_dirs([f.resolve() for f in folders])
     reports = result.reports
     if ids:
         known = {r.entry.id for r in reports}
@@ -274,7 +274,9 @@ def validate(
             raise typer.Exit(2)
         reports = [r for r in reports if r.entry.id in ids]
 
-    out.print(Text(f"Entradas en {folder}", style="af.muted"))
+    out.print(
+        Text(f"Entradas en {', '.join(str(f) for f in folders)}", style="af.muted")
+    )
     for r in reports:
         if r.errors:
             mark, style = "✘", "af.error"
@@ -293,7 +295,7 @@ def validate(
     general_errors = result.errors
     general_warnings = result.warnings if not ids else []
     if general_errors or general_warnings:
-        out.print(Text("Directorio", style="af.title"))
+        out.print(Text("Directorios", style="af.title"))
         _print_lines(out, general_errors, "error", "✘")
         _print_lines(out, general_warnings, "warn", "!")
 

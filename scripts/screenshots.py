@@ -70,7 +70,7 @@ def _make_home(base: Path, ui: bool) -> Path:
         (home / "entries" / f"{entry_id}.toml").write_text(text, encoding="utf-8")
     flag = "true" if ui else "false"
     (home / "config.toml").write_text(
-        f'entries_dir = "entries"\n[ui]\nsearch = {flag}\ncategories = {flag}\n',
+        f'entries_dirs = ["entries"]\n[ui]\nsearch = {flag}\ncategories = {flag}\n',
         encoding="utf-8",
     )
     for p in [home, *home.rglob("*")]:

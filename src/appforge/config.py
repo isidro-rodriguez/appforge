@@ -6,13 +6,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from acodo.utils import to_path
-
 from appforge.entry import insecure_reason
 
 APP_NAME = "appforge"
 CONFIG_FILE = "config.toml"
-_CONFIG_KEYS = {"entries_dir", "ui"}
+_CONFIG_KEYS = {"entries_dirs", "ui"}
 LOGS_DIR = "logs"
 _UI_KEYS = {"search", "categories"}
 
@@ -40,12 +38,13 @@ class Config:
 
     Attributes:
         base_dir: Directorio donde viven el binario y ``config.toml``.
-        entries_dir: Directorio de entradas, ya resuelto a ruta absoluta.
+        entries_dirs: Directorios de entradas, en orden y resueltos a rutas
+            absolutas. Si un id está en varios, vale el del último.
         ui: Opciones de la TUI.
     """
 
     base_dir: Path
-    entries_dir: Path
+    entries_dirs: tuple[Path, ...]
     ui: UiConfig = field(default_factory=UiConfig)
 
     @property
@@ -100,15 +99,32 @@ def load_config(base: Path | None = None) -> Config:
     unknown = set(data) - _CONFIG_KEYS
     if unknown:
         raise ConfigError(f"{path}: claves desconocidas: {', '.join(sorted(unknown))}")
-    entries_raw = to_path(data.get("entries_dir"))
-    if entries_raw is None:
-        raise ConfigError(f"{path}: falta 'entries_dir'")
-
-    entries = (base / entries_raw).resolve()
-    if not entries.is_dir():
-        raise ConfigError(f"El directorio de entradas no existe: {entries}")
+    dirs = _load_entries_dirs(data.get("entries_dirs"), base, path)
     ui = _load_ui(data.get("ui", {}), path)
-    return Config(base_dir=base, entries_dir=entries, ui=ui)
+    return Config(base_dir=base, entries_dirs=dirs, ui=ui)
+
+
+def _load_entries_dirs(raw: Any, base: Path, path: Path) -> tuple[Path, ...]:
+    """Valida ``entries_dirs``: lista no vacía de directorios existentes."""
+    if raw is None:
+        raise ConfigError(f"{path}: falta 'entries_dirs'")
+    if (
+        not isinstance(raw, list)
+        or not raw
+        or not all(isinstance(d, str) and d.strip() for d in raw)
+    ):
+        raise ConfigError(
+            f"{path}: 'entries_dirs' debe ser una lista de rutas, "
+            'p. ej. ["appforge-entries", "custom-entries"]'
+        )
+    dirs: list[Path] = []
+    for item in raw:
+        folder = (base / Path(item).expanduser()).resolve()
+        if not folder.is_dir():
+            raise ConfigError(f"El directorio de entradas no existe: {folder}")
+        if folder not in dirs:
+            dirs.append(folder)
+    return tuple(dirs)
 
 
 def _load_ui(raw: Any, path: Path) -> UiConfig:

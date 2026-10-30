@@ -16,7 +16,7 @@ VALUES: dict[str, str] = {}
 
 
 def ollama(config):
-    entries, _ = load_entries(config.entries_dir)
+    entries, _ = load_entries(config.entries_dirs[0])
     return next(e for e in entries if e.id == "ollama")
 
 
@@ -46,7 +46,7 @@ def test_entry_is_valid(config):
 
 
 def test_missing_icon_is_reported(config):
-    (config.entries_dir / "ollama" / "ollama.png").unlink()
+    (config.entries_dirs[0] / "ollama" / "ollama.png").unlink()
     e = ollama(config)
     assert any("ollama.png" in p for p in e.problems)
 
@@ -167,7 +167,7 @@ def test_toggle_on_then_off(fake_install):
 def test_dry_run_is_logged(config, sink) -> None:
     from appforge.runlog import RunLog
 
-    entries, _ = load_entries(config.entries_dir)
+    entries, _ = load_entries(config.entries_dirs[0])
     entry = next(e for e in entries if e.id == "ollama")
     engine = Engine(config, RunLog(config).tee(sink, "ollama: "))
     assert engine.apply(entry, VALUES, dry_run=True)

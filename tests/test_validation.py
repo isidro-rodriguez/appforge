@@ -9,7 +9,7 @@ from appforge.entry import Entry, load_entries
 
 
 def get_entry(config: Config, name: str) -> Entry:
-    entries, _ = load_entries(config.entries_dir)
+    entries, _ = load_entries(config.entries_dirs[0])
     return next(e for e in entries if e.id == name)
 
 
@@ -75,20 +75,20 @@ def test_world_writable_entry_is_rejected(config, write_entry) -> None:
 
 def test_symlink_in_files_dir_is_rejected(config, write_entry) -> None:
     write_entry("s", f'name="s"\n{STEP}', {"ok.txt": "x"})
-    (config.entries_dir / "s" / "link").symlink_to("/etc/hostname")
+    (config.entries_dirs[0] / "s" / "link").symlink_to("/etc/hostname")
     assert any("enlace simbólico" in p for p in get_entry(config, "s").problems)
 
 
 def test_config_errors(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match="No existe"):
         load_config(tmp_path)
-    (tmp_path / "config.toml").write_text('entries_dir = "nope"')
+    (tmp_path / "config.toml").write_text('entries_dirs = ["nope"]')
     with pytest.raises(ConfigError, match="no existe"):
         load_config(tmp_path)
     (tmp_path / "config.toml").write_text('entries = "x"')
     with pytest.raises(ConfigError, match="desconocidas"):
         load_config(tmp_path)
-    (tmp_path / "config.toml").write_text("entries_dir = ")
+    (tmp_path / "config.toml").write_text("entries_dirs = ")
     with pytest.raises(ConfigError, match="TOML inválido"):
         load_config(tmp_path)
 
@@ -105,16 +105,18 @@ def test_category_is_read(config, write_entry) -> None:
 def test_ui_options(tmp_path: Path) -> None:
     (tmp_path / "entries").mkdir()
     cfg = tmp_path / "config.toml"
-    cfg.write_text('entries_dir = "entries"\n')
+    cfg.write_text('entries_dirs = ["entries"]\n')
     assert not load_config(tmp_path).ui.search
-    cfg.write_text('entries_dir = "entries"\n[ui]\nsearch = true\ncategories = true\n')
+    cfg.write_text(
+        'entries_dirs = ["entries"]\n[ui]\nsearch = true\ncategories = true\n'
+    )
     ui = load_config(tmp_path).ui
     assert ui.search
     assert ui.categories
-    cfg.write_text('entries_dir = "entries"\n[ui]\nfoo = true\n')
+    cfg.write_text('entries_dirs = ["entries"]\n[ui]\nfoo = true\n')
     with pytest.raises(ConfigError, match="desconocidas en \\[ui\\]"):
         load_config(tmp_path)
-    cfg.write_text('entries_dir = "entries"\nui = 1\n')
+    cfg.write_text('entries_dirs = ["entries"]\nui = 1\n')
     with pytest.raises(ConfigError, match="tabla \\[ui\\]"):
         load_config(tmp_path)
 
@@ -151,3 +153,40 @@ def test_insecure_config_is_rejected(home: Path) -> None:
     config.symlink_to(real)
     with pytest.raises(ConfigError, match="enlace simbólico"):
         load_config(home)
+
+
+def test_several_entries_dirs_last_one_wins(home: Path) -> None:
+    from appforge.entry import load_catalog
+    from appforge.validate import validate_dirs
+
+    custom = home / "custom-entries"
+    custom.mkdir(mode=0o755)
+    (custom / "ollama.toml").write_text(f'name = "Ollama propio"\n{STEP}')
+    (custom / "mia.toml").write_text(f'name = "Mía"\n{STEP}')
+    for p in [custom, *custom.iterdir()]:
+        p.chmod(p.stat().st_mode & ~0o022)
+    (home / "config.toml").write_text('entries_dirs = ["entries", "custom-entries"]\n')
+    config = load_config(home)
+    assert [d.name for d in config.entries_dirs] == ["entries", "custom-entries"]
+
+    catalog = load_catalog(config.entries_dirs)
+    by_id = {e.id: e for e in catalog.entries}
+    assert by_id["ollama"].name == "Ollama propio"  # gana el último directorio
+    assert by_id["ollama"].source == "custom-entries/ollama.toml"
+    assert "mia" in by_id and "fonts" in by_id
+    assert catalog.overrides == [
+        "ollama: custom-entries/ollama.toml sustituye a entries/ollama.toml"
+    ]
+    warnings = validate_dirs(config.entries_dirs).warnings
+    assert any("sustituye a entries/ollama.toml" in w for w in warnings)
+
+
+def test_entries_dirs_must_be_a_list(tmp_path: Path) -> None:
+    (tmp_path / "e").mkdir()
+    for raw in ('entries_dirs = "e"', "entries_dirs = []", "entries_dirs = [1]"):
+        (tmp_path / "config.toml").write_text(raw)
+        with pytest.raises(ConfigError, match="lista de rutas"):
+            load_config(tmp_path)
+    (tmp_path / "config.toml").write_text("ui = {}")
+    with pytest.raises(ConfigError, match="falta 'entries_dirs'"):
+        load_config(tmp_path)

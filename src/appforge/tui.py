@@ -42,7 +42,7 @@ from textual.widgets import (
 from appforge import __version__
 from appforge.config import Config
 from appforge.engine import Engine, EngineError, invoking_user, resolve_values
-from appforge.entry import Entry, Step, load_entries
+from appforge.entry import Entry, Step, load_catalog
 from appforge.runlog import RunLog, step_tag
 from appforge.theme import (
     ANVIL_DARK,
@@ -299,7 +299,7 @@ def describe(entry: Entry, state: State, checked: bool = True) -> Group:
     kinds = ", ".join(sorted({s.kind for s in entry.steps}))
     grid.add_row("Pasos", f"{len(entry.steps)} ({kinds})" if kinds else "0")
     grid.add_row("Eliminar", "sí" if entry.remove else "no")
-    grid.add_row("Fichero", entry.path.name)
+    grid.add_row("Fichero", entry.source)
     parts: list[Text | Table] = [Text(entry.name + "\n", style=STYLES["title"]), grid]
     if entry.description:
         parts.append(Text("\n" + entry.description))
@@ -465,7 +465,7 @@ def entry_markdown(entry: Entry, state: State, checked: bool = True) -> str:
         parts.append(entry.description)
     parts.append(
         "| Estado | Categoría | Fichero |\n|---|---|---|\n"
-        f"| {status} | {entry.category or '—'} | `{entry.path.name}` |"
+        f"| {status} | {entry.category or '—'} | `{entry.source}` |"
     )
     if entry.problems:
         parts.append("## Problemas")
@@ -528,7 +528,7 @@ class DetailScreen(Screen[None]):
         yield TopBar("Detalle")
         panel = VerticalScroll(classes="panel", id="detail-page")
         panel.border_title = "Ficha"
-        panel.border_subtitle = self.entry.path.name
+        panel.border_subtitle = self.entry.source
         with panel:
             yield Markdown(entry_markdown(self.entry, self.state, self.checked))
         yield Footer()
@@ -898,7 +898,8 @@ class AppForgeApp(App[None]):
     # -- carga y filtrado ------------------------------------------------ #
     def action_reload(self) -> None:
         """Vuelve a leer las entradas y sus estados."""
-        self.entries, problems = load_entries(self.config.entries_dir)
+        catalog = load_catalog(self.config.entries_dirs)
+        self.entries, problems = catalog.entries, catalog.problems
         self.marked &= {e.id for e in self.entries}
         self.checked.clear()
         for problem in problems:

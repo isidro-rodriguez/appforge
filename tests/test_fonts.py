@@ -5,7 +5,7 @@ from appforge.entry import load_entries
 
 
 def fonts(config):
-    entries, _ = load_entries(config.entries_dir)
+    entries, _ = load_entries(config.entries_dirs[0])
     return next(e for e in entries if e.id == "fonts")
 
 

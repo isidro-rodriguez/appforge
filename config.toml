@@ -1,6 +1,6 @@
-# Junto al binario. Rutas relativas a este directorio.
-entries_dir = "entries"
-# backups_dir = "~/.local/state/appforge/backups"   # por defecto ($XDG_STATE_HOME)
+# Configuración para desarrollo (desde el código). La que se distribuye está en
+# scripts/dist/config.toml. Rutas relativas a este directorio.
+entries_dirs = ["entries"]
 
 [ui]
 search = true  # buscador sobre la lista de aplicaciones

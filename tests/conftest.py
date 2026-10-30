@@ -39,7 +39,7 @@ def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     base.mkdir()
     # config.toml propio y con los valores por defecto: el del repositorio es
     # configuración del usuario (p. ej. [ui]) y no debe cambiar los tests.
-    (base / "config.toml").write_text('entries_dir = "entries"\n', encoding="utf-8")
+    (base / "config.toml").write_text('entries_dirs = ["entries"]\n', encoding="utf-8")
     shutil.copytree(ROOT / "entries", base / "entries")
     secure(base)
     # Desde el código, config.toml se busca en el directorio de trabajo.
@@ -59,14 +59,14 @@ def write_entry(config: Config) -> WriteEntry:
     """Devuelve una función que crea ``entries/<name>.toml`` y sus ficheros."""
 
     def write(name: str, toml: str, files: dict[str, str] | None = None) -> Path:
-        path = config.entries_dir / f"{name}.toml"
+        path = config.entries_dirs[0] / f"{name}.toml"
         path.write_text(toml, encoding="utf-8")
         if files:
-            folder = config.entries_dir / name
+            folder = config.entries_dirs[0] / name
             folder.mkdir(exist_ok=True)
             for filename, content in files.items():
                 (folder / filename).write_text(content, encoding="utf-8")
-        secure(config.entries_dir)
+        secure(config.entries_dirs[0])
         return path
 
     return write

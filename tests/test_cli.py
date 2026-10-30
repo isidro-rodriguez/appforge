@@ -118,7 +118,7 @@ def test_repo_entries_are_valid(home: Path, capsys: pytest.CaptureFixture[str]) 
 def test_good_entry(write_entry, config) -> None:
     write_entry("buena", GOOD, {"hola.tpl": "hola $who\n"})
     report = next(
-        r for r in validate_dir(config.entries_dir).reports if r.entry.id == "buena"
+        r for r in validate_dir(config.entries_dirs[0]).reports if r.entry.id == "buena"
     )
     assert report.errors == []
     assert report.warnings == []
@@ -143,7 +143,7 @@ run = "bash ${APPFORGE_ENTRY_DIR}/borra.sh"
 """,
         {"s.sh": "for x in; do\n", "borra.sh": "true\n"},
     )
-    result = validate_dir(config.entries_dir)
+    result = validate_dir(config.entries_dirs[0])
     errors = "\n".join(next(r for r in result.reports if r.entry.id == "rota").errors)
     assert "falta el fichero rota/no-existe.conf" in errors
     assert "step #2: error de sintaxis" in errors
@@ -165,8 +165,8 @@ run = "true"
 """,
         {"sobra.txt": "x"},
     )
-    (config.entries_dir / "huerfano").mkdir()
-    result = validate_dir(config.entries_dir)
+    (config.entries_dirs[0] / "huerfano").mkdir()
+    result = validate_dir(config.entries_dirs[0])
     warnings = "\n".join(
         next(r for r in result.reports if r.entry.id == "floja").warnings
     )
@@ -199,7 +199,7 @@ def test_validate_other_dir(tmp_path: Path, capsys: pytest.CaptureFixture[str]) 
 
 
 def test_bad_config_exits_2(home: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    (home / "config.toml").write_text('entries_dir = "entries"\n[ui]\nsearch = 1\n')
+    (home / "config.toml").write_text('entries_dirs = ["entries"]\n[ui]\nsearch = 1\n')
     assert main(["validate"]) == 2
     assert "[ui].search" in capsys.readouterr().err
 

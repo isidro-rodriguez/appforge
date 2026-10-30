@@ -59,7 +59,7 @@ def demo(config: Config, write_entry, tmp_path: Path) -> Path:
 
 def with_ui(home: Path, **ui: bool) -> Config:
     lines = "\n".join(f"{k} = {'true' if v else 'false'}" for k, v in ui.items())
-    (home / "config.toml").write_text(f'entries_dir = "entries"\n[ui]\n{lines}\n')
+    (home / "config.toml").write_text(f'entries_dirs = ["entries"]\n[ui]\n{lines}\n')
     return load_config(home)
 
 
@@ -262,7 +262,7 @@ async def test_double_click_opens_detail_page(config: Config) -> None:
 def test_entry_markdown_lists_everything(config: Config) -> None:
     from appforge.entry import load_entries
 
-    entries, _ = load_entries(config.entries_dir)
+    entries, _ = load_entries(config.entries_dirs[0])
     md = entry_markdown(entries[0], False)
     assert md.startswith("# Ollama (bajo demanda)")
     assert "### Ajustes de rendimiento" in md  # clave details
@@ -275,4 +275,4 @@ def test_entry_markdown_lists_everything(config: Config) -> None:
     assert "**4. Variables de entorno (optimización)** · `template`" in md
     assert "Genera `/opt/ollama/ollama.env` desde `ollama/ollama.env.tpl`" in md
     assert "## Comprobación" in md
-    assert "| no aplicada | IA | `ollama.toml` |" in md
+    assert "| no aplicada | IA | `entries/ollama.toml` |" in md

@@ -9,6 +9,7 @@ import re
 import stat
 import string
 import tomllib
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -124,6 +125,11 @@ class Entry:
     def files_dir(self) -> Path:
         """Subdirectorio con los ficheros adicionales de la entrada."""
         return self.path.parent / self.id
+
+    @property
+    def source(self) -> str:
+        """``<directorio>/<fichero>``: de qué directorio de entradas viene."""
+        return f"{self.path.parent.name}/{self.path.name}"
 
     @property
     def valid(self) -> bool:
@@ -442,3 +448,45 @@ def load_entries(entries_dir: Path) -> tuple[list[Entry], list[str]]:
         e.problems.extend(dir_problems)
     entries.sort(key=lambda e: e.name.lower())
     return entries, dir_problems
+
+
+@dataclass
+class Catalog:
+    """Entradas de varios directorios, ya combinadas.
+
+    Attributes:
+        entries: Entradas ordenadas por nombre; con id repetido, la del último
+            directorio.
+        problems: Problemas de los propios directorios.
+        overrides: Avisos de entradas sustituidas por otra con el mismo id.
+    """
+
+    entries: list[Entry]
+    problems: list[str] = field(default_factory=list)
+    overrides: list[str] = field(default_factory=list)
+
+
+def load_catalog(entries_dirs: Iterable[Path]) -> Catalog:
+    """Carga y combina las entradas de varios directorios, en orden.
+
+    Si un id aparece en más de un directorio vale el del último: así una
+    entrada de ejemplo se sustituye sin tocarla, poniendo otra con el mismo
+    nombre de fichero en un directorio posterior.
+
+    Args:
+        entries_dirs: Directorios con los ``*.toml``.
+
+    Returns:
+        El catálogo combinado.
+    """
+    by_id: dict[str, Entry] = {}
+    catalog = Catalog(entries=[])
+    for folder in entries_dirs:
+        entries, problems = load_entries(folder)
+        catalog.problems.extend(problems)
+        for e in entries:
+            if (old := by_id.get(e.id)) is not None:
+                catalog.overrides.append(f"{e.id}: {e.source} sustituye a {old.source}")
+            by_id[e.id] = e
+    catalog.entries = sorted(by_id.values(), key=lambda e: e.name.lower())
+    return catalog
