@@ -108,15 +108,20 @@ flag=()
 deb_sum="$(sha256sum "$deb" | cut -d' ' -f1)"
 
 wait_ready() {  # espera a poder ejecutar órdenes y a tener red
-  local name="$1"
-  for _ in $(seq 120); do
-    incus exec "$name" -- true 2>/dev/null && break
+  local name="$1" ok=0
+  printf '    esperando a que %s arranque' "$name"
+  for _ in $(seq 90); do  # 3 min: una VM tarda en cargar su agente
+    if incus exec "$name" -- true 2>/dev/null; then ok=1; break; fi
+    printf '.'
     sleep 2
   done
+  echo
+  [ "$ok" = 1 ] || die "$name no responde tras 3 min. Mira: incus info $name --show-log"
+  echo "    esperando red"
   # shellcheck disable=SC2016  # se expande dentro de la máquina
   incus exec "$name" -- sh -c \
     'for i in $(seq 60); do getent hosts deb.debian.org >/dev/null && exit 0; sleep 2; done; exit 1' \
-    || die "$name no tiene red"
+    || die "$name no tiene red (¿un cortafuegos o Docker bloquea el puente incusbr0?)"
 }
 
 if incus info "$base" >/dev/null 2>&1; then
@@ -127,6 +132,7 @@ if incus info "$base" >/dev/null 2>&1; then
 fi
 if ! incus info "$base" >/dev/null 2>&1; then
   say "Creando $base ($distro, $kind)"
+  echo "    la primera vez descarga la imagen (unos cientos de MB)"
   incus launch "images:$distro" "$base" "${flag[@]}" \
     || die "no se pudo crear ($kind) $distro (¿hay imagen? incus image list images: $distro)"
   wait_ready "$base"
