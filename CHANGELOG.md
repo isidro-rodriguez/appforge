@@ -11,6 +11,10 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 - Receta `git`: parámetro `aliases` (sí por defecto) que añade alias de git a
   `~/.gitconfig` (`git st`, `git lg`, `git bundle-pull`…).
+- Receta `bash-aliases` modular: `~/.bash_aliases` carga `~/.bash_aliases.d/*.sh`,
+  donde la receta instala `base.sh` y, con el parámetro `eza`, `eza.sh` (`ls` con eza;
+  iconos con `eza_icons`). Los fragmentos propios del usuario no se tocan. Quita los
+  atajos de apt y systemd anteriores.
 
 ## [0.13.0] - 2026-10-30
 

@@ -87,7 +87,9 @@ def test_invalid_params_stop_before_configuring(home: Path, values, message) -> 
 
 def git_aliases(config) -> dict[str, str]:
     conf = config.entries_dirs[0] / "git" / "aliases.conf"
-    lines = [ln for ln in conf.read_text().splitlines() if ln and not ln.startswith("#")]
+    lines = [
+        ln for ln in conf.read_text().splitlines() if ln and not ln.startswith("#")
+    ]
     return dict(ln.split(" ", 1) for ln in lines)
 
 

@@ -13,7 +13,7 @@ página resume el conjunto y cómo combinarlas.
 | Ollama (bajo demanda) | `ollama` | IA | Ollama en /opt/ollama, sin servicio de arranque; lanzador on/off con notificación | `version`, `arch`, `host`, `keep_alive`, `kv_cache`, `context_length` |
 | Cortafuegos (ufw) | `firewall` | Red | ufw activo: entrada denegada, salida permitida, con las excepciones que indiques | `allow`, `allow_from` |
 | Servidor SSH (endurecido) | `ssh-server` | Red | OpenSSH con acceso solo para tu usuario, sin root y, por defecto, solo con claves | `port`, `password_auth` |
-| Alias de bash | `bash-aliases` | Sistema | ~/.bash_aliases con atajos para listados, apt y systemd | — |
+| Alias de bash | `bash-aliases` | Sistema | ~/.bash_aliases modular: atajos de shell y, opcional, ls con eza | `eza`, `eza_icons` |
 | Docker Engine | `docker` | Virtualización | Docker CE desde el repositorio oficial de Docker, con Buildx y Compose | — |
 | Incus (contenedores y VM) | `incus` | Virtualización | Incus de Debian 13 inicializado, con tu usuario en incus-admin y la red abierta en ufw | `vms` |
 
@@ -38,6 +38,8 @@ clave solo vale para ese repositorio. Desinstalar quita paquete, repositorio y c
 | Servidor SSH solo con claves | Copia antes tu clave pública (`ssh-copy-id` desde el otro equipo): la receta falla, sin tocar nada, si no hay `~/.ssh/authorized_keys` |
 | Grupos `docker` e `incus-admin` | Cierra sesión y vuelve a entrar para usarlos sin `sudo`. Pertenecer a `docker` equivale a ser root |
 | Después de **Git y GitHub CLI** | Ejecuta `gh auth login` como tu usuario: la receta no inicia sesión |
+| **Alias de bash** con iconos de eza | Aplica **Fuentes adicionales** (incluye JetBrainsMono Nerd Font) y elígela en las preferencias del terminal: ninguna receta lo configura |
+| Alias de git | Están en **Git y GitHub CLI** (`git st`, `git lg`…), no en **Alias de bash** |
 
 Si seleccionas varias, se aplican en el orden de la lista (alfabético), que ya pone
 el **Cortafuegos** antes que **Incus** y **Servidor SSH**.
@@ -51,4 +53,4 @@ el **Cortafuegos** antes que **Incus** y **Servidor SSH**.
 | Incus | Incus, instancias, imágenes y almacenamiento |
 | Docker | `/var/lib/docker` (imágenes, contenedores, volúmenes) y `/etc/docker` |
 | Git | `git` y tu `~/.gitconfig` |
-| Alias de bash | Tu `~/.bash_aliases` si lo cambiaste; si no, restaura el `.backup` |
+| Alias de bash | `eza`, tus fragmentos de `~/.bash_aliases.d/` y lo que hayas cambiado; si no, restaura el `.backup` |

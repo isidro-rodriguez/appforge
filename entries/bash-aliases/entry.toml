@@ -1,19 +1,40 @@
 name = "Alias de bash"
-description = "~/.bash_aliases con atajos para listados, apt y systemd"
+description = "~/.bash_aliases modular: atajos de shell y, opcional, ls con eza"
 category = "Sistema"
 
+[[param]]
+name = "eza"
+prompt = "Usar eza en lugar de ls (instala el paquete eza)"
+type = "bool"
+default = true
+
+[[param]]
+name = "eza_icons"
+prompt = "Iconos en eza (requiere una Nerd Font en el terminal)"
+type = "bool"
+default = false
+
 [check]
+# [check] se ejecuta con los valores por defecto: eza.sh puede faltar o ser
+# cualquiera de sus dos variantes.
 run = """
-cmp -s "$APPFORGE_ENTRY_DIR/bash_aliases" "$APPFORGE_USER_HOME/.bash_aliases"
+d="$APPFORGE_USER_HOME/.bash_aliases.d"
+cmp -s "$APPFORGE_ENTRY_DIR/bash_aliases" "$APPFORGE_USER_HOME/.bash_aliases" \
+  && cmp -s "$APPFORGE_ENTRY_DIR/base.sh" "$d/base.sh" \
+  && { [ ! -e "$d/eza.sh" ] \
+    || cmp -s "$APPFORGE_ENTRY_DIR/eza.sh" "$d/eza.sh" \
+    || cmp -s "$APPFORGE_ENTRY_DIR/eza-icons.sh" "$d/eza.sh"; }
 """
 
 [[step]]
-title = "Instalar ~/.bash_aliases"
+title = "Instalar ~/.bash_aliases y sus fragmentos"
 script = "install-aliases.sh"
 
 [remove]
-# Si el usuario editó el fichero después de aplicar la receta, se conserva.
+# No desinstala eza. Lo modificado por el usuario se conserva, y también sus
+# propios fragmentos de ~/.bash_aliases.d/.
 run = """
+d="$APPFORGE_USER_HOME/.bash_aliases.d"
 dest="$APPFORGE_USER_HOME/.bash_aliases"
 if [ -f "$dest" ] && ! cmp -s "$APPFORGE_ENTRY_DIR/bash_aliases" "$dest"; then
   echo "Aviso: $dest se ha modificado; no se toca" >&2
@@ -23,4 +44,14 @@ elif [ -f "$dest.backup" ]; then
 else
   rm -f "$dest"
 fi
+for f in base.sh eza.sh; do
+  [ -e "$d/$f" ] || continue
+  if cmp -s "$APPFORGE_ENTRY_DIR/$f" "$d/$f" \
+    || { [ "$f" = eza.sh ] && cmp -s "$APPFORGE_ENTRY_DIR/eza-icons.sh" "$d/$f"; }; then
+    rm -f "$d/$f"
+  else
+    echo "Aviso: $d/$f se ha modificado; no se toca" >&2
+  fi
+done
+rmdir "$d" 2>/dev/null || true
 """
