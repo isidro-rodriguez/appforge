@@ -11,6 +11,7 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 - Receta **Cortafuegos (ufw)** (`firewall`): entrada denegada y salida permitida, con excepciones y una red de confianza validadas antes de cambiar nada.
 - Receta **Servidor SSH (endurecido)** (`ssh-server`): OpenSSH con `50-appforge.conf` en `sshd_config.d`, validado con `sshd -t`; no se aplica sin claves autorizadas si se desactiva la contraseña. Abre su puerto en ufw si está activo.
+- Receta **Incus (contenedores y VM)** (`incus`): paquete de Debian 13 (con QEMU y OVMF opcionales), `incus admin init --minimal` si hace falta, usuario en `incus-admin` y reglas de ufw para `incusbr0`.
 
 ## [0.9.0] - 2026-10-30
 
