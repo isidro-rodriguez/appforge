@@ -7,12 +7,22 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-30
+
 ### Changed
 
+- **Incompatible:** cada receta es una carpeta `<id>/` con `entry.toml` (la receta),
+  `details.md` (su ficha, obligatoria) y los ficheros de sus pasos. La clave `details`
+  ya no existe en el TOML. Las recetas en el formato anterior (`<id>.toml` suelto) se
+  ignoran y `appforge validate` avisa de cómo moverlas; revisa tu `custom-entries/`.
+- Para sustituir una receta de ejemplo basta copiar su carpeta a `custom-entries/`.
+- `scripts/try-entry.sh` recibe el id o la ruta a la carpeta de la receta.
 - Documentación: la portada usa la receta del servidor SSH en los tres pasos de
   «Cómo funciona» y la parrilla de tarjetas queda alineada. Las capturas solo
-  muestran recetas reales (el progreso es un *dry-run*); se retiran las entradas de
-  demostración.
+  muestran recetas reales (el progreso es un *dry-run*).
+- Documentación: una sola página «Recetas incluidas»; la información de Ollama,
+  Neovim y fuentes pasa a la ficha de cada receta. Un test comprueba que la tabla
+  de esa página coincide con las recetas.
 
 ## [0.10.0] - 2026-10-30
 
