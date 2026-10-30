@@ -7,6 +7,26 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-30
+
+### Added
+
+- `appforge update`: actualiza AppForge desde la última Release de GitHub (o desde un
+  `.tar.gz` con `--from`), verificando `SHA256SUMS`. Conserva tu `config.toml` y las
+  recetas que hayas modificado (la versión nueva queda en `<fichero>.new`), no recrea
+  las que borraste y no toca `custom-entries/` ni `logs/`. Con `--dry-run` solo
+  muestra el plan; `--force` reinstala la misma versión.
+- `entries_dirs` en `config.toml`: varios directorios de recetas; si dos traen el
+  mismo id, gana el último. `appforge validate` lo avisa y admite `--dir` repetido.
+
+### Changed
+
+- El paquete trae `appforge-entries/` (recetas de ejemplo), `custom-entries/` (las
+  tuyas, vacío) y `.manifest.json` (sumas de cada fichero, para `update`).
+- **Incompatible:** `entries_dir` pasa a ser `entries_dirs` (lista). Una instalación
+  0.8.0 se reinstala a mano.
+- `scripts/try-entry.sh` sube la receta a `custom-entries/`.
+
 ## [0.8.0] - 2026-10-30
 
 ### Added
