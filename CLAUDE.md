@@ -39,7 +39,8 @@ Debian stable (13). It **only runs as root**: no sudo handling in the engine, no
 ├── scripts/
 │   ├── backup.py           # git bundle
 │   ├── build.py            # PyInstaller --onefile + dist/appforge_<v>_<arch>.deb
-│   └── screenshots.py      # TUI and CLI SVG screenshots for the docs
+│   ├── screenshots.py      # TUI and CLI SVG screenshots for the docs
+│   └── try-entry.sh        # try an entry in a disposable incus VM/container
 ├── src/appforge/
 │   ├── __init__.py         # __version__ via importlib.metadata
 │   ├── __main__.py         # python -m appforge

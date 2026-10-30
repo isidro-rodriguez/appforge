@@ -38,6 +38,7 @@ nav = [
         { "Crear una receta" = "desarrollo/nueva-entrada.md" },
         { "Formato de las recetas" = "desarrollo/formato.md" },
         { "Buenas prácticas" = "desarrollo/buenas-practicas.md" },
+        { "Probar una receta" = "desarrollo/probar.md" },
         { "Arquitectura" = "desarrollo/arquitectura.md" },
         { "Contribuir" = "desarrollo/contribuir.md" },
         { "Empaquetado y publicación" = "desarrollo/empaquetado.md" },

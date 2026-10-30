@@ -156,5 +156,6 @@ Los tests nunca deben tocar rutas reales del sistema: usa *dry-run*.
 
 ## Siguiente
 
+- Pruébala de verdad en una máquina desechable: [Probar una receta](probar.md).
 - Referencia completa del [formato](formato.md).
 - [Buenas prácticas](buenas-practicas.md) para recetas fiables y seguras.

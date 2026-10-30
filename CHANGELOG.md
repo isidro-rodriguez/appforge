@@ -7,6 +7,11 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/try-entry.sh`: prueba una receta en una VM o contenedor desechable con
+  incus, en Debian 13 u otra distro, y su página «Probar una receta».
+
 ## [0.7.0] - 2026-10-29
 
 ### Added

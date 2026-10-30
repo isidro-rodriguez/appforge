@@ -113,6 +113,7 @@ chmod -R go-w entries
 uv run appforge validate --strict <id>       # no errors and no warnings (exit 0)
 uv run pytest tests/test_<id>.py -s          # your dry-run test (see below)
 uv run pytest                                # existing suite still passes
+scripts/try-entry.sh <id> --no-tui           # optional: install + validate in a clean VM (incus)
 ```
 
 `validate` never runs anything: it checks the format, security, bash syntax (`bash -n`),
