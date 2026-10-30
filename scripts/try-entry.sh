@@ -178,9 +178,9 @@ incus start "$try"
 wait_ready "$try"
 
 say "Subiendo $id"
-incus file push "$toml" "$try/opt/appforge/entries/"
-[ -d "$files_dir" ] && incus file push -r "$files_dir" "$try/opt/appforge/entries/"
-incus exec "$try" -- sh -c 'chown -R root:root /opt/appforge/entries && chmod -R go-w /opt/appforge/entries'
+incus file push "$toml" "$try/opt/appforge/custom-entries/"
+[ -d "$files_dir" ] && incus file push -r "$files_dir" "$try/opt/appforge/custom-entries/"
+incus exec "$try" -- sh -c 'chown -R root:root /opt/appforge/custom-entries && chmod -R go-w /opt/appforge/custom-entries'
 
 say "Validando $id en $distro"
 if [ "$tui" = 0 ]; then
