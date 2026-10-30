@@ -7,6 +7,8 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-30
+
 ### Added
 
 - Receta **Cortafuegos (ufw)** (`firewall`): entrada denegada y salida permitida, con excepciones y una red de confianza validadas antes de cambiar nada.
@@ -15,6 +17,14 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Receta **Docker Engine** (`docker`): repositorio APT oficial con clave de huella verificada y `.sources` deb822 con `Signed-By`; usuario en el grupo `docker`. Desinstalar conserva `/var/lib/docker`.
 - Receta **Git y GitHub CLI** (`git`): `gh` desde su repositorio APT oficial (clave verificada), configuración global de git del usuario y `gh` como gestor de credenciales.
 - Receta **Alias de bash** (`bash-aliases`): `~/.bash_aliases` con atajos para listados, apt y systemd; guarda el anterior en `.backup` y lo restaura al desinstalar.
+
+### Changed
+
+- Los diálogos (parámetros y confirmación) usan el fondo y el borde de los paneles;
+  los botones secundarios ya no se confunden con el fondo y el foco se marca con el
+  color de acento.
+- Documentación: página «Recetas incluidas» con el catálogo, cómo combinarlas
+  (cortafuegos, SSH, Incus y Docker) y qué conserva cada una al desinstalar.
 
 ## [0.9.0] - 2026-10-30
 
