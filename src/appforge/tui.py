@@ -115,16 +115,30 @@ AppRow .tag { width: auto; padding: 0 1; color: $text-muted; }
 CategoryRow .name { width: 1fr; padding-left: 1; }
 CategoryRow .count { width: auto; padding-right: 1; color: $text-muted; }
 
+/* Diálogos con el mismo aspecto que los paneles: fondo de la app y borde redondo. */
+ConfirmScreen, ParamsScreen { align: center middle; }
 #dialog {
     width: 70; max-width: 90%; height: auto; max-height: 90%;
-    padding: 1 2; border: round $border; background: $surface;
+    padding: 1 2; border: round $border; background: $background;
 }
-#fields { height: auto; max-height: 55vh; }
-ConfirmScreen, ParamsScreen { align: center middle; }
+#fields {
+    height: auto; max-height: 55vh;
+    scrollbar-size-vertical: 1; scrollbar-background: $background;
+}
+#dialog Input { background: $panel; border: tall $border-blurred; }
+#dialog Input:focus { border: tall $border; }
 .prompt { margin-top: 1; }
 .link { color: $text-muted; }
 .buttons { height: auto; margin-top: 1; align-horizontal: right; }
-.buttons Button { margin-left: 1; }
+.buttons Button {
+    margin-left: 1; min-width: 12;
+    color: $foreground; background: $panel; border: tall $border-blurred;
+}
+.buttons Button:hover { border: tall $border; }
+.buttons Button.-primary {
+    color: $background; background: $primary; border: tall $primary;
+}
+.buttons Button:focus { text-style: bold; border: tall $accent; }
 
 #progress { height: auto; max-height: 50%; padding: 0 1; }
 #rows { height: auto; max-height: 12; }
