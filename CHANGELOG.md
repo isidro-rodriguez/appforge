@@ -7,6 +7,8 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-10-30
+
 ### Changed
 
 - Receta `git`: parámetro `aliases` (sí por defecto) que añade alias de git a
