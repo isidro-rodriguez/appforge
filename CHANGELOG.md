@@ -7,6 +7,12 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-10-30
+
+### Changed
+
+- Requiere `acodo>=0.4`, que trae `valid_cidr`, `valid_int` y `valid_path`.
+
 ## [0.12.0] - 2026-10-30
 
 ### Added
