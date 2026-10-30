@@ -7,6 +7,21 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-30
+
+### Added
+
+- Parámetros con tipo: `type` (`bool`, `int`, `port`, `email`, `path`, `ip`, `url`,
+  `domain`) y `choices` (valores fijos). La TUI muestra una casilla, un desplegable o
+  un campo que se marca en rojo y no deja aceptar un valor no válido; el motor lo
+  vuelve a comprobar y `appforge validate` revisa los `default`. Un `bool` llega a los
+  pasos como `yes`/`no`.
+
+### Changed
+
+- Las recetas incluidas usan tipos: puerto y contraseña de SSH, email de Git,
+  arquitectura y caché K/V de Ollama y Neovim, contexto de Ollama y VM de Incus.
+
 ## [0.11.0] - 2026-10-30
 
 ### Changed
