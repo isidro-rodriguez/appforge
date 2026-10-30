@@ -1,56 +1,6 @@
 name = "Neovim (IDE de terminal)"
 description = "Neovim en /opt/nvim como vi y vim, configurado como IDE ligero con plugins de la comunidad"
 category = "Desarrollo"
-details = """
-Instala [Neovim](https://neovim.io) desde sus Releases de GitHub en `/opt/nvim`,
-lo pone en lugar de **vi** y **vim** y deja una configuración de IDE ligero para el
-usuario que ejecutó `sudo appforge`.
-
-La versión es un parámetro. Neovim no publica un fichero de sumas: la descarga se
-**verifica con el SHA-256 que GitHub publica para cada fichero de la Release**; sin
-suma no se instala. Lo mismo vale para `tree-sitter-cli`. Para actualizar, vuelve a
-aplicar la receta con otra versión.
-
-### Qué deja instalado
-
-- `/opt/nvim` con `nvim` y `tree-sitter`, enlazados en `/usr/local/bin`.
-- `vi`, `vim`, `view` y `vimdiff` apuntan a Neovim (`update-alternatives`). Si
-  tenías `vim` o `vim-tiny`, siguen instalados como reserva.
-- Herramientas que usan los plugins: `git`, `gcc`, `ripgrep`, `fd-find`, `fzf`,
-  Node.js y `npm`, `python3-venv`, `wl-clipboard` y `xclip`.
-- La configuración en `~/.config/nvim`. Si ya tenías una, se mueve a
-  `~/.config/nvim.backup-<fecha>`.
-
-### La configuración
-
-Usa el gestor de plugins de Neovim (`vim.pack`) con las versiones fijadas en
-`nvim-pack-lock.json`:
-
-| Función | Plugin |
-|---|---|
-| Tema | tokyonight.nvim |
-| Barra de estado, pestañas, pares, *surround*, explorador, notificaciones | mini.nvim |
-| Ayuda de atajos | which-key.nvim |
-| Buscador de ficheros, texto y símbolos | fzf-lua |
-| Resaltado y sangría por sintaxis | nvim-treesitter |
-| LSP e instalación de servidores | nvim-lspconfig, mason.nvim, mason-lspconfig.nvim |
-| Autocompletado y *snippets* | blink.cmp, friendly-snippets |
-| Git | gitsigns.nvim |
-| Formateo | conform.nvim |
-
-Al aplicar se clonan los plugins, se compilan los parsers de tree-sitter y se
-instalan los servidores de Lua y Bash: hace falta red y tarda unos minutos.
-
-### Uso
-
-`<Espacio>` es la tecla líder: púlsala y espera para ver los atajos. Los más
-útiles: `<Espacio>ff` ficheros, `<Espacio>fg` buscar texto, `<Espacio>fe`
-explorador, `gd` ir a la definición, `K` documentación, `:Mason` más servidores.
-Los iconos necesitan una Nerd Font en la terminal (receta «Fuentes adicionales»).
-
-Tus ajustes van en `~/.config/nvim/lua/local.lua`: reaplicar la receta sobrescribe
-el resto. Desinstalar conserva tu configuración y los plugins.
-"""
 
 [[param]]
 name = "version"

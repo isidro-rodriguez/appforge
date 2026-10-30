@@ -1,36 +1,6 @@
 name = "Ollama (bajo demanda)"
 description = "Ollama en /opt/ollama, sin servicio de arranque; lanzador on/off con notificación"
 category = "IA"
-details = """
-Instala [Ollama](https://ollama.com) para ejecutar modelos de lenguaje en local,
-**sin servicio de arranque**: no consume memoria ni GPU hasta que lo enciendes.
-
-La versión es un parámetro: se descarga de las Releases de Ollama en GitHub y se
-**verifica con su `sha256sum.txt`**; sin suma publicada no se instala. Para
-actualizar, vuelve a aplicar la receta con otra versión.
-
-### Qué deja instalado
-
-- Binario y librerías en `/opt/ollama`; modelos en `/opt/ollama/models`, propiedad
-  del usuario que ejecutó `sudo appforge`.
-- Un lanzador **Ollama** en el menú de aplicaciones que hace de interruptor:
-  la primera pulsación arranca `ollama serve` y la siguiente lo detiene. Cada
-  cambio se anuncia con una notificación del escritorio.
-
-### Ajustes de rendimiento
-
-Se escriben en `/opt/ollama/ollama.env` y los aplica el interruptor:
-
-- *Flash attention* activado y caché K/V cuantizada (`q8_0`): menos VRAM por
-  token de contexto.
-- Contexto de 8192 tokens y un solo modelo cargado a la vez.
-- `OLLAMA_KEEP_ALIVE=30m`: el modelo sigue en memoria media hora sin uso.
-
-### Uso
-
-Pulsa el lanzador y, cuando aparezca «Servicio activo», usa `ollama run <modelo>`
-o cualquier cliente que apunte a `OLLAMA_HOST`. Desinstalar conserva los modelos.
-"""
 
 # Los parámetros llegan a los pasos `run` como variables de entorno ($arch...)
 # y a las plantillas vía string.Template. $APPFORGE_USER es quien llamó a sudo.

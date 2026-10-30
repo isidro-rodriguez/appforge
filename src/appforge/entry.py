@@ -1,4 +1,8 @@
-"""Modelo y validación de entradas (un fichero TOML por opción del menú).
+"""Modelo y validación de entradas (una carpeta por opción del menú).
+
+Cada entrada es una carpeta ``<id>/`` dentro de un directorio de entradas con
+``entry.toml`` (la definición), ``details.md`` (la ficha en Markdown) y los
+ficheros que usen sus pasos.
 
 Cargar una entrada nunca lanza excepción: los fallos se acumulan en
 ``Entry.problems`` para que el menú pueda mostrarla marcada como inválida.
@@ -16,10 +20,13 @@ from typing import Any
 
 STEP_KINDS = ("run", "template", "copy", "script")
 FILE_KINDS = ("template", "copy", "script")
+ENTRY_FILE = "entry.toml"
+DETAILS_FILE = "details.md"
+# Forman la entrada: no son ficheros de sus pasos.
+OWN_FILES = (ENTRY_FILE, DETAILS_FILE)
 TOP_KEYS = {
     "name",
     "description",
-    "details",
     "category",
     "param",
     "check",
@@ -79,7 +86,7 @@ class Step:
         title: Texto que se muestra al ejecutarlo.
         kind: ``run``, ``template``, ``copy`` o ``script`` (``remove`` para el
             paso sintético de :meth:`Engine.remove`).
-        value: Comando (``run``) o fichero relativo al subdirectorio.
+        value: Comando (``run``) o fichero relativo a la carpeta de la entrada.
         dest: Ruta absoluta de destino (``template`` y ``copy``).
         mode: Permisos del destino, o ``None`` para el valor por defecto.
     """
@@ -93,14 +100,14 @@ class Step:
 
 @dataclass
 class Entry:
-    """Entrada del menú cargada desde ``entries/<id>.toml``.
+    """Entrada del menú cargada desde ``<directorio de entradas>/<id>/``.
 
     Attributes:
-        id: Nombre del fichero sin extensión.
-        path: Ruta del fichero TOML.
+        id: Nombre de su carpeta.
+        path: Ruta de su ``entry.toml``.
         name: Nombre que se muestra en el menú.
         description: Descripción de una línea.
-        details: Descripción larga en Markdown para la página de detalle.
+        details: Ficha en Markdown para la página de detalle (``details.md``).
         category: Categoría para el panel de categorías; vacía si no tiene.
         params: Parámetros que se piden antes de aplicar.
         check: Comando que indica si ya está aplicada (código 0).
@@ -123,13 +130,13 @@ class Entry:
 
     @property
     def files_dir(self) -> Path:
-        """Subdirectorio con los ficheros adicionales de la entrada."""
-        return self.path.parent / self.id
+        """Carpeta de la entrada: ``entry.toml``, ``details.md`` y sus ficheros."""
+        return self.path.parent
 
     @property
     def source(self) -> str:
-        """``<directorio>/<fichero>``: de qué directorio de entradas viene."""
-        return f"{self.path.parent.name}/{self.path.name}"
+        """``<directorio>/<id>/``: de qué directorio de entradas viene."""
+        return f"{self.files_dir.parent.name}/{self.id}/"
 
     @property
     def valid(self) -> bool:
@@ -333,7 +340,7 @@ class _Parser:
         return Step(title=title, kind=kind, value=value, dest=dest, mode=mode)
 
     def _source_ok(self, value: str, where: str) -> bool:
-        """Valida un fichero de origen relativo al subdirectorio."""
+        """Valida un fichero de origen relativo a la carpeta de la entrada."""
         rel = Path(value)
         if rel.is_absolute() or ".." in rel.parts or not value.strip():
             self.problems.append(
@@ -396,45 +403,83 @@ class _Parser:
         return self.text(raw, "run", f"[{key}]", required=True)
 
 
-def load_entry(path: Path) -> Entry:
+def _read_details(entry: Entry) -> str:
+    """Contenido de ``details.md`` (obligatorio y no vacío)."""
+    path = entry.files_dir / DETAILS_FILE
+    if not path.is_file():
+        entry.problems.append(
+            f"falta {entry.id}/{DETAILS_FILE} (la ficha de la entrada)"
+        )
+        return ""
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeDecodeError) as e:
+        entry.problems.append(f"{entry.id}/{DETAILS_FILE}: no se puede leer: {e}")
+        return ""
+    if not text:
+        entry.problems.append(f"{entry.id}/{DETAILS_FILE} está vacío")
+    return text
+
+
+def load_entry(entry_dir: Path) -> Entry:
     """Carga y valida una entrada.
 
     Args:
-        path: Ruta a ``entries/<id>.toml``.
+        entry_dir: Carpeta de la entrada (``<directorio>/<id>/``), con
+            ``entry.toml`` y ``details.md``.
 
     Returns:
         La entrada. Si hay errores quedan en ``problems`` y ``valid`` es
         ``False``.
     """
-    entry = Entry(id=path.stem, path=path, name=path.stem)
-    if reason := insecure_reason(path):
-        entry.problems.append(reason)
+    path = entry_dir / ENTRY_FILE
+    entry = Entry(id=entry_dir.name, path=path, name=entry_dir.name)
+    entry.problems.extend(_check_tree(entry_dir))
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except OSError as e:
+        entry.problems.append(f"{entry.id}/{ENTRY_FILE}: {e.strerror}")
+        return entry
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as e:
         entry.problems.append(f"TOML inválido: {e}")
         return entry
 
     parser = _Parser(entry)
-    parser.unknown(data, TOP_KEYS, "entrada")
-    entry.name = parser.text(data, "name", "entrada", required=True) or path.stem
+    if "details" in data:
+        entry.problems.append(f"entrada: 'details' va en {entry.id}/{DETAILS_FILE}")
+    parser.unknown(data, TOP_KEYS | {"details"}, "entrada")
+    entry.name = parser.text(data, "name", "entrada", required=True) or entry.id
     entry.description = parser.text(data, "description", "entrada") or ""
-    entry.details = (parser.text(data, "details", "entrada") or "").strip()
+    entry.details = _read_details(entry)
     entry.category = (parser.text(data, "category", "entrada") or "").strip()
     entry.params = parser.params(data.get("param"))
     entry.check = parser.run_table(data.get("check"), "check")
     entry.remove = parser.run_table(data.get("remove"), "remove")
-    if entry.files_dir.exists():
-        entry.problems.extend(_check_tree(entry.files_dir))
     entry.steps = parser.steps(data.get("step"))
     return entry
+
+
+def entry_dirs_in(entries_dir: Path) -> list[Path]:
+    """Carpetas de entrada (con ``entry.toml``) de un directorio de entradas.
+
+    Args:
+        entries_dir: Directorio de entradas.
+
+    Returns:
+        Las carpetas, por nombre; se ignoran las ocultas.
+    """
+    return sorted(
+        d
+        for d in entries_dir.iterdir()
+        if d.is_dir() and not d.name.startswith(".") and (d / ENTRY_FILE).is_file()
+    )
 
 
 def load_entries(entries_dir: Path) -> tuple[list[Entry], list[str]]:
     """Carga todas las entradas de un directorio.
 
     Args:
-        entries_dir: Directorio con los ``*.toml``.
+        entries_dir: Directorio con una carpeta por entrada.
 
     Returns:
         Las entradas ordenadas por nombre y los problemas del propio
@@ -443,7 +488,7 @@ def load_entries(entries_dir: Path) -> tuple[list[Entry], list[str]]:
     dir_problems = []
     if reason := insecure_reason(entries_dir):
         dir_problems.append(reason)
-    entries = [load_entry(p) for p in sorted(entries_dir.glob("*.toml")) if p.is_file()]
+    entries = [load_entry(d) for d in entry_dirs_in(entries_dir)]
     for e in entries:
         e.problems.extend(dir_problems)
     entries.sort(key=lambda e: e.name.lower())
@@ -470,11 +515,11 @@ def load_catalog(entries_dirs: Iterable[Path]) -> Catalog:
     """Carga y combina las entradas de varios directorios, en orden.
 
     Si un id aparece en más de un directorio vale el del último: así una
-    entrada de ejemplo se sustituye sin tocarla, poniendo otra con el mismo
-    nombre de fichero en un directorio posterior.
+    entrada de ejemplo se sustituye sin tocarla, poniendo otra carpeta con el
+    mismo nombre en un directorio posterior.
 
     Args:
-        entries_dirs: Directorios con los ``*.toml``.
+        entries_dirs: Directorios de entradas, en orden.
 
     Returns:
         El catálogo combinado.

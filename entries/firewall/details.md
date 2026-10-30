@@ -1,7 +1,3 @@
-name = "Cortafuegos (ufw)"
-description = "ufw activo: entrada denegada, salida permitida, con las excepciones que indiques"
-category = "Red"
-details = """
 Instala y activa [ufw](https://wiki.debian.org/Uncomplicated%20Firewall%20%28ufw%29)
 con esta política:
 
@@ -31,35 +27,3 @@ SSH) deja fuera las conexiones nuevas y puede cortar la sesión actual. Añade
 su puerto si ufw está activo.
 
 Desinstalar ejecuta `ufw disable`: no desinstala ufw ni borra las reglas.
-"""
-
-[[param]]
-name = "allow"
-prompt = "Excepciones de entrada, separadas por espacios (p. ej. 22/tcp 443; - = ninguna)"
-default = "-"
-
-[[param]]
-name = "allow_from"
-prompt = "Red de confianza, todo permitido (p. ej. 192.168.1.0/24; - = ninguna)"
-default = "-"
-
-[check]
-# ufw puede estar traducido: salida en inglés con LC_ALL=C.
-run = """
-command -v ufw >/dev/null || exit 1
-status="$(LC_ALL=C ufw status verbose)"
-grep -q '^Status: active' <<<"$status" \
-  && grep -q 'deny (incoming), allow (outgoing)' <<<"$status"
-"""
-
-[[step]]
-title = "Instalar ufw"
-run = "DEBIAN_FRONTEND=noninteractive apt-get install -y ufw"
-
-[[step]]
-title = "Validar excepciones, aplicar política y activar"
-script = "configure-ufw.sh"
-
-[remove]
-# Solo desactiva: conserva ufw y sus reglas.
-run = "if command -v ufw >/dev/null; then ufw disable; fi"

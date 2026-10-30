@@ -4,8 +4,8 @@
 # Uso:
 #   scripts/try-entry.sh RECETA [--distro D] [--container] [--keep] [--tar RUTA]
 #
-#   RECETA       id en ./entries (mi-receta) o ruta a su .toml (…/mi-receta.toml);
-#                su subdirectorio <id>/, si existe, va con ella.
+#   RECETA       id en ./entries (mi-receta) o ruta a su carpeta (…/mi-receta/,
+#                con entry.toml y details.md).
 #   --distro D   imagen de incus (por defecto debian/13; p. ej. ubuntu/26.04).
 #   --container  contenedor en lugar de VM: más rápido, sin systemd ni KVM.
 #   --keep       no borrar la máquina de prueba al salir.
@@ -43,15 +43,14 @@ done
 [ -n "$entry" ] || die "indica la receta (scripts/try-entry.sh --help)"
 
 # --- Receta ------------------------------------------------------------------
-if [[ "$entry" == *.toml ]]; then
-  toml="$entry"
+if [[ "$entry" == */* ]]; then
+  files_dir="${entry%/}"
 else
-  toml="entries/$entry.toml"
+  files_dir="entries/$entry"
 fi
-[ -f "$toml" ] || die "no existe $toml"
-id="$(basename "$toml" .toml)"
-entries_dir="$(cd "$(dirname "$toml")" && pwd)"
-files_dir="$entries_dir/$id"
+[ -f "$files_dir/entry.toml" ] || die "no existe $files_dir/entry.toml"
+files_dir="$(cd "$files_dir" && pwd)"
+id="$(basename "$files_dir")"
 
 # --- Requisitos --------------------------------------------------------------
 command -v incus >/dev/null || die "falta incus (sudo apt install incus)"
@@ -80,8 +79,7 @@ say "Validando $id en este equipo"
 # máquina de prueba se fijan al subir la receta.
 check_dir="$(mktemp -d)"
 mkdir "$check_dir/entries"
-cp "$toml" "$check_dir/entries/"
-[ -d "$files_dir" ] && cp -r "$files_dir" "$check_dir/entries/"
+cp -r "$files_dir" "$check_dir/entries/"
 chmod -R go-w "$check_dir"
 if command -v uv >/dev/null && [ -f pyproject.toml ]; then
   validator=(uv run appforge)
@@ -178,8 +176,7 @@ incus start "$try"
 wait_ready "$try"
 
 say "Subiendo $id"
-incus file push "$toml" "$try/opt/appforge/custom-entries/"
-[ -d "$files_dir" ] && incus file push -r "$files_dir" "$try/opt/appforge/custom-entries/"
+incus file push -r "$files_dir" "$try/opt/appforge/custom-entries/"
 incus exec "$try" -- sh -c 'chown -R root:root /opt/appforge/custom-entries && chmod -R go-w /opt/appforge/custom-entries'
 
 say "Validando $id en $distro"

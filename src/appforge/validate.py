@@ -5,10 +5,12 @@ impiden aplicar una entrada), revisa lo que solo se ve mirando el conjunto:
 
 - **Errores**: sintaxis de bash en ``run``, ``[check]``, ``[remove]`` y
   scripts; referencias ``$APPFORGE_ENTRY_DIR/<fichero>`` a ficheros que no
-  existen en el subdirectorio de la entrada.
-- **Avisos**: ficheros del subdirectorio que nada usa, parámetros que ningún
+  existen en la carpeta de la entrada.
+- **Avisos**: ficheros de la carpeta que nada usa, parámetros que ningún
   comando ni plantilla usa, entradas sin ``description``, ``[check]`` o
-  ``[remove]``, nombres repetidos y subdirectorios sin su ``.toml``.
+  ``[remove]``, nombres repetidos, carpetas sin ``entry.toml`` y ficheros
+  sueltos en el directorio de entradas (p. ej. el formato anterior,
+  ``<id>.toml``).
 
 Nunca ejecuta las entradas: solo lee ficheros y llama a ``bash -n``.
 """
@@ -21,7 +23,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from appforge.entry import FILE_KINDS, Entry, load_catalog
+from appforge.entry import (
+    DETAILS_FILE,
+    ENTRY_FILE,
+    FILE_KINDS,
+    OWN_FILES,
+    Entry,
+    load_catalog,
+)
 
 ENTRY_DIR_REF = re.compile(r"\$\{?APPFORGE_ENTRY_DIR\}?/([A-Za-z0-9._\-/]+)")
 
@@ -108,14 +117,15 @@ def _commands(entry: Entry) -> list[tuple[str, str]]:
 
 
 def _files(entry: Entry) -> list[str]:
-    """Ficheros del subdirectorio como rutas relativas POSIX."""
+    """Ficheros de la carpeta (salvo los de la propia entrada), en POSIX."""
     if not entry.files_dir.is_dir():
         return []
-    return sorted(
+    files = (
         p.relative_to(entry.files_dir).as_posix()
         for p in entry.files_dir.rglob("*")
         if p.is_file()
     )
+    return sorted(f for f in files if f not in OWN_FILES)
 
 
 def _check_syntax(entry: Entry, report: Report) -> None:
@@ -191,6 +201,25 @@ def validate_entry(entry: Entry) -> Report:
     return report
 
 
+def _strays(folder: Path) -> list[str]:
+    """Lo que hay en un directorio de entradas y no es una entrada."""
+    out = []
+    for p in sorted(folder.iterdir()):
+        if p.name.startswith("."):
+            continue
+        if p.is_dir() and not (p / ENTRY_FILE).is_file():
+            out.append(f"{folder.name}/{p.name}/: carpeta sin {ENTRY_FILE}")
+        elif p.suffix == ".toml":
+            out.append(
+                f"{folder.name}/{p.name}: formato anterior, se ignora; "
+                f"muévelo a {p.stem}/{ENTRY_FILE} "
+                f"con su ficha en {p.stem}/{DETAILS_FILE}"
+            )
+        elif not p.is_dir():
+            out.append(f"{folder.name}/{p.name}: fichero suelto, se ignora")
+    return out
+
+
 def validate_dirs(entries_dirs: Sequence[Path]) -> Validation:
     """Valida el catálogo que forman varios directorios de entradas.
 
@@ -198,7 +227,7 @@ def validate_dirs(entries_dirs: Sequence[Path]) -> Validation:
     último) y se avisa de la sustitución.
 
     Args:
-        entries_dirs: Directorios con los ``*.toml``, en orden.
+        entries_dirs: Directorios de entradas, en orden.
 
     Returns:
         Los informes de cada entrada y los de los directorios.
@@ -216,14 +245,9 @@ def validate_dirs(entries_dirs: Sequence[Path]) -> Validation:
     result.warnings.extend(catalog.overrides)
     if not entries:
         names = ", ".join(str(d) for d in entries_dirs)
-        result.warnings.append(f"{names}: no hay ninguna entrada (*.toml)")
+        result.warnings.append(f"{names}: no hay ninguna entrada (<id>/{ENTRY_FILE})")
     for folder in entries_dirs:
-        ids = {p.stem for p in folder.glob("*.toml")}
-        for d in sorted(p for p in folder.iterdir() if p.is_dir()):
-            if d.name not in ids and not d.name.startswith("."):
-                result.warnings.append(
-                    f"{folder.name}/{d.name}/: subdirectorio sin {d.name}.toml"
-                )
+        result.warnings.extend(_strays(folder))
     for name, count in Counter(e.name for e in entries).items():
         if count > 1:
             result.warnings.append(f"nombre repetido en {count} entradas: {name}")
@@ -234,7 +258,7 @@ def validate_dir(entries_dir: Path) -> Validation:
     """Valida todas las entradas de un directorio.
 
     Args:
-        entries_dir: Directorio con los ``*.toml``.
+        entries_dir: Directorio de entradas.
 
     Returns:
         Los informes de cada entrada y los del directorio.

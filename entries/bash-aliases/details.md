@@ -1,7 +1,3 @@
-name = "Alias de bash"
-description = "~/.bash_aliases con atajos para listados, apt y systemd"
-category = "Sistema"
-details = """
 Instala `~/.bash_aliases` en tu usuario (modo 0644). El `~/.bashrc` de Debian ya lo
 carga; si el tuyo no lo hace, la receta avisa.
 
@@ -23,27 +19,3 @@ pon tus alias propios en otro sitio.
 
 Desinstalar restaura `~/.bash_aliases.backup` si existe y, si no, borra el
 fichero. Si lo has modificado después de aplicar la receta, no se toca.
-"""
-
-[check]
-run = """
-cmp -s "$APPFORGE_ENTRY_DIR/bash_aliases" "$APPFORGE_USER_HOME/.bash_aliases"
-"""
-
-[[step]]
-title = "Instalar ~/.bash_aliases"
-script = "install-aliases.sh"
-
-[remove]
-# Si el usuario editó el fichero después de aplicar la receta, se conserva.
-run = """
-dest="$APPFORGE_USER_HOME/.bash_aliases"
-if [ -f "$dest" ] && ! cmp -s "$APPFORGE_ENTRY_DIR/bash_aliases" "$dest"; then
-  echo "Aviso: $dest se ha modificado; no se toca" >&2
-elif [ -f "$dest.backup" ]; then
-  mv -f "$dest.backup" "$dest"
-  echo "restaurado $dest desde $dest.backup"
-else
-  rm -f "$dest"
-fi
-"""

@@ -161,9 +161,11 @@ def test_several_entries_dirs_last_one_wins(home: Path) -> None:
 
     custom = home / "custom-entries"
     custom.mkdir(mode=0o755)
-    (custom / "ollama.toml").write_text(f'name = "Ollama propio"\n{STEP}')
-    (custom / "mia.toml").write_text(f'name = "Mía"\n{STEP}')
-    for p in [custom, *custom.iterdir()]:
+    for entry_id, name in [("ollama", "Ollama propio"), ("mia", "Mía")]:
+        (custom / entry_id).mkdir()
+        (custom / entry_id / "entry.toml").write_text(f'name = "{name}"\n{STEP}')
+        (custom / entry_id / "details.md").write_text("Ficha.\n")
+    for p in [custom, *custom.rglob("*")]:
         p.chmod(p.stat().st_mode & ~0o022)
     (home / "config.toml").write_text('entries_dirs = ["entries", "custom-entries"]\n')
     config = load_config(home)
@@ -172,13 +174,13 @@ def test_several_entries_dirs_last_one_wins(home: Path) -> None:
     catalog = load_catalog(config.entries_dirs)
     by_id = {e.id: e for e in catalog.entries}
     assert by_id["ollama"].name == "Ollama propio"  # gana el último directorio
-    assert by_id["ollama"].source == "custom-entries/ollama.toml"
+    assert by_id["ollama"].source == "custom-entries/ollama/"
     assert "mia" in by_id and "fonts" in by_id
     assert catalog.overrides == [
-        "ollama: custom-entries/ollama.toml sustituye a entries/ollama.toml"
+        "ollama: custom-entries/ollama/ sustituye a entries/ollama/"
     ]
     warnings = validate_dirs(config.entries_dirs).warnings
-    assert any("sustituye a entries/ollama.toml" in w for w in warnings)
+    assert any("sustituye a entries/ollama/" in w for w in warnings)
 
 
 def test_entries_dirs_must_be_a_list(tmp_path: Path) -> None:
@@ -190,3 +192,35 @@ def test_entries_dirs_must_be_a_list(tmp_path: Path) -> None:
     (tmp_path / "config.toml").write_text("ui = {}")
     with pytest.raises(ConfigError, match="falta 'entries_dirs'"):
         load_config(tmp_path)
+
+
+# -- Carpeta de la entrada ---------------------------------------------------- #
+def test_details_md_is_required(config, write_entry) -> None:
+    write_entry("sinficha", f'name = "Sin ficha"\n{STEP}', details=None)
+    write_entry("vacia", f'name = "Vacía"\n{STEP}', details="  \n")
+    assert "falta sinficha/details.md" in "\n".join(
+        get_entry(config, "sinficha").problems
+    )
+    assert "vacia/details.md está vacío" in get_entry(config, "vacia").problems
+
+
+def test_details_key_points_to_details_md(config, write_entry) -> None:
+    write_entry("vieja", f'name = "Vieja"\ndetails = "texto"\n{STEP}')
+    problems = get_entry(config, "vieja").problems
+    assert problems == ["entrada: 'details' va en vieja/details.md"]
+
+
+def test_details_md_feeds_the_detail_page(config, write_entry) -> None:
+    write_entry("ficha", f'name = "Ficha"\n{STEP}', details="## Uso\n\nTexto.\n")
+    entry = get_entry(config, "ficha")
+    assert entry.valid
+    assert entry.details == "## Uso\n\nTexto."
+    assert entry.files_dir == config.entries_dirs[0] / "ficha"
+
+
+def test_own_files_are_not_unused(config, write_entry) -> None:
+    from appforge.validate import validate_entry
+
+    write_entry("limpia", f'name = "Limpia"\ndescription = "d"\n{STEP}')
+    warnings = validate_entry(get_entry(config, "limpia")).warnings
+    assert not [w for w in warnings if "sin usar" in w]

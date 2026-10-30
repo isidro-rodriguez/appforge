@@ -166,6 +166,7 @@ run = "true"
         {"sobra.txt": "x"},
     )
     (config.entries_dirs[0] / "huerfano").mkdir()
+    (config.entries_dirs[0] / "vieja.toml").write_text('name = "Vieja"\n')
     result = validate_dir(config.entries_dirs[0])
     warnings = "\n".join(
         next(r for r in result.reports if r.entry.id == "floja").warnings
@@ -176,7 +177,8 @@ run = "true"
     assert "sin [remove]" in warnings
     assert "sin 'description'" in warnings
     general = "\n".join(result.warnings)
-    assert "huerfano/: subdirectorio sin huerfano.toml" in general
+    assert "huerfano/: carpeta sin entry.toml" in general
+    assert "vieja.toml: formato anterior" in general
     assert "nombre repetido" in general
 
 

@@ -313,7 +313,7 @@ def describe(entry: Entry, state: State, checked: bool = True) -> Group:
     kinds = ", ".join(sorted({s.kind for s in entry.steps}))
     grid.add_row("Pasos", f"{len(entry.steps)} ({kinds})" if kinds else "0")
     grid.add_row("Eliminar", "sí" if entry.remove else "no")
-    grid.add_row("Fichero", entry.source)
+    grid.add_row("Carpeta", entry.source)
     parts: list[Text | Table] = [Text(entry.name + "\n", style=STYLES["title"]), grid]
     if entry.description:
         parts.append(Text("\n" + entry.description))
@@ -478,7 +478,7 @@ def entry_markdown(entry: Entry, state: State, checked: bool = True) -> str:
     if entry.description:
         parts.append(entry.description)
     parts.append(
-        "| Estado | Categoría | Fichero |\n|---|---|---|\n"
+        "| Estado | Categoría | Carpeta |\n|---|---|---|\n"
         f"| {status} | {entry.category or '—'} | `{entry.source}` |"
     )
     if entry.problems:

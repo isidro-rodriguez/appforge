@@ -41,11 +41,9 @@ run = "rm -f {dest}/{name}"
 @pytest.fixture(autouse=True)
 def only_ollama(home: Path) -> None:
     """Deja solo la entrada de referencia: los tests no dependen de los ejemplos."""
-    entries = home / "entries"
-    for toml in entries.glob("*.toml"):
-        if toml.stem != "ollama":
-            toml.unlink()
-            shutil.rmtree(entries / toml.stem, ignore_errors=True)
+    for folder in (home / "entries").iterdir():
+        if folder.name != "ollama":
+            shutil.rmtree(folder)
 
 
 @pytest.fixture
@@ -265,7 +263,7 @@ def test_entry_markdown_lists_everything(config: Config) -> None:
     entries, _ = load_entries(config.entries_dirs[0])
     md = entry_markdown(entries[0], False)
     assert md.startswith("# Ollama (bajo demanda)")
-    assert "### Ajustes de rendimiento" in md  # clave details
+    assert "### Ajustes de rendimiento" in md  # details.md
     assert "| `arch` | Arquitectura (amd64 | arm64) | `amd64` |" in md
     assert (
         "| `version` | Versión de Ollama (etiqueta de GitHub) "
@@ -275,4 +273,4 @@ def test_entry_markdown_lists_everything(config: Config) -> None:
     assert "**4. Variables de entorno (optimización)** · `template`" in md
     assert "Genera `/opt/ollama/ollama.env` desde `ollama/ollama.env.tpl`" in md
     assert "## Comprobación" in md
-    assert "| no aplicada | IA | `entries/ollama.toml` |" in md
+    assert "| no aplicada | IA | `entries/ollama/` |" in md

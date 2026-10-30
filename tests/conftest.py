@@ -56,16 +56,26 @@ def config(home: Path) -> Config:
 
 @pytest.fixture
 def write_entry(config: Config) -> WriteEntry:
-    """Devuelve una función que crea ``entries/<name>.toml`` y sus ficheros."""
+    """Devuelve una función que crea ``entries/<name>/`` con su entrada y ficheros.
 
-    def write(name: str, toml: str, files: dict[str, str] | None = None) -> Path:
-        path = config.entries_dirs[0] / f"{name}.toml"
+    ``details`` es el contenido de ``details.md``; ``None`` no lo crea.
+    """
+
+    def write(
+        name: str,
+        toml: str,
+        files: dict[str, str] | None = None,
+        details: str | None = "Ficha de prueba.\n",
+    ) -> Path:
+        folder = config.entries_dirs[0] / name
+        folder.mkdir(exist_ok=True)
+        path = folder / "entry.toml"
         path.write_text(toml, encoding="utf-8")
-        if files:
-            folder = config.entries_dirs[0] / name
-            folder.mkdir(exist_ok=True)
-            for filename, content in files.items():
-                (folder / filename).write_text(content, encoding="utf-8")
+        if details is not None:
+            (folder / "details.md").write_text(details, encoding="utf-8")
+        for filename, content in (files or {}).items():
+            (folder / filename).parent.mkdir(parents=True, exist_ok=True)
+            (folder / filename).write_text(content, encoding="utf-8")
         secure(config.entries_dirs[0])
         return path
 

@@ -220,10 +220,10 @@ def _print_lines(out: Console, items: list[str], kind: str, mark: str) -> None:
 _VALIDATE_HELP = """Revisa las entradas sin ejecutarlas.
 
 [bold]Errores[/]: TOML, claves y seguridad; sintaxis de bash; ficheros que faltan
-en el subdirectorio de la entrada (pasos y $APPFORGE_ENTRY_DIR/...).
+en la carpeta de la entrada (pasos, details.md y $APPFORGE_ENTRY_DIR/...).
 
 [bold]Avisos[/]: ficheros y parámetros sin usar, sin \\[check] o \\[remove],
-sin description, nombres repetidos y subdirectorios sin su .toml.
+sin description, nombres repetidos, carpetas sin entry.toml y ficheros sueltos.
 
 Código de salida: 0 bien · 1 errores (o avisos con --strict) · 2 uso.
 """
@@ -235,7 +235,7 @@ def validate(
         list[str] | None,
         typer.Argument(
             metavar="ID...",
-            help="Entradas a validar (nombre del .toml). Por defecto, todas.",
+            help="Entradas a validar (nombre de su carpeta). Por defecto, todas.",
             show_default=False,
         ),
     ] = None,
