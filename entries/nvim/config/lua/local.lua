@@ -1,0 +1,7 @@
+-- Tus ajustes de Neovim. AppForge crea este fichero una sola vez y no lo vuelve a
+-- tocar: lo que pongas aquí sobrevive a reaplicar la receta.
+--
+-- Ejemplos:
+--   vim.opt.relativenumber = false
+--   vim.cmd.colorscheme("tokyonight-storm")
+--   vim.pack.add({ "https://github.com/usuario/plugin" })

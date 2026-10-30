@@ -1,0 +1,185 @@
+name = "Neovim (IDE de terminal)"
+description = "Neovim en /opt/nvim como vi y vim, configurado como IDE ligero con plugins de la comunidad"
+category = "Desarrollo"
+details = """
+Instala [Neovim](https://neovim.io) desde sus Releases de GitHub en `/opt/nvim`,
+lo pone en lugar de **vi** y **vim** y deja una configuración de IDE ligero para el
+usuario que ejecutó `sudo appforge`.
+
+La versión es un parámetro. Neovim no publica un fichero de sumas: la descarga se
+**verifica con el SHA-256 que GitHub publica para cada fichero de la Release**; sin
+suma no se instala. Lo mismo vale para `tree-sitter-cli`. Para actualizar, vuelve a
+aplicar la receta con otra versión.
+
+### Qué deja instalado
+
+- `/opt/nvim` con `nvim` y `tree-sitter`, enlazados en `/usr/local/bin`.
+- `vi`, `vim`, `view` y `vimdiff` apuntan a Neovim (`update-alternatives`). Si
+  tenías `vim` o `vim-tiny`, siguen instalados como reserva.
+- Herramientas que usan los plugins: `git`, `gcc`, `ripgrep`, `fd-find`, `fzf`,
+  Node.js y `npm`, `python3-venv`, `wl-clipboard` y `xclip`.
+- La configuración en `~/.config/nvim`. Si ya tenías una, se mueve a
+  `~/.config/nvim.backup-<fecha>`.
+
+### La configuración
+
+Usa el gestor de plugins de Neovim (`vim.pack`) con las versiones fijadas en
+`nvim-pack-lock.json`:
+
+| Función | Plugin |
+|---|---|
+| Tema | tokyonight.nvim |
+| Barra de estado, pestañas, pares, *surround*, explorador, notificaciones | mini.nvim |
+| Ayuda de atajos | which-key.nvim |
+| Buscador de ficheros, texto y símbolos | fzf-lua |
+| Resaltado y sangría por sintaxis | nvim-treesitter |
+| LSP e instalación de servidores | nvim-lspconfig, mason.nvim, mason-lspconfig.nvim |
+| Autocompletado y *snippets* | blink.cmp, friendly-snippets |
+| Git | gitsigns.nvim |
+| Formateo | conform.nvim |
+
+Al aplicar se clonan los plugins, se compilan los parsers de tree-sitter y se
+instalan los servidores de Lua y Bash: hace falta red y tarda unos minutos.
+
+### Uso
+
+`<Espacio>` es la tecla líder: púlsala y espera para ver los atajos. Los más
+útiles: `<Espacio>ff` ficheros, `<Espacio>fg` buscar texto, `<Espacio>fe`
+explorador, `gd` ir a la definición, `K` documentación, `:Mason` más servidores.
+Los iconos necesitan una Nerd Font en la terminal (receta «Fuentes adicionales»).
+
+Tus ajustes van en `~/.config/nvim/lua/local.lua`: reaplicar la receta sobrescribe
+el resto. Desinstalar conserva tu configuración y los plugins.
+"""
+
+[[param]]
+name = "version"
+prompt = "Versión de Neovim (etiqueta de GitHub)"
+default = "v0.12.6"
+link = "https://github.com/neovim/neovim/releases"
+
+[[param]]
+name = "ts_version"
+prompt = "Versión de tree-sitter-cli (etiqueta de GitHub)"
+default = "v0.27.1"
+link = "https://github.com/tree-sitter/tree-sitter/releases"
+
+[[param]]
+name = "arch"
+prompt = "Arquitectura (amd64 | arm64)"
+default = "amd64"
+
+[check]
+run = """
+test -x /opt/nvim/bin/nvim \
+  && test -x /opt/nvim/bin/tree-sitter \
+  && test "$(readlink -f /usr/bin/vi)" = /opt/nvim/bin/nvim \
+  && test "$(readlink -f /usr/bin/vim)" = /opt/nvim/bin/nvim \
+  && test -f "$APPFORGE_USER_HOME/.config/nvim/lua/appforge/plugins.lua"
+"""
+
+[[step]]
+title = "Dependencias (descarga, compilador, buscadores, portapapeles)"
+run = """
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  curl jq git gcc libc6-dev ripgrep fd-find fzf unzip \
+  nodejs npm python3-venv wl-clipboard xclip
+"""
+
+[[step]]
+title = "Descargar, verificar (SHA-256) e instalar Neovim y tree-sitter en /opt/nvim"
+script = "install-nvim.sh"
+
+[[step]]
+title = "Envoltorio view"
+copy = "view"
+dest = "/opt/nvim/libexec/view"
+mode = "0755"
+
+[[step]]
+title = "Envoltorio vimdiff"
+copy = "vimdiff"
+dest = "/opt/nvim/libexec/vimdiff"
+mode = "0755"
+
+[[step]]
+title = "Sustituir vi y vim (update-alternatives)"
+script = "alternatives.sh"
+
+# Configuración: copia de referencia en /opt/nvim/appforge/config (así el dry-run
+# muestra los cambios); user-config.sh la instala en el HOME del usuario.
+
+[[step]]
+title = "Configuración: init.lua"
+copy = "config/init.lua"
+dest = "/opt/nvim/appforge/config/init.lua"
+mode = "0644"
+
+[[step]]
+title = "Configuración: opciones"
+copy = "config/lua/appforge/options.lua"
+dest = "/opt/nvim/appforge/config/lua/appforge/options.lua"
+mode = "0644"
+
+[[step]]
+title = "Configuración: atajos"
+copy = "config/lua/appforge/keymaps.lua"
+dest = "/opt/nvim/appforge/config/lua/appforge/keymaps.lua"
+mode = "0644"
+
+[[step]]
+title = "Configuración: plugins"
+copy = "config/lua/appforge/plugins.lua"
+dest = "/opt/nvim/appforge/config/lua/appforge/plugins.lua"
+mode = "0644"
+
+[[step]]
+title = "Configuración: tree-sitter"
+copy = "config/lua/appforge/treesitter.lua"
+dest = "/opt/nvim/appforge/config/lua/appforge/treesitter.lua"
+mode = "0644"
+
+[[step]]
+title = "Configuración: LSP"
+copy = "config/lua/appforge/lsp.lua"
+dest = "/opt/nvim/appforge/config/lua/appforge/lsp.lua"
+mode = "0644"
+
+[[step]]
+title = "Configuración: preparación sin interfaz"
+copy = "config/lua/appforge/bootstrap.lua"
+dest = "/opt/nvim/appforge/config/lua/appforge/bootstrap.lua"
+mode = "0644"
+
+[[step]]
+title = "Configuración: ajustes del usuario (plantilla vacía)"
+copy = "config/lua/local.lua"
+dest = "/opt/nvim/appforge/config/lua/local.lua"
+mode = "0644"
+
+[[step]]
+title = "Configuración: versiones fijadas de los plugins"
+copy = "config/nvim-pack-lock.json"
+dest = "/opt/nvim/appforge/config/nvim-pack-lock.json"
+mode = "0644"
+
+[[step]]
+title = "Instalar la configuración en ~/.config/nvim"
+script = "user-config.sh"
+
+[[step]]
+title = "Plugins, parsers y servidores LSP (necesita red)"
+script = "bootstrap.sh"
+
+[remove]
+# Conserva ~/.config/nvim y ~/.local/share/nvim (configuración, plugins y
+# servidores del usuario). vi y vim vuelven a la alternativa anterior, si la hay.
+run = """
+for name in vi vim; do
+  update-alternatives --remove "$name" /opt/nvim/bin/nvim || true
+done
+update-alternatives --remove view /opt/nvim/libexec/view || true
+update-alternatives --remove vimdiff /opt/nvim/libexec/vimdiff || true
+rm -f /usr/local/bin/nvim /usr/local/bin/tree-sitter
+rm -rf /opt/nvim
+"""

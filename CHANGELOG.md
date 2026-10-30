@@ -9,6 +9,10 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Added
 
+- Receta **Neovim (IDE de terminal)**: Neovim en `/opt/nvim` (versión fija,
+  verificada con el SHA-256 de la Release de GitHub) en lugar de `vi` y `vim`, con
+  una configuración de IDE ligero (`vim.pack`, LSP con Mason, tree-sitter,
+  autocompletado, buscador, git y formateo) y su página «Receta incluida: Neovim».
 - `scripts/try-entry.sh`: prueba una receta en una VM o contenedor desechable con
   incus, en Debian 13 u otra distro, y su página «Probar una receta».
 

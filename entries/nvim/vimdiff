@@ -1,0 +1,3 @@
+#!/bin/sh
+# vimdiff: Neovim en modo diff (instalado por AppForge).
+exec /opt/nvim/bin/nvim -d "$@"

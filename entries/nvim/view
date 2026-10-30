@@ -1,0 +1,3 @@
+#!/bin/sh
+# view: Neovim en solo lectura (instalado por AppForge).
+exec /opt/nvim/bin/nvim -R "$@"
