@@ -144,7 +144,11 @@ class AppForgeApp(Screen):
         self._run_flow("apply", dry_run=True)
 
     def _run_flow(self, action: str, dry_run: bool) -> None:
-        entries = [e for e in self.entries if e.id in self.marked] or [self.current_entry()] if self.current_entry() else []
+        entries = (
+            [e for e in self.entries if e.id in self.marked] or [self.current_entry()]
+            if self.current_entry()
+            else []
+        )
         if not entries:
             return
         self.push_screen(ConfirmScreen(entries, action, dry_run))
@@ -164,7 +168,9 @@ class AppForgeApp(Screen):
         entry = self.current_entry()
         if entry is None:
             return
-        self.push_screen(DetailScreen(entry, self.states.get(entry.id), entry.id in self.checked))
+        self.push_screen(
+            DetailScreen(entry, self.states.get(entry.id), entry.id in self.checked)
+        )
 
 
 class AppRow(ListItem):
@@ -202,7 +208,9 @@ class ConfirmScreen(ModalScreen[bool]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="dialog"):
-            yield Static(f"¿Quieres {self.action} {len(self.entries)} entradas?", classes="title")
+            yield Static(
+                f"¿Quieres {self.action} {len(self.entries)} entradas?", classes="title"
+            )
             yield Button("Sí", id="yes", variant="primary")
             yield Button("No", id="no")
 
@@ -254,17 +262,26 @@ class ParamsScreen(ModalScreen[dict[str, Any] | None]):
 
     def _field_for_param(self, param: Param) -> Any:
         if param.type == "bool":
-            field = Checkbox(param.prompt, value=self.values.get(param.name, BOOL_VALUES[0]))
+            field = Checkbox(
+                param.prompt, value=self.values.get(param.name, BOOL_VALUES[0])
+            )
             field.id = f"p_{param.name}"
             self._field_widgets.append(field)
             return field
         if param.choices:
             options = [(value, value) for value in param.choices]
-            select = Select(options, value=self.values.get(param.name, param.default or options[0][0]), allow_blank=False)
+            select = Select(
+                options,
+                value=self.values.get(param.name, param.default or options[0][0]),
+                allow_blank=False,
+            )
             select.id = f"p_{param.name}"
             self._field_widgets.append(select)
             return select
-        field = Input(value=str(self.values.get(param.name, param.default or "")), placeholder=param.prompt)
+        field = Input(
+            value=str(self.values.get(param.name, param.default or "")),
+            placeholder=param.prompt,
+        )
         field.id = f"p_{param.name}"
         self._field_widgets.append(field)
         return field
@@ -321,7 +338,9 @@ class ProgressScreen(ModalScreen[None]):
     ProgressScreen { align: center middle; }
     """
 
-    def __init__(self, config: Config, entries: list[Entry], action: str, dry_run: bool) -> None:
+    def __init__(
+        self, config: Config, entries: list[Entry], action: str, dry_run: bool
+    ) -> None:
         super().__init__()
         self.config = config
         self.entries = entries
