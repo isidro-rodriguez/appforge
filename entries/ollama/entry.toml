@@ -13,7 +13,8 @@ link = "https://github.com/ollama/ollama/releases"
 
 [[param]]
 name = "arch"
-prompt = "Arquitectura (amd64 | arm64)"
+prompt = "Arquitectura"
+choices = ["amd64", "arm64"]
 default = "amd64"
 
 [[param]]
@@ -28,12 +29,14 @@ default = "30m"
 
 [[param]]
 name = "kv_cache"
-prompt = "OLLAMA_KV_CACHE_TYPE (f16 | q8_0 | q4_0)"
+prompt = "OLLAMA_KV_CACHE_TYPE"
+choices = ["f16", "q8_0", "q4_0"]
 default = "q8_0"
 
 [[param]]
 name = "context_length"
 prompt = "OLLAMA_CONTEXT_LENGTH"
+type = "int"
 default = "8192"
 
 [check]

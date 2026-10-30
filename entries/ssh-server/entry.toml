@@ -5,12 +5,14 @@ category = "Red"
 [[param]]
 name = "port"
 prompt = "Puerto de escucha"
+type = "port"
 default = "22"
 
 [[param]]
 name = "password_auth"
-prompt = "¿Permitir contraseña? (no | yes)"
-default = "no"
+prompt = "Permitir el acceso con contraseña"
+type = "bool"
+default = false
 
 [check]
 # Comprueba el endurecimiento fijo; el puerto y la contraseña dependen de lo aplicado.

@@ -9,6 +9,7 @@ prompt = "Nombre para los commits (user.name)"
 [[param]]
 name = "user_email"
 prompt = "Email para los commits (user.email)"
+type = "email"
 
 [[param]]
 name = "default_branch"

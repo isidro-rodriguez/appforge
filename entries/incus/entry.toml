@@ -4,8 +4,9 @@ category = "Virtualización"
 
 [[param]]
 name = "vms"
-prompt = "¿Soporte de máquinas virtuales? (yes | no)"
-default = "yes"
+prompt = "Soporte de máquinas virtuales (QEMU y OVMF)"
+type = "bool"
+default = true
 
 [check]
 run = """

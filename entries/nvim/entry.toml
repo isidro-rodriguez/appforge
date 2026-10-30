@@ -16,7 +16,8 @@ link = "https://github.com/tree-sitter/tree-sitter/releases"
 
 [[param]]
 name = "arch"
-prompt = "Arquitectura (amd64 | arm64)"
+prompt = "Arquitectura"
+choices = ["amd64", "arm64"]
 default = "amd64"
 
 [check]

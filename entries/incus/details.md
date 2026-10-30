@@ -3,7 +3,7 @@ para crear contenedores y máquinas virtuales.
 
 ### Qué hace
 
-- Paquete `incus` y, si el parámetro **VM** es `yes`, `qemu-system-x86` y `ovmf`
+- Paquete `incus` y, si marcas el soporte de **máquinas virtuales**, `qemu-system-x86` y `ovmf`
   (máquinas virtuales con UEFI).
 - `incus admin init --minimal` solo si Incus no está inicializado: almacenamiento
   `dir` y el puente `incusbr0` con NAT.

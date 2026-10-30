@@ -5,7 +5,7 @@ Instala `openssh-server` y escribe el endurecimiento en
 |---|---|
 | `Port` | Parámetro (22) |
 | `PermitRootLogin` | `no` |
-| `PasswordAuthentication` | Parámetro (`no`) |
+| `PasswordAuthentication` | Parámetro (`no` salvo que lo permitas) |
 | `KbdInteractiveAuthentication` | `no` |
 | `X11Forwarding` | `no` |
 | `MaxAuthTries` | `3` |
@@ -15,7 +15,7 @@ Instala `openssh-server` y escribe el endurecimiento en
 
 - Con `PasswordAuthentication no`, la receta **falla antes de tocar nada** si tu
   `~/.ssh/authorized_keys` no existe o está vacío. Copia antes tu clave pública
-  (`ssh-copy-id` desde el otro equipo) o aplica la receta con `yes`.
+  (`ssh-copy-id` desde el otro equipo) o aplica la receta permitiendo la contraseña.
 - La configuración se valida con `sshd -t` antes de recargar el servicio; si no es
   válida, se restaura la anterior y la receta falla.
 - Si ufw está activo, se abre `<puerto>/tcp`. Al cambiar de puerto, la regla del
