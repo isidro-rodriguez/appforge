@@ -7,6 +7,10 @@ proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+
+- Receta **Cortafuegos (ufw)** (`firewall`): entrada denegada y salida permitida, con excepciones y una red de confianza validadas antes de cambiar nada.
+
 ## [0.9.0] - 2026-10-30
 
 ### Added
