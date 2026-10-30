@@ -54,7 +54,7 @@ async def _wait(pilot: object, condition: Callable[[], bool]) -> None:
 
 async def _capture(base: Path) -> None:
     """Recorre la TUI y guarda cada pantalla."""
-    from textual.widgets import Button, Input, ListView
+    from textual.widgets import Button, ListView, Select
 
     from appforge.config import load_config
     from appforge.tui import (
@@ -119,7 +119,7 @@ async def _capture(base: Path) -> None:
         app._repaint()
         await pilot.press("d")
         await _wait(pilot, lambda: isinstance(app.screen, ParamsScreen))
-        app.screen.query_one("#p_kv_cache", Input).value = "q4_0"
+        app.screen.query_one("#p_kv_cache", Select).value = "q4_0"
         await pilot.pause(0.2)
         save(app, "parametros")
         await pilot.press("escape")

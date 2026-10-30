@@ -43,9 +43,28 @@ Valores que se piden antes de aplicar. No se guardan en disco.
 |---|---|---|---|
 | `name` | identificador | sí | `[A-Za-z_][A-Za-z0-9_]*`; no puede ser `PATH`, `HOME`, `USER`, … ni empezar por `APPFORGE_` |
 | `prompt` | texto | no (`name`) | Pregunta |
-| `default` | escalar | no | Sin default, el parámetro es obligatorio |
-| `secret` | bool | no (`false`) | Entrada oculta; el valor se enmascara (`••••••`) en toda la salida |
+| `default` | escalar | no | Sin default, el parámetro es obligatorio (salvo `bool`, que vale `false`). Debe cumplir su `type` o `choices` |
+| `type` | texto | no (`text`) | Qué admite el campo; ver la tabla siguiente |
+| `choices` | lista de textos | no | Valores permitidos (dos o más): la TUI muestra un desplegable. No se combina con `type` |
+| `secret` | bool | no (`false`) | Entrada oculta; el valor se enmascara (`••••••`) en toda la salida. Solo con texto libre |
 | `link` | URL http(s) | no | Página donde elegir el valor (p. ej. las versiones publicadas). La TUI la muestra bajo la pregunta y en la página de detalle |
+
+| `type` | Campo en la TUI | Admite | Llega a los pasos como |
+|---|---|---|---|
+| `text` | Texto | Cualquier texto | Tal cual |
+| `bool` | Casilla | `true`/`false`, `sí`/`no`, `on`/`off`… | `yes` o `no` |
+| `int` | Solo dígitos | Número entero | El número |
+| `port` | Solo dígitos | Puerto 1-65535 | El número |
+| `email` | Texto | Email (`nombre@dominio`) | Tal cual |
+| `path` | Texto | Ruta absoluta (`/…`) | Tal cual |
+| `ip` | Texto | Dirección IPv4 o IPv6 | Tal cual |
+| `url` | Texto | URL | Tal cual |
+| `domain` | Texto | Nombre de dominio | Tal cual |
+
+Un valor que no cumple su tipo marca el campo en rojo y el formulario no se cierra;
+`appforge validate` comprueba los `default`. Las comprobaciones son de formato
+(heurísticas, de la librería `acodo`); si el paso
+necesita más (que el fichero exista, un rango concreto), compruébalo en su script.
 
 ```toml
 [[param]]
@@ -53,6 +72,18 @@ name = "version"
 prompt = "Versión de Ollama (etiqueta de GitHub)"
 default = "v0.40.13"
 link = "https://github.com/ollama/ollama/releases"
+
+[[param]]
+name = "arch"
+prompt = "Arquitectura"
+choices = ["amd64", "arm64"]
+default = "amd64"
+
+[[param]]
+name = "password_auth"
+prompt = "Permitir el acceso con contraseña"
+type = "bool"            # casilla; el paso recibe yes/no
+default = false
 ```
 
 ### `[check]`
