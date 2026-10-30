@@ -46,7 +46,8 @@ destino, la comprobación y la eliminación. ++esc++, ++q++ o ++v++ vuelven.
 1. **Parámetros**: una ventana por receta que los tenga. Cada campo se adapta a su
    tipo: casilla (sí/no), desplegable (valores fijos) o texto, que se marca en rojo si
    el valor no vale (un puerto fuera de rango, un email mal escrito…); así no se
-   cierra la ventana. ++enter++ pasa al siguiente campo; en el último, acepta.
+   cierra la ventana. ++tab++ / ++shift+tab++ recorren campos y botones; ++enter++
+   pasa al siguiente campo y, en el último, acepta.
    ++esc++ cancela todo el lote. Si un parámetro tiene
    enlace (↗, p. ej. a las versiones publicadas), aparece bajo su pregunta para consultarlo
    antes de elegir.

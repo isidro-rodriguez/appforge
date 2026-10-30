@@ -333,3 +333,22 @@ run = "echo $flag $color $port > {tmp_path}/out"
         assert isinstance(progress, ProgressScreen)
         await wait_for(pilot, lambda: not progress.running)
         assert "# echo $flag $color $port" in log_text(progress)
+
+
+async def test_tab_moves_between_dialog_fields(config: Config) -> None:
+    """En el formulario, Tab y Mayús+Tab recorren los campos y los botones."""
+    app = AppForgeApp(config)
+    async with app.run_test(size=SIZE) as pilot:
+        await settle(app, pilot)
+        app.marked = {"ollama"}
+        await pilot.press("d")
+        await wait_for(pilot, lambda: isinstance(app.screen, ParamsScreen))
+        screen = app.screen
+        assert screen.focused is screen.query_one("#p_version", Input)
+        await pilot.press("tab")
+        assert screen.focused is screen.query_one("#p_arch", Select)
+        await pilot.press("tab")
+        assert screen.focused is screen.query_one("#p_host", Input)
+        await pilot.press("shift+tab")
+        assert screen.focused is screen.query_one("#p_arch", Select)
+        assert app.screen is screen  # Tab no dispara acciones del catálogo
