@@ -1,20 +1,21 @@
 # Recetas incluidas
 
-El paquete trae estas recetas en `/opt/appforge/appforge-entries/`. Cada una explica
-en su [página de detalle](interfaz.md) qué instala, qué pregunta y qué deja al
-desinstalar; esta página resume el conjunto y cómo combinarlas.
+El paquete trae estas recetas en `/opt/appforge/appforge-entries/`, una carpeta por
+receta. La ficha completa de cada una (qué instala, qué conviene saber antes, sus
+parámetros y qué deja al desinstalar) está en la TUI: resáltala y pulsa ++v++. Esta
+página resume el conjunto y cómo combinarlas.
 
-| Receta | Categoría | Qué hace | Parámetros |
-|---|---|---|---|
-| [Ollama (bajo demanda)](ollama.md) | IA | Ollama en `/opt/ollama` con versión fija verificada y lanzador on/off | Versión, arquitectura, `OLLAMA_*` |
-| [Fuentes adicionales](fuentes.md) | Escritorio | Microsoft core fonts, Ubuntu, Fira Code y JetBrainsMono Nerd Font | Versión de Nerd Fonts |
-| [Neovim (IDE de terminal)](nvim.md) | Desarrollo | Neovim en `/opt/nvim` con configuración de IDE ligero | Versión |
-| Git y GitHub CLI | Desarrollo | `git`, `gh` (repositorio oficial) y tu `~/.gitconfig` | Nombre, email, rama inicial, editor |
-| Cortafuegos (ufw) | Red | Entrada denegada y salida permitida, con excepciones | Excepciones, red de confianza |
-| Servidor SSH (endurecido) | Red | OpenSSH solo para tu usuario, sin root y, por defecto, solo con claves | Puerto, contraseña sí/no |
-| Incus (contenedores y VM) | Virtualización | Incus de Debian inicializado, tu usuario en `incus-admin` | Soporte de VM |
-| Docker Engine | Virtualización | Docker CE con Buildx y Compose desde el repositorio oficial | — |
-| Alias de bash | Sistema | `~/.bash_aliases` con atajos para listados, apt y systemd | — |
+| Receta | Id | Categoría | Descripción | Parámetros |
+|---|---|---|---|---|
+| Git y GitHub CLI | `git` | Desarrollo | git, gh (repositorio oficial) y tu configuración global de git | `user_name`, `user_email`, `default_branch`, `editor` |
+| Neovim (IDE de terminal) | `nvim` | Desarrollo | Neovim en /opt/nvim como vi y vim, configurado como IDE ligero con plugins de la comunidad | `version`, `ts_version`, `arch` |
+| Fuentes adicionales | `fonts` | Escritorio | Fuentes de Microsoft, Ubuntu, Fira Code y JetBrainsMono Nerd Font | `nerd_version` |
+| Ollama (bajo demanda) | `ollama` | IA | Ollama en /opt/ollama, sin servicio de arranque; lanzador on/off con notificación | `version`, `arch`, `host`, `keep_alive`, `kv_cache`, `context_length` |
+| Cortafuegos (ufw) | `firewall` | Red | ufw activo: entrada denegada, salida permitida, con las excepciones que indiques | `allow`, `allow_from` |
+| Servidor SSH (endurecido) | `ssh-server` | Red | OpenSSH con acceso solo para tu usuario, sin root y, por defecto, solo con claves | `port`, `password_auth` |
+| Alias de bash | `bash-aliases` | Sistema | ~/.bash_aliases con atajos para listados, apt y systemd | — |
+| Docker Engine | `docker` | Virtualización | Docker CE desde el repositorio oficial de Docker, con Buildx y Compose | — |
+| Incus (contenedores y VM) | `incus` | Virtualización | Incus de Debian 13 inicializado, con tu usuario en incus-admin y la red abierta en ufw | `vms` |
 
 Las recetas que tocan ficheros de usuario (Git, alias de bash, grupos de Incus y
 Docker) usan el usuario que lanzó `sudo /opt/appforge/appforge`, no `root`.

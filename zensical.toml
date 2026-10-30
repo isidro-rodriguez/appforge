@@ -26,9 +26,6 @@ nav = [
         { "Interfaz" = "guia/interfaz.md" },
         { "Línea de comandos" = "guia/cli.md" },
         { "Recetas incluidas" = "guia/recetas.md" },
-        { "Receta incluida: Ollama" = "guia/ollama.md" },
-        { "Receta incluida: fuentes" = "guia/fuentes.md" },
-        { "Receta incluida: Neovim" = "guia/nvim.md" },
     ] },
     { "Uso avanzado" = [
         { "Configuración" = "avanzado/configuracion.md" },

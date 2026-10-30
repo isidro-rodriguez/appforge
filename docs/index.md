@@ -79,11 +79,10 @@ preguntar, qué ejecutar y cómo comprobar que quedó bien.
 
 === "1. Escribe la receta"
 
-    ```toml title="appforge-entries/ssh-server.toml"
+    ```toml title="appforge-entries/ssh-server/entry.toml"
     name = "Servidor SSH (endurecido)"
     description = "OpenSSH con acceso solo para tu usuario, sin root y, por defecto, solo con claves"
     category = "Red"
-    details = """…"""            # la ficha completa, en Markdown
 
     [[param]]                     # se preguntan antes de aplicar
     name = "port"
@@ -126,8 +125,8 @@ preguntar, qué ejecutar y cómo comprobar que quedó bien.
     """
     ```
 
-    Versión abreviada de la [receta incluida](guia/recetas.md); sus ficheros viven en
-    `appforge-entries/ssh-server/`.
+    Versión abreviada de la [receta incluida](guia/recetas.md). En la misma carpeta van
+    su ficha (`details.md`, en Markdown) y los ficheros de sus pasos.
 
 === "2. Revísala"
 

@@ -38,9 +38,9 @@ desapercibida.
 | `custom-entries/` | Tus recetas | Nunca lo toca |
 
 Puedes añadir más directorios a la lista (por ejemplo, un repositorio de recetas de tu
-equipo). Si dos directorios tienen una receta con el mismo nombre de fichero,
-**vale la del último**: para sustituir una de ejemplo sin tocarla, copia su `.toml`
-**y su subdirectorio** a `custom-entries/` y cámbiala ahí. `appforge validate` avisa
+equipo). Si dos directorios tienen una receta con el mismo nombre de carpeta,
+**vale la del último**: para sustituir una de ejemplo sin tocarla, copia su carpeta
+a `custom-entries/` y cámbiala ahí. `appforge validate` avisa
 de cada sustitución.
 
 ### Interfaz

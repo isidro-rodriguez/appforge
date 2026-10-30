@@ -26,7 +26,7 @@ aplicar:
 
 | Comprobación | Por qué |
 |---|---|
-| El `.toml`, su carpeta o un fichero dentro son **escribibles por el grupo u otros** | Otro usuario podría inyectar comandos |
+| La carpeta de la receta o un fichero dentro son **escribibles por el grupo u otros** | Otro usuario podría inyectar comandos |
 | Pertenecen a **otro usuario** que no es `root` ni quien ejecutó `sudo` | Ídem |
 | Hay **enlaces simbólicos** en `entries/<id>/` | Podrían apuntar a ficheros fuera de la receta |
 | Una ruta de origen es absoluta o contiene `..` | Los ficheros de una receta no salen de su carpeta |

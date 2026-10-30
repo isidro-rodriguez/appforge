@@ -6,35 +6,40 @@ pasos, comprobación y eliminación.
 
 ## 1. Los ficheros
 
-Una receta es `entries/<id>.toml` en el repositorio (instalado, en
-`/opt/appforge/custom-entries/<id>.toml` si es tuya;
-edítala con `sudo`). Si necesita ficheros (plantillas, scripts,
-iconos), van en `entries/<id>/`. El `<id>` es el nombre del fichero.
+Una receta es una carpeta `entries/<id>/` en el repositorio (instalada, en
+`/opt/appforge/custom-entries/<id>/` si es tuya; edítala con `sudo`). El `<id>` es el
+nombre de la carpeta. Dentro van la receta (`entry.toml`), su ficha (`details.md`) y
+los ficheros que usen sus pasos (plantillas, scripts, iconos).
 
 ```text
 entries/
-├── ssh-hardening.toml
 └── ssh-hardening/
+    ├── entry.toml
+    ├── details.md
     └── hardening.conf.tpl
 ```
 
 ## 2. La cabecera
 
-```toml title="entries/ssh-hardening.toml"
+```toml title="entries/ssh-hardening/entry.toml"
 name = "SSH endurecido"
 description = "Sin contraseñas ni root por SSH; puerto y usuarios propios"
 category = "Sistema"
-details = """
+```
+
+Todo se ejecuta como `root`: AppForge solo arranca como superusuario.
+
+La ficha va aparte, en Markdown, y se ve en la
+[página de detalle](../guia/interfaz.md#página-de-detalle). Es obligatoria: cuenta qué
+hace la receta, qué conviene saber antes y qué deja al desinstalar.
+
+```markdown title="entries/ssh-hardening/details.md"
 Escribe `/etc/ssh/sshd_config.d/50-appforge.conf` con una configuración
 restrictiva y recarga el servicio **solo si la sintaxis es válida**.
 
 Asegúrate de tener tu clave pública en `~/.ssh/authorized_keys` antes de
 aplicarla: se desactiva el acceso con contraseña.
-"""
 ```
-
-Todo se ejecuta como `root`: AppForge solo arranca como superusuario. `details` es
-Markdown y se ve en la [página de detalle](../guia/interfaz.md#página-de-detalle).
 
 ## 3. Los parámetros
 

@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Development guide for AppForge (the engine, CLI and TUI). For adding or editing menu
-entries (`entries/*.toml`), follow [AGENTS.md](AGENTS.md) instead.
+entries (`entries/<id>/`), follow [AGENTS.md](AGENTS.md) instead.
 
 ## Language
 
@@ -17,7 +17,7 @@ entries (`entries/*.toml`), follow [AGENTS.md](AGENTS.md) instead.
 A console launcher shipped as a `.tar.gz` extracted into `/opt/appforge`: one
 self-contained folder with the PyInstaller binary, `config.toml`, `appforge-entries/`
 (shipped examples, from the repo's `entries/`), `custom-entries/` (the user's) and
-`.manifest.json`, plus `logs/` at runtime. One TOML per menu option. No `.deb`, man page or desktop launcher: the
+`.manifest.json`, plus `logs/` at runtime. One folder per menu option. No `.deb`, man page or desktop launcher: the
 single folder is deliberate, keep it that way. Each entry declares params, a `[check]`, ordered
 steps (`run`, `script`, `template`, `copy`) and an optional `[remove]`. Target: current
 Debian stable (13). It **only runs as root**: no sudo handling in the engine, no unprivileged cases.
@@ -34,7 +34,7 @@ Debian stable (13). It **only runs as root**: no sudo handling in the engine, no
 ├── config.toml             # development config: entries_dirs = ["entries"]
 ├── docs/                   # Zensical site (Spanish): guia/, avanzado/, desarrollo/
 ├── docs_templates/         # Zensical overrides (favicons, mkdocstrings in Spanish)
-├── entries/                # Example entries (→ /opt/appforge/appforge-entries); ollama.toml is the reference
+├── entries/                # Example entries (→ /opt/appforge/appforge-entries); ollama/ is the reference
 ├── pyproject.toml          # Deps, build (uv_build), ruff, ty, pytest, poe
 ├── README.md               # Minimal overview
 ├── scripts/
@@ -87,7 +87,12 @@ Debian stable (13). It **only runs as root**: no sudo handling in the engine, no
   `config.toml` is rejected if it is a symlink or insecure.
 - `entries_dirs` lists the entry directories in order; `entry.load_catalog` merges
   them and the **last one wins** on a repeated id (recorded in `Catalog.overrides`,
-  reported by `validate`). An entry's files live in `<its dir>/<id>/`.
+  reported by `validate`).
+- Each entry is a folder `<entries dir>/<id>/` (`entry.load_entry(folder)`): `entry.toml`
+  and `details.md` (the detail page; required, never a TOML key) plus the files its
+  steps use. `Entry.files_dir` is that folder (cwd and `APPFORGE_ENTRY_DIR` of steps).
+  Folders without `entry.toml` and loose files (e.g. the old `<id>.toml`) are ignored
+  and reported by `validate`.
 - `appforge update` never overwrites user changes: it compares the installed
   `.manifest.json`, the new one and the disk (`update.plan_update`). Unchanged
   package files are replaced, modified ones kept (new version as `.new`), deleted
@@ -170,6 +175,9 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
   `tests/test_ui.py` builds non-root entries that write under `tmp_path`, and an
   autouse fixture keeps only `ollama` from the repo entries.
 - Every repo entry has a dry-run test (`tests/test_<id>.py`, e.g. `tests/test_fonts.py`).
+- `tests/test_docs.py` keeps the catalog table of `docs/guia/recetas.md` in sync with
+  `entries/` (the only user page about the shipped recipes; their details live in
+  each `details.md`).
 - Linux only (CI runs on `ubuntu-latest`).
 
 ## Agent workflow

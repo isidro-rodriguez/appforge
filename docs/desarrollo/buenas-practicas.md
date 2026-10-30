@@ -69,4 +69,4 @@ casi igual: «Desarrollo» y «Programación» acaban partiendo el catálogo.
 - [ ] Aplicar dos veces seguidas deja todo «sin cambios».
 - [ ] `[remove]` deshace la receta y `[check]` vuelve a fallar.
 - [ ] Si necesita algo que aporta el usuario (un icono, una clave), lo dice en
-      `details`.
+      `details.md`.

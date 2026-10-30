@@ -12,7 +12,7 @@ solo tiene lo que no cabe en ella:
 | `appforge --version`, `-V` | Versión | no | 0 |
 | `appforge --help`, `-h` | Ayuda (también `appforge validate -h`) | no | 0 |
 
-`ID` es el nombre del fichero sin `.toml` (`ollama` para `appforge-entries/ollama.toml`).
+`ID` es el nombre de la carpeta de la receta (`ollama` para `appforge-entries/ollama/`).
 
 ![Ayuda de la línea de comandos](../assets/images/screenshots/cli-ayuda.svg){ .af-shot }
 
@@ -32,7 +32,7 @@ CI de tu repositorio de recetas.
 | Comprobación | Ejemplo de mensaje |
 |---|---|
 | TOML, claves y tipos | `step #2: necesita exactamente uno de run, template, copy, script` |
-| Seguridad (permisos, propietario, enlaces) | `entries/x.toml: escribible por grupo u otros` |
+| Seguridad (permisos, propietario, enlaces) | `entries/x/entry.toml: escribible por grupo u otros` |
 | Ficheros de los pasos | `step #3: falta el fichero ollama/ollama.png` |
 | Plantillas | `step #4: la plantilla usa parámetros inexistentes: port` |
 | Sintaxis de bash en `run`, `[check]`, `[remove]` y scripts | `step #2: error de sintaxis: …` |
@@ -42,12 +42,13 @@ CI de tu repositorio de recetas.
 
 | Comprobación | Ejemplo de mensaje |
 |---|---|
-| Ficheros del subdirectorio que nada usa | `fichero sin usar: x/viejo.conf` |
+| Ficheros de la carpeta que nada usa | `fichero sin usar: x/viejo.conf` |
 | Parámetros que ningún comando ni plantilla usa | `parámetro sin usar: port` |
 | Sin `description`, `[check]` o `[remove]` | `sin [check]: su estado siempre será desconocido` |
 | Dos recetas con el mismo `name` | `nombre repetido en 2 entradas: Docker` |
-| Subdirectorio sin su `.toml` | `custom-entries/docker/: subdirectorio sin docker.toml` |
-| Receta sustituida por otra con el mismo nombre en un directorio posterior | `ollama: custom-entries/ollama.toml sustituye a appforge-entries/ollama.toml` |
+| Carpeta sin `entry.toml` | `custom-entries/docker/: carpeta sin entry.toml` |
+| Fichero suelto, p. ej. una receta en el formato anterior (`<id>.toml`), que se ignora | `custom-entries/mia.toml: formato anterior, se ignora; muévelo a mia/entry.toml…` |
+| Receta sustituida por otra con el mismo nombre en un directorio posterior | `ollama: custom-entries/ollama/ sustituye a appforge-entries/ollama/` |
 
 ```bash
 appforge validate                      # todas

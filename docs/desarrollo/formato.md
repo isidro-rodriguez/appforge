@@ -2,22 +2,28 @@
 
 Referencia completa. Para un recorrido paso a paso, ver [Crear una receta](nueva-entrada.md).
 
-Cada opción del catálogo es un fichero `<id>.toml` en uno de los
+Cada opción del catálogo es una carpeta `<id>/` en uno de los
 [directorios de recetas](../avanzado/configuracion.md#directorios-de-recetas) (las tuyas,
-en `custom-entries/`). Si necesita ficheros adicionales (plantillas, scripts, iconos) van
-en el subdirectorio `<id>/` **del mismo directorio**. El `<id>` es el nombre del fichero
-sin extensión y es lo que se usa en la CLI (`appforge validate <id>`); si dos
-directorios tienen el mismo `<id>`, vale el del último.
+en `custom-entries/`). El `<id>` es el nombre de la carpeta y es lo que se usa en la CLI
+(`appforge validate <id>`); si dos directorios tienen el mismo `<id>`, vale el del
+último.
 
 ```text
-entries/
-├── ollama.toml
+appforge-entries/
 └── ollama/
-    ├── ollama.env.tpl
+    ├── entry.toml        # la receta (obligatorio)
+    ├── details.md        # su ficha, en Markdown (obligatorio)
+    ├── ollama.env.tpl    # los ficheros que usan sus pasos
     ├── ollama-toggle.sh
     ├── ollama.desktop
     └── ollama.png
 ```
+
+| Fichero | Obligatorio | Contenido |
+|---|---|---|
+| `entry.toml` | sí | La receta: cabecera, parámetros, comprobación, pasos y eliminación |
+| `details.md` | sí | La ficha de la [página de detalle](../guia/interfaz.md#página-de-detalle): qué instala, qué conviene saber antes y qué deja al desinstalar. Markdown; no se declara en `entry.toml` |
+| Los demás | no | Plantillas, scripts y ficheros que copian sus pasos, con rutas relativas a la carpeta |
 
 ## Referencia
 
@@ -27,7 +33,6 @@ entries/
 |---|---|---|---|
 | `name` | texto | sí | Nombre en el menú |
 | `description` | texto | no | Una línea: resumen en el catálogo y en la ficha |
-| `details` | texto (Markdown) | no | Descripción larga para la [página de detalle](../guia/interfaz.md#página-de-detalle). Usa `"""…"""` |
 | `category` | texto | no | Agrupa la receta en el panel de categorías ([`[ui] categories`](../avanzado/configuracion.md#interfaz)) |
 
 ### `[[param]]`
@@ -150,11 +155,12 @@ run = "git config --global --unset alias.st"
 
 AppForge marca la receta como `inválida` (no se puede aplicar) si:
 
+- falta `entry.toml` o `details.md` (o está vacío), o `entry.toml` lleva `details`;
 - el TOML no es válido o tiene claves desconocidas o de tipo incorrecto;
 - un paso tiene cero o varios tipos, o un `dest`/`mode` donde no corresponde;
 - un fichero de origen falta, es absoluto o contiene `..`;
 - una plantilla usa parámetros no declarados o un `$` mal formado;
-- el `.toml`, su subdirectorio o cualquier fichero dentro son escribibles por grupo u
+- su carpeta o cualquier fichero dentro son escribibles por grupo u
   otros, pertenecen a otro usuario (que no sea `root` ni quien ejecutó `sudo`) o son enlaces
   simbólicos.
 

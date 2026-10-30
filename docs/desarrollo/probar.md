@@ -20,12 +20,12 @@ scripts/try-entry.sh mi-receta                        # VM con Debian 13
 scripts/try-entry.sh mi-receta --distro ubuntu/26.04   # otra distro
 scripts/try-entry.sh mi-receta --container             # contenedor: más rápido
 scripts/try-entry.sh mi-receta --keep                  # conservarla al salir
-scripts/try-entry.sh ruta/a/mi-receta.toml --tar appforge-0.8.0-linux-x86_64.tar.gz
+scripts/try-entry.sh ruta/a/mi-receta/ --tar appforge-0.8.0-linux-x86_64.tar.gz
 ```
 
 | Opción | Efecto |
 |---|---|
-| `RECETA` | Id en `./entries` o ruta a su `.toml`; su subdirectorio `<id>/` va con ella |
+| `RECETA` | Id en `./entries` o ruta a su carpeta (con `entry.toml` y `details.md`) |
 | `--distro D` | Imagen de incus (por defecto `debian/13`). Lista: `incus image list images: debian` |
 | `--container` | Contenedor en lugar de VM: no necesita KVM, pero no tiene systemd completo |
 | `--keep` | No borra la máquina de prueba; entra con `incus exec appforge-try -- bash` |

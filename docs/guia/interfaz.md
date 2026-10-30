@@ -37,7 +37,7 @@ Con el ratón, un clic resalta una fila y el doble clic abre su detalle.
 </figure>
 
 Muestra la receta entera: estado, categoría, la descripción larga
-(clave [`details`](../desarrollo/formato.md#cabecera)), los parámetros con sus
+([`details.md`](../desarrollo/formato.md)), los parámetros con sus
 valores por defecto (los secretos nunca), cada paso con su comando o fichero de
 destino, la comprobación y la eliminación. ++esc++, ++q++ o ++v++ vuelven.
 

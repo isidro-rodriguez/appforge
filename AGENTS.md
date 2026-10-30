@@ -5,29 +5,41 @@ CLI or TUI is out of scope here: see [CLAUDE.md](CLAUDE.md).
 
 The repo's `entries/` ships in the package as `/opt/appforge/appforge-entries/`.
 End users put their own recipes in `/opt/appforge/custom-entries/` (listed later in
-`entries_dirs`, so a recipe there with the same id replaces the shipped one; it must
-carry its own `<id>/` files directory). Recipes for the project go in `entries/`.
+`entries_dirs`, so a folder there with the same id replaces the shipped one). Recipes
+for the project go in `entries/`.
 
 ## Language
 
-- Entry content shown to the user (`name`, `description`, `details`, `prompt`, `title`,
-  comments) in **Spanish**.
+- Entry content shown to the user (`name`, `description`, `details.md`, `prompt`,
+  `title`, comments) in **Spanish**.
 - Param names, file names and shell code identifiers in **English** (`snake_case`).
 
 ## Where things go
 
 ```text
 entries/
-├── <id>.toml        # the entry; <id> in kebab-case, e.g. docker-rootless
-└── <id>/            # only if the entry needs extra files
+└── <id>/            # one folder per entry; <id> in kebab-case, e.g. docker-rootless
+    ├── entry.toml   # the entry (required)
+    ├── details.md   # its detail page in Markdown (required; not declared in entry.toml)
     ├── *.tpl        # templates (string.Template)
     ├── *.sh         # scripts for `script` steps
     └── ...          # files for `copy` steps
 ```
 
+`details.md` explains what the entry installs, what to know before applying it
+(prerequisites, risks, interactions with other entries) and what `[remove]` keeps. A
+missing or empty `details.md`, or a `details` key in `entry.toml`, makes the entry
+invalid.
+
 Full format reference: [docs/desarrollo/formato.md](docs/desarrollo/formato.md); step-by-step
 tutorial: [docs/desarrollo/nueva-entrada.md](docs/desarrollo/nueva-entrada.md). Reference
-example: `entries/ollama.toml` ([docs/guia/ollama.md](docs/guia/ollama.md)).
+example: `entries/ollama/`.
+
+Every entry is listed in the catalog table of
+[docs/guia/recetas.md](docs/guia/recetas.md) (name, id, category, description,
+params; sorted by category and name). `tests/test_docs.py` fails, printing the
+expected table, if it is out of date. Add interactions with other entries to its
+«Combinarlas» section.
 
 ## Format cheat sheet
 
@@ -35,9 +47,7 @@ example: `entries/ollama.toml` ([docs/guia/ollama.md](docs/guia/ollama.md)).
 name = "Nombre en el menú"
 description = "Una línea"
 category = "Desarrollo"        # optional; groups entries in the categories panel
-details = """
-Long Markdown description shown in the TUI detail page (double click or `v`).
-"""
+# The long description goes in details.md (TUI detail page: double click or `v`).
 
 [[param]]
 name = "owner"                 # available as $owner in run/script and templates
@@ -55,7 +65,7 @@ run = "DEBIAN_FRONTEND=noninteractive apt-get install -y curl"
 
 [[step]]
 title = "Configuración"
-template = "x.conf.tpl"        # relative to entries/<id>/
+template = "x.conf.tpl"        # relative to the entry folder (entries/<id>/)
 dest = "/etc/x.conf"           # absolute
 mode = "0644"
 
@@ -105,7 +115,7 @@ Everything runs as root. When an entry writes files that belong to the user (the
 11. **Scope:** no conditionals or loops in TOML. If you need logic, write a `script`
     step and keep it idempotent with `set -euo pipefail`.
 12. **Category:** reuse an existing `category` when one fits
-    (`grep -h '^category' entries/*.toml | sort -u`) instead of creating near-duplicates.
+    (`grep -h '^category' entries/*/entry.toml | sort -u`) instead of creating near-duplicates.
 13. **Do not modify** the engine, CLI, TUI or the entry format to fit a new entry. If
     the format falls short, stop and propose the change.
 

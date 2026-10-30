@@ -12,6 +12,7 @@ Generada a partir de los docstrings del código.
         - Step
         - load_entry
         - load_entries
+        - entry_dirs_in
         - load_catalog
         - Catalog
         - insecure_reason
