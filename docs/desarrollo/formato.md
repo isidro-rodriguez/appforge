@@ -43,41 +43,60 @@ Valores que se piden antes de aplicar. No se guardan en disco.
 |---|---|---|---|
 | `name` | identificador | sí | `[A-Za-z_][A-Za-z0-9_]*`; no puede ser `PATH`, `HOME`, `USER`, … ni empezar por `APPFORGE_` |
 | `prompt` | texto | no (`name`) | Pregunta |
-| `default` | escalar | no | Sin default, el parámetro es obligatorio (salvo `bool`, que vale `false`). Debe cumplir su `type` o `choices` |
-| `type` | texto | no (`text`) | Qué admite el campo; ver la tabla siguiente |
-| `choices` | lista de textos | no | Valores permitidos (dos o más): la TUI muestra un desplegable. No se combina con `type` |
-| `secret` | bool | no (`false`) | Entrada oculta; el valor se enmascara (`••••••`) en toda la salida. Solo con texto libre |
+| `type` | texto | **sí** | Qué admite el campo; ver la tabla siguiente |
+| `default` | escalar | no | Valor si el usuario deja el campo vacío; sin él, el parámetro es obligatorio (salvo `bool`, que vale `false`). Lo pone la receta y se acepta tal cual: puede ser un marcador como `-` aunque no cumpla el tipo. En `bool` debe ser `true`/`false` y en `choice`, uno de `choices` |
+| `choices` | lista de textos | con `choice` | Valores del desplegable (dos o más, distintos) |
+| `min`, `max` | entero | no | Límites (incluidos) de un `int` |
+| `secret` | bool | no (`false`) | Entrada oculta; el valor se enmascara (`••••••`) en toda la salida. Solo con `text` |
 | `link` | URL http(s) | no | Página donde elegir el valor (p. ej. las versiones publicadas). La TUI la muestra bajo la pregunta y en la página de detalle |
 
 | `type` | Campo en la TUI | Admite | Llega a los pasos como |
 |---|---|---|---|
 | `text` | Texto | Cualquier texto | Tal cual |
 | `bool` | Casilla | `true`/`false`, `sí`/`no`, `on`/`off`… | `yes` o `no` |
-| `int` | Solo dígitos | Número entero | El número |
+| `choice` | Desplegable | Uno de `choices` | Tal cual |
+| `int` | Solo dígitos | Número entero, entre `min` y `max` si se indican | El número |
 | `port` | Solo dígitos | Puerto 1-65535 | El número |
 | `email` | Texto | Email (`nombre@dominio`) | Tal cual |
-| `path` | Texto | Ruta absoluta (`/…`) | Tal cual |
+| `path` | Texto | Ruta absoluta (`/…`; `~` no vale) | Tal cual |
 | `ip` | Texto | Dirección IPv4 o IPv6 | Tal cual |
+| `cidr` | Texto | Red con prefijo (`192.168.1.0/24`, `fd00::/8`) | Tal cual |
 | `url` | Texto | URL | Tal cual |
 | `domain` | Texto | Nombre de dominio | Tal cual |
 
-Un valor que no cumple su tipo marca el campo en rojo y el formulario no se cierra;
-`appforge validate` comprueba los `default`. Las comprobaciones son de formato
-(heurísticas, de la librería `acodo`); si el paso
-necesita más (que el fichero exista, un rango concreto), compruébalo en su script.
+Lo que escribe el usuario debe cumplir su tipo: si no, el campo se marca en rojo y el
+formulario no se cierra (el motor lo vuelve a comprobar). Si deja el campo vacío, vale
+el `default`. `appforge validate` revisa que cada parámetro tenga un `type` conocido y
+que sus claves casen con él. Las comprobaciones son de formato (de la librería
+`acodo`); si el paso necesita más (que el fichero exista), compruébalo en su script.
 
 ```toml
 [[param]]
 name = "version"
 prompt = "Versión de Ollama (etiqueta de GitHub)"
+type = "text"
 default = "v0.40.13"
 link = "https://github.com/ollama/ollama/releases"
 
 [[param]]
 name = "arch"
 prompt = "Arquitectura"
+type = "choice"
 choices = ["amd64", "arm64"]
 default = "amd64"
+
+[[param]]
+name = "context_length"
+prompt = "OLLAMA_CONTEXT_LENGTH"
+type = "int"
+min = 512
+default = "8192"
+
+[[param]]
+name = "allow_from"
+prompt = "Red de confianza (vacío = ninguna)"
+type = "cidr"
+default = "-"            # marcador de la receta: se acepta aunque no sea una red
 
 [[param]]
 name = "password_auth"

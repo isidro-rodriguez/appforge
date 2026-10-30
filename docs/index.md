@@ -87,12 +87,14 @@ preguntar, qué ejecutar y cómo comprobar que quedó bien.
     [[param]]                     # se preguntan antes de aplicar
     name = "port"
     prompt = "Puerto de escucha"
+    type = "port"                 # el formulario rechaza lo que no sea un puerto
     default = "22"
 
     [[param]]
     name = "password_auth"
-    prompt = "¿Permitir contraseña? (no | yes)"
-    default = "no"
+    prompt = "Permitir el acceso con contraseña"
+    type = "bool"                 # casilla; la plantilla recibe yes/no
+    default = false
 
     [check]                       # ¿ya está aplicada? (solo lectura)
     run = """

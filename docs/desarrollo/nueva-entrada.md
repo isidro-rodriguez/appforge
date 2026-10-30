@@ -47,14 +47,18 @@ aplicarla: se desactiva el acceso con contraseña.
 [[param]]
 name = "port"
 prompt = "Puerto de SSH"
+type = "port"
 default = "22"
 
 [[param]]
 name = "users"
 prompt = "Usuarios con acceso (separados por espacios)"
+type = "text"
 ```
 
-`users` no tiene `default`, así que es obligatorio. Los parámetros llegan a los
+Cada parámetro declara su `type`: `port` hace que el formulario rechace lo que no sea
+un puerto; `users` es texto libre. `users` no tiene `default`, así que es obligatorio.
+Los parámetros llegan a los
 comandos como variables (`$port`, `$users`) y a las plantillas como `$port`.
 
 ## 4. La plantilla

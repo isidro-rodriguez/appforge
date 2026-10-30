@@ -41,9 +41,11 @@ params; sorted by category and name). `tests/test_docs.py` fails, printing the
 expected table, if it is out of date. Add interactions with other entries to its
 «Combinarlas» section.
 
-Give every param the narrowest `type` or `choices` that fits (a port is `port`, yes/no
-is `bool`, a fixed set is `choices`) instead of listing the values in the `prompt`:
-the TUI then rejects bad values before anything runs. Keep the script checks too
+Every param needs a `type`. Pick the narrowest that fits (a port is `port`, yes/no is
+`bool`, a fixed set is `choice`, a network is `cidr`, a bounded number is `int` with
+`min`/`max`) instead of listing the values in the `prompt`: the TUI then rejects bad
+values before anything runs. The `default` is trusted as written, so a placeholder
+such as `-` ("none") is fine even for a typed param. Keep the script checks too
 (they also guard the dry-run and values the type cannot express, like a CIDR).
 
 ## Format cheat sheet
@@ -57,9 +59,10 @@ category = "Desarrollo"        # optional; groups entries in the categories pane
 [[param]]
 name = "owner"                 # available as $owner in run/script and templates
 prompt = "Usuario propietario"
-default = "usuario"            # omit to make it mandatory
-type = "text"                  # text | bool | int | port | email | path | ip | url | domain
-# choices = ["a", "b"]         # instead of type: fixed values (dropdown)
+type = "text"                  # required: text | bool | choice | int | port | email | path | ip | cidr | url | domain
+default = "usuario"            # used when the field is left empty (taken as is); omit to make it mandatory
+# choices = ["a", "b"]         # with type = "choice": dropdown values
+# min = 1                      # with type = "int": optional bounds (also max)
 secret = false                 # true: hidden input, masked output (text only)
 link = "https://…/releases"    # optional: where to pick the value (shown in the TUI)
 
