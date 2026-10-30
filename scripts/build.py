@@ -2,8 +2,10 @@
 
 Deja en ``dist/``:
 
-- ``appforge/``: el binario (``--onefile``), ``config.toml`` y ``entries/``, lista
-  para copiar a ``/opt/appforge``.
+- ``appforge/``: el binario (``--onefile``), ``config.toml`` (de
+  ``scripts/dist/``), ``appforge-entries/`` (las recetas de ``entries/``),
+  ``custom-entries/`` vacío y ``.manifest.json`` (versión y suma de cada
+  fichero, para ``appforge update``), lista para ``/opt/appforge``.
 - ``appforge-<versión>-linux-<arquitectura>.tar.gz``: esa carpeta empaquetada,
   con los ficheros a nombre de ``root`` y sin escritura para grupo ni otros.
 - ``SHA256SUMS``: la suma del ``.tar.gz``.
@@ -16,6 +18,7 @@ Uso:
 """
 
 import hashlib
+import json
 import platform
 import shutil
 import subprocess
@@ -28,6 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
 DIST = ROOT / "dist"
 OUT = DIST / "appforge"
+DIST_CONFIG = ROOT / "scripts" / "dist" / "config.toml"
 
 
 def _version() -> str:
@@ -76,8 +80,18 @@ def build_binary() -> Path:
     return BUILD / "bin" / "appforge"
 
 
+def _manifest(folder: Path) -> dict[str, object]:
+    """Versión y suma SHA-256 de cada fichero del paquete."""
+    files = {
+        str(p.relative_to(folder)): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in sorted(folder.rglob("*"))
+        if p.is_file()
+    }
+    return {"version": _version(), "files": files}
+
+
 def assemble(binary: Path) -> Path:
-    """Monta ``dist/appforge/``: binario, ``config.toml`` y ``entries/``.
+    """Monta ``dist/appforge/``: binario, configuración, recetas y manifiesto.
 
     Args:
         binary: Binario de PyInstaller.
@@ -88,8 +102,11 @@ def assemble(binary: Path) -> Path:
     shutil.rmtree(OUT, ignore_errors=True)
     OUT.mkdir(parents=True)
     shutil.copy2(binary, OUT / "appforge")
-    shutil.copy2(ROOT / "config.toml", OUT / "config.toml")
-    shutil.copytree(ROOT / "entries", OUT / "entries")
+    shutil.copy2(DIST_CONFIG, OUT / "config.toml")
+    shutil.copytree(ROOT / "entries", OUT / "appforge-entries")
+    (OUT / "custom-entries").mkdir()
+    manifest = json.dumps(_manifest(OUT), indent=1, ensure_ascii=False) + "\n"
+    (OUT / ".manifest.json").write_text(manifest, encoding="utf-8")
     # AppForge rechaza entradas escribibles por grupo u otros.
     for p in [OUT, *OUT.rglob("*")]:
         p.chmod(p.stat().st_mode & ~0o022)

@@ -5,10 +5,11 @@ dry-run). La CLI solo tiene lo que no cabe en ella:
 
 - ``appforge validate``: revisa las entradas sin abrir la interfaz, para
   autores de entradas y para la CI.
+- ``appforge update``: actualiza la instalación sin perder los cambios del usuario.
 - ``appforge --version``.
 
-La TUI exige ser superusuario; ``validate`` (solo lee ficheros), ``--help`` y
-``--version`` no.
+La TUI y ``update`` exigen ser superusuario; ``validate`` (solo lee ficheros),
+``update --dry-run``, ``--help`` y ``--version`` no.
 """
 
 import os
@@ -16,7 +17,7 @@ import shlex
 import shutil
 import sys
 from pathlib import Path
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
 import typer.rich_utils
@@ -27,6 +28,9 @@ from typer.core import TyperCommand, TyperGroup
 from appforge import __version__
 from appforge.config import Config, ConfigError, load_config
 from appforge.theme import RICH_THEME, TYPER_STYLES
+
+if TYPE_CHECKING:
+    from appforge.update import Plan
 
 # Textos de la ayuda de Typer en español.
 _TYPER_TEXTS = {
@@ -310,6 +314,151 @@ def validate(
         )
     )
     raise typer.Exit(1 if failed else 0)
+
+
+_UPDATE_HELP = """Actualiza AppForge instalado sin perder tus cambios.
+
+Descarga la última Release de GitHub y la verifica con SHA256SUMS (o usa el
+paquete de [bold]--from[/]). Sustituye el programa y los ficheros del paquete que no
+has tocado. Los que modificaste se conservan y la versión nueva queda junto a
+ellos como [bold].new[/]; los que borraste no vuelven. custom-entries/ y logs/ no
+se tocan.
+
+Código de salida: 0 bien o ya al día · 1 error · 2 uso.
+"""
+
+
+def installed_dir() -> Path | None:
+    """Carpeta de AppForge instalada, o ``None`` si se ejecuta desde el código."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return None
+
+
+def _print_plan(out: Console, plan: "Plan") -> None:
+    """Muestra qué hará la actualización con cada fichero."""
+    sections = (
+        ("Se actualizan", plan.replace, "ok"),
+        ("Nuevos", plan.add, "ok"),
+        (
+            "Modificados por ti: se conservan; la versión nueva queda en .new",
+            plan.keep,
+            "warn",
+        ),
+        ("Retirados del paquete", plan.remove, "muted"),
+        ("Retirados del paquete pero modificados: se conservan", plan.orphan, "warn"),
+        ("Borrados por ti: no se vuelven a crear", plan.skip, "muted"),
+    )
+    for title, files, style in sections:
+        if files:
+            out.print(Text(f"{title} ({len(files)}):", style=f"af.{style}"))
+            for rel in files:
+                out.print(Text(f"    {rel}"))
+    if not any(files for _, files, _ in sections):
+        out.print(Text("Recetas y configuración: sin cambios", style="af.muted"))
+
+
+@app.command(cls=_Command, help=_UPDATE_HELP)
+def update(
+    package: Annotated[
+        Path | None,
+        typer.Option(
+            "--from",
+            help="Paquete .tar.gz local (se verifica con el SHA256SUMS de su carpeta).",
+            dir_okay=False,
+            exists=True,
+            metavar="FICHERO",
+            show_default=False,
+        ),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", "-n", help="Muestra qué cambiaría, sin cambiar nada."
+        ),
+    ] = False,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Instala aunque sea la misma versión o anterior."),
+    ] = False,
+) -> None:
+    """Actualiza AppForge instalado.
+
+    Args:
+        package: Paquete local en lugar de descargarlo.
+        dry_run: Solo mostrar el plan.
+        force: Permitir la misma versión o una anterior.
+    """
+    from appforge import update as up
+
+    out, err = make_consoles()
+    installed = installed_dir()
+    if installed is None:
+        err.print(
+            Text(
+                "appforge: update actualiza el AppForge instalado (el binario del "
+                "paquete). Desde el código usa git pull.",
+                style="af.error",
+            )
+        )
+        raise typer.Exit(2)
+    if not dry_run:
+        _require_root()
+
+    work = up.staging_dir(installed)
+    try:
+        if package is not None:
+            sums = package.parent / "SHA256SUMS"
+            if sums.is_file():
+                up.check_sum(package, sums)
+                out.print(
+                    Text(f"✔ {package.name}: suma SHA-256 correcta", style="af.ok")
+                )
+            else:
+                out.print(
+                    Text(
+                        f"! Sin SHA256SUMS junto a {package.name}: no se verifica",
+                        style="af.warn",
+                    )
+                )
+        else:
+            out.print(Text("Consultando la última versión…", style="af.muted"))
+            latest, assets = up.latest_release()
+            if not force and up.version_key(latest) <= up.version_key(__version__):
+                out.print(
+                    Text(
+                        f"✔ Ya tienes la última versión ({__version__})", style="af.ok"
+                    )
+                )
+                raise typer.Exit(0)
+            out.print(Text(f"Descargando {up.asset_name(latest)}…", style="af.muted"))
+            package = up.download(latest, assets, work)
+            out.print(Text("✔ Suma SHA-256 correcta", style="af.ok"))
+
+        staged = up.extract(package, work)
+        new_version = up.manifest_version(staged)
+        if not force and up.version_key(new_version) <= up.version_key(__version__):
+            out.print(
+                Text(
+                    f"El paquete es la {new_version} y tienes la {__version__}: "
+                    "usa --force para instalarlo igualmente.",
+                    style="af.warn",
+                )
+            )
+            raise typer.Exit(0)
+        out.print(Text(f"Programa: {__version__} → {new_version}", style="af.title"))
+        plan = up.plan_update(installed, staged)
+        _print_plan(out, plan)
+        if dry_run:
+            out.print(Text("Dry-run: no se ha cambiado nada", style="af.muted"))
+            raise typer.Exit(0)
+        up.apply_update(installed, staged, plan)
+        out.print(Text(f"✔ AppForge actualizado a {new_version}", style="af.ok"))
+    except up.UpdateError as e:
+        err.print(Text(f"appforge: {e}", style="af.error"))
+        raise typer.Exit(1) from None
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 
 def main(argv: list[str] | None = None) -> int:
