@@ -78,8 +78,8 @@ Como ante un fallo, una receta cancelada puede quedar a medias.
 
 ## Registro
 
-Cada evento de la TUI se añade a `/var/log/appforge/appforge.log` con fecha, nivel e
-id de la receta:
+Cada evento de la TUI se añade a `logs/appforge.log`, en la carpeta de AppForge
+(`/opt/appforge/logs/`), con fecha, nivel e id de la receta:
 
 ```text
 2026-10-29 18:10:03 INFO       ollama [tpl ] [4/7] Variables de entorno (optimización)

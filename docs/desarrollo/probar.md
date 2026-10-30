@@ -20,7 +20,7 @@ scripts/try-entry.sh mi-receta                        # VM con Debian 13
 scripts/try-entry.sh mi-receta --distro ubuntu/26.04   # otra distro
 scripts/try-entry.sh mi-receta --container             # contenedor: más rápido
 scripts/try-entry.sh mi-receta --keep                  # conservarla al salir
-scripts/try-entry.sh ruta/a/mi-receta.toml --deb appforge_0.7.0_amd64.deb
+scripts/try-entry.sh ruta/a/mi-receta.toml --tar appforge-0.8.0-linux-x86_64.tar.gz
 ```
 
 | Opción | Efecto |
@@ -29,7 +29,7 @@ scripts/try-entry.sh ruta/a/mi-receta.toml --deb appforge_0.7.0_amd64.deb
 | `--distro D` | Imagen de incus (por defecto `debian/13`). Lista: `incus image list images: debian` |
 | `--container` | Contenedor en lugar de VM: no necesita KVM, pero no tiene systemd completo |
 | `--keep` | No borra la máquina de prueba; entra con `incus exec appforge-try -- bash` |
-| `--deb RUTA` | Paquete a instalar (por defecto, el más reciente de `dist/`) |
+| `--tar RUTA` | Paquete `appforge-*.tar.gz` a instalar (por defecto, el más reciente de `dist/`) |
 | `--no-tui` | Solo prepara, sube y valida la receta (p. ej. en una CI) |
 
 Qué hace:
@@ -37,10 +37,11 @@ Qué hace:
 1. Valida la receta en tu equipo: si falla, para antes de crear nada. Valida una copia
    sin escritura para grupo y otros, así que los permisos de tu copia de trabajo (que
    dependen de tu `umask`; git no los guarda) no la hacen fallar.
-2. La primera vez por distro crea `appforge-base-<distro>`: instala el `.deb`, crea un
+2. La primera vez por distro crea `appforge-base-<distro>`: extrae el paquete en
+   `/opt/appforge` (con un enlace en `/usr/local/bin`), crea un
    usuario `usuario` con `sudo` y guarda la instantánea `limpio`. Las siguientes veces
-   solo la clona (segundos); si el `.deb` cambia, la rehace.
-3. Clona la base en `appforge-try`, sube la receta a `/etc/appforge/entries/` y la
+   solo la clona (segundos); si el paquete cambia, la rehace.
+3. Clona la base en `appforge-try`, sube la receta a `/opt/appforge/entries/` y la
    valida en la distro de destino.
 4. Abre AppForge como `usuario` con `sudo` (así `APPFORGE_USER` es `usuario`): aplica,
    comprueba que sale `aplicada`, vuelve a aplicar («sin cambios») y desinstala.

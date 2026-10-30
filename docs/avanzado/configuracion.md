@@ -2,17 +2,17 @@
 
 ## Dónde está
 
-AppForge lee `/etc/appforge/config.toml`. Las rutas relativas se resuelven desde
-`/etc/appforge/`. Es un fichero de configuración del paquete: al actualizar, `apt`
-conserva tus cambios (y pregunta si el paquete también lo cambió).
+AppForge lee el `config.toml` que está junto al programa: `/opt/appforge/config.toml`
+si lo extrajiste ahí. Las rutas relativas se resuelven desde esa carpeta, también si
+lanzas AppForge desde un enlace (`/usr/local/bin/appforge`).
 
-Se edita como superusuario (`sudo editor /etc/appforge/config.toml`). AppForge se
+Se edita como superusuario (`sudo editor /opt/appforge/config.toml`). AppForge se
 niega a arrancar si es un enlace simbólico o si lo pueden modificar otros usuarios.
 
 ## `config.toml`
 
 ```toml title="config.toml"
-# Relativo a /etc/appforge.
+# Relativo a la carpeta de AppForge.
 entries_dir = "entries"
 
 [ui]
@@ -22,7 +22,7 @@ categories = false   # panel de categorías
 
 | Clave | Tipo | Por defecto | Descripción |
 |---|---|---|---|
-| `entries_dir` | ruta | — (obligatoria) | Directorio de recetas, relativo a `/etc/appforge`. Debe existir |
+| `entries_dir` | ruta | — (obligatoria) | Directorio de recetas, relativo a la carpeta de AppForge. Debe existir |
 | `[ui] search` | bool | `false` | Muestra el buscador (++slash++) |
 | `[ui] categories` | bool | `false` | Muestra el panel de categorías |
 
@@ -55,8 +55,19 @@ AppForge no guarda estado propio: si una receta está aplicada lo dice siempre s
 | Ruta | Contenido |
 |---|---|
 | `<fichero>.backup`, junto al original | Copia de un fichero antes de que `template` o `copy` lo sobrescriba. Mismos permisos que el original; si ya había una, se reemplaza |
-| `/var/log/appforge/appforge.log` | Registro de todas las ejecuciones, copias incluidas; rota cada día y guarda 7. Se borra al purgar el paquete |
+| `logs/appforge.log`, en la carpeta de AppForge | Registro de todas las ejecuciones, copias incluidas; rota cada día y guarda 7 |
 
 ## Colores
 
 La línea de comandos respeta `NO_COLOR`: con la variable definida no usa colores.
+
+## Actualizar
+
+Una versión nueva se extrae igual, encima de la anterior. Eso **sobrescribe**
+`config.toml` y las recetas de ejemplo; tus recetas propias (ficheros que el paquete
+no trae) se conservan. Si cambiaste algo del paquete, guárdalo antes:
+
+```bash
+sudo cp -a /opt/appforge/config.toml /opt/appforge/config.toml.mio
+sudo tar -xzf appforge-<versión>-linux-x86_64.tar.gz -C /opt
+```

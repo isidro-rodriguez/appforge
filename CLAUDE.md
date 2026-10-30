@@ -14,9 +14,10 @@ entries (`entries/*.toml`), follow [AGENTS.md](AGENTS.md) instead.
 
 ## What AppForge is
 
-A console launcher shipped as a `.deb`: binary in `/opt/appforge` (`/usr/bin/appforge`
-links to it), `/etc/appforge/config.toml` pointing to `/etc/appforge/entries/`, one TOML
-per menu option. Each entry declares params, a `[check]`, ordered
+A console launcher shipped as a `.tar.gz` extracted into `/opt/appforge`: one
+self-contained folder with the PyInstaller binary, `config.toml` and `entries/` (one TOML
+per menu option), plus `logs/` at runtime. No `.deb`, man page or desktop launcher: the
+single folder is deliberate, keep it that way. Each entry declares params, a `[check]`, ordered
 steps (`run`, `script`, `template`, `copy`) and an optional `[remove]`. Target: current
 Debian stable (13). It **only runs as root**: no sudo handling in the engine, no unprivileged cases.
 
@@ -24,7 +25,7 @@ Debian stable (13). It **only runs as root**: no sudo handling in the engine, no
 
 ```text
 .
-├── .github/                # CI, docs (Pages), release (.deb) and Dependabot
+├── .github/                # CI, docs (Pages), release (.tar.gz) and Dependabot
 ├── .pre-commit-config.yaml # pre-commit/pre-push hooks (ruff, ty, pytest)
 ├── AGENTS.md               # Guide for agents adding entries
 ├── CLAUDE.md               # This file
@@ -32,27 +33,26 @@ Debian stable (13). It **only runs as root**: no sudo handling in the engine, no
 ├── config.toml             # entries_dir = "entries"
 ├── docs/                   # Zensical site (Spanish): guia/, avanzado/, desarrollo/
 ├── docs_templates/         # Zensical overrides (favicons, mkdocstrings in Spanish)
-├── entries/                # Example entries (→ /etc/appforge/entries); ollama.toml is the reference
-├── packaging/              # appforge.1 (man), appforge.desktop, postrm
+├── entries/                # Example entries (→ /opt/appforge/entries); ollama.toml is the reference
 ├── pyproject.toml          # Deps, build (uv_build), ruff, ty, pytest, poe
 ├── README.md               # Minimal overview
 ├── scripts/
 │   ├── backup.py           # git bundle
-│   ├── build.py            # PyInstaller --onefile + dist/appforge_<v>_<arch>.deb
+│   ├── build.py            # PyInstaller --onefile → dist/appforge/ + .tar.gz + SHA256SUMS
 │   ├── screenshots.py      # TUI and CLI SVG screenshots for the docs
 │   └── try-entry.sh        # try an entry in a disposable incus VM/container
 ├── src/appforge/
 │   ├── __init__.py         # __version__ via importlib.metadata
 │   ├── __main__.py         # python -m appforge
-│   ├── config.py           # Base dir (/etc/appforge packaged, cwd from source), config.toml
+│   ├── config.py           # Base dir (binary dir when packaged, cwd from source), config.toml
 │   ├── engine.py           # Execution: check, steps, remove, .backup copies, dry-run
 │   ├── entry.py            # Entry model and validation (never raises)
 │   ├── main.py             # CLI entry point (Typer): validate, --version; no command -> TUI
-│   ├── runlog.py           # Run log (/var/log/appforge or <cwd>/logs; acodo.logger)
+│   ├── runlog.py           # Run log <base>/logs/appforge.log (acodo.logger, daily)
 │   ├── theme.py            # Palette from the icon; Textual and Rich themes
 │   ├── tui.py              # Textual app (catalog, detail page, batches, progress)
 │   ├── validate.py         # `appforge validate`: whole-directory checks, never runs entries
-│   ├── resources/          # Optimized icons (appforge-<size>.png)
+│   ├── resources/          # Icon PNGs (README logo, docs favicons; not shipped)
 │   └── py.typed
 ├── tests/                  # pytest
 ├── uv.lock
@@ -79,8 +79,8 @@ Debian stable (13). It **only runs as root**: no sudo handling in the engine, no
   `engine.invoking_user()` (`SUDO_USER`, else the process user); `entry.USER_VARS`
   lists them for template validation. Entries use them for user-owned files instead
   of asking for a user name.
-- Configuration is only `/etc/appforge/config.toml` when packaged (cwd when run from
-  source); logs go to `/var/log/appforge` (`<cwd>/logs` from source). No environment
+- Configuration is only `config.toml` next to the binary (resolved through symlinks;
+  cwd when run from source); logs go to `<base>/logs`. No environment
   variables, no extra directories. `config.toml` is rejected if it is a symlink or
   insecure. Multiple entry directories may come
   later; do not add them (or mention them in docs) until asked.
@@ -121,7 +121,7 @@ uv run ruff check .
 uv run ty check
 uv run pytest
 uv run appforge validate --strict             # repo entries: no errors or warnings (no root needed)
-uv run python scripts/build.py                # binary + .deb in dist/ (needs dpkg-deb)
+uv run python scripts/build.py                # dist/appforge/ + .tar.gz + SHA256SUMS
 uv run python scripts/screenshots.py          # docs screenshots (SVG)
 uv run --group docs zensical build            # docs site in site/
 ```
@@ -192,18 +192,17 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
 - **No personal data** in docs, examples, tests or screenshots: use placeholders
   (`usuario`, `$USER`). The only exception is the repository URL
   (`github.com/isidro-rodriguez/appforge` and its Pages site).
-- User docs (`guia/`, `avanzado/`, README usage) describe the installed `.deb`
-  (`sudo appforge`, paths under `/etc/appforge` and `/var/log/appforge`). `uv` and running from source belong to `desarrollo/` only.
+- User docs (`guia/`, `avanzado/`, README usage) describe the tarball extracted into
+  `/opt/appforge` (`sudo /opt/appforge/appforge`; everything inside that folder). `uv` and running from source belong to `desarrollo/` only.
 - Anchors keep accents (`#página-de-detalle`), like GitHub.
 
 ## Releases
 
-- `.github/workflows/release.yml` builds the `.deb` in a container of the current
-  Debian stable (13, trixie), the only supported target, tests it in a clean Debian 13
-  (install, man, desktop file, permissions, reinstall with a modified conffile,
-  remove, purge) and publishes it with `SHA256SUMS` and a build provenance
-  attestation. Do not add older releases. The man page and launcher live in
-  `packaging/`; keep `packaging/appforge.1` in sync with the CLI.
+- `.github/workflows/release.yml` builds the `.tar.gz` in a container of the current
+  Debian stable (13, trixie), the only supported target, tests it extracted into
+  `/opt` in a clean Debian 13 (checksum, version, contents, `validate --strict`,
+  ownership/permissions, symlink in `PATH`, TUI without root/terminal) and publishes
+  it with `SHA256SUMS` and a build provenance attestation. Do not add older releases.
 - A `vX.Y.Z` tag publishes a GitHub Release; the tag must match `pyproject.toml`.
   Manual runs only upload a workflow artifact, unless `publish=true` on `main`: then
   the workflow creates the tag from `pyproject.toml` and the Release. Release notes

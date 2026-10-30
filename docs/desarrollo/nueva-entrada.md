@@ -6,7 +6,7 @@ pasos, comprobación y eliminación.
 
 ## 1. Los ficheros
 
-Una receta es `entries/<id>.toml` (con el paquete, `/etc/appforge/entries/<id>.toml`;
+Una receta es `entries/<id>.toml` (instalado, `/opt/appforge/entries/<id>.toml`;
 edítala con `sudo`). Si necesita ficheros (plantillas, scripts,
 iconos), van en `entries/<id>/`. El `<id>` es el nombre del fichero.
 
@@ -104,7 +104,7 @@ run = "rm -f /etc/ssh/sshd_config.d/50-appforge.conf && systemctl reload ssh"
 ## 7. Comprueba la receta
 
 ```bash
-sudo chmod -R go-w /etc/appforge/entries        # nadie más puede modificarlas
+sudo chmod -R go-w /opt/appforge/entries        # nadie más puede modificarlas
 appforge validate --strict ssh-hardening         # sin errores ni avisos → código 0
 sudo appforge                                    # TUI: márcala y pulsa d (dry-run)
 ```

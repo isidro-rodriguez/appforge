@@ -6,16 +6,17 @@ Mensajes habituales, su causa y qué hacer.
 :   AppForge solo funciona como `root`. Repite el comando con `sudo` (el mensaje
     muestra el comando exacto).
 
-`appforge: No existe /etc/appforge/config.toml`
-:   Falta la [configuración](configuracion.md#dónde-está). Si la borraste,
-    recupérala con `sudo apt install --reinstall -o Dpkg::Options::=--force-confmiss appforge`.
+`appforge: No existe …/config.toml`
+:   Falta la [configuración](configuracion.md#dónde-está) junto al programa. Si la
+    borraste, extrae de nuevo el paquete.
 
 `…config.toml no es de fiar: …` / `no puede ser un enlace simbólico`
 :   Otros usuarios pueden modificarlo o es un enlace. Déjalo como un fichero normal
-    de `root` con `sudo chmod 644 /etc/appforge/config.toml`.
+    de `root` con `sudo chmod 644 /opt/appforge/config.toml`.
 
 `El directorio de entradas no existe: …`
-:   `entries_dir` apunta a una carpeta que no existe. Es relativo a `/etc/appforge`.
+:   `entries_dir` apunta a una carpeta que no existe. Es relativo a la carpeta de
+    AppForge.
 
 `claves desconocidas en [ui]: …` / `[ui].search debe ser true/false`
 :   Errata o tipo incorrecto en `config.toml`. Los valores booleanos van sin comillas.

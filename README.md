@@ -11,19 +11,17 @@ demanda y fuentes adicionales). Para **Debian 13**.
 
 ## 🚀 Uso
 
-Descarga `appforge_<versión>_amd64.deb` de
-[Releases](https://github.com/isidro-rodriguez/appforge/releases) e instálalo:
+Descarga `appforge-<versión>-linux-x86_64.tar.gz` de
+[Releases](https://github.com/isidro-rodriguez/appforge/releases) y extráelo en `/opt`:
 
 ```bash
-sudo apt install ./appforge_<versión>_amd64.deb
-sudo appforge                    # TUI: espacio marca, i instala, d dry-run, v detalle
-appforge validate --strict       # revisa las recetas (sin sudo)
-man appforge
+sudo tar -xzf appforge-<versión>-linux-x86_64.tar.gz -C /opt
+sudo /opt/appforge/appforge                 # TUI: espacio marca, i instala, d dry-run, v detalle
+/opt/appforge/appforge validate --strict    # revisa las recetas (sin sudo)
 ```
 
-Las recetas de ejemplo y las tuyas van en `/etc/appforge/entries/`; la configuración,
-en `/etc/appforge/config.toml`. También aparece **AppForge** en el menú de
-aplicaciones.
+Todo queda en `/opt/appforge/`: el programa, `config.toml`, las recetas en `entries/`
+(las de ejemplo y las tuyas) y el registro en `logs/`.
 
 ## 📚 Documentación
 
@@ -39,7 +37,7 @@ git clone https://github.com/isidro-rodriguez/appforge.git
 cd appforge
 uv sync
 uv run ruff format . && uv run ruff check . && uv run ty check && uv run pytest
-uv run python scripts/build.py             # binario y .deb en dist/ (en Debian)
+uv run python scripts/build.py             # binario, config y entradas en dist/ (.tar.gz)
 ```
 
 Más en [Contribuir](https://isidro-rodriguez.github.io/appforge/desarrollo/contribuir/),

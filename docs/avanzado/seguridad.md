@@ -16,7 +16,7 @@ desconfía por defecto.
 
 | Uso | Dónde están las recetas | Quién puede cambiarlas |
 |---|---|---|
-| **Instalación del paquete** (normal) | `/etc/appforge/entries/` | Solo `root` |
+| **Instalación** (normal) | `/opt/appforge/entries/` | Solo `root` (extraído con `sudo tar`) |
 | **Desarrollo** (desde el código) | `entries/` de tu copia del repositorio | Tú, que ya ejecutas con `sudo` |
 
 ## Qué rechaza
@@ -37,8 +37,8 @@ El directorio de recetas entero y `config.toml` se comprueban igual (este, adem�
 no puede ser un enlace). Para arreglar permisos:
 
 ```bash
-sudo chown -R root:root /etc/appforge
-sudo chmod -R go-w /etc/appforge
+sudo chown -R root:root /opt/appforge
+sudo chmod -R go-w /opt/appforge
 ```
 
 ## Qué garantiza al ejecutar
@@ -65,13 +65,13 @@ Para escribir recetas seguras, ver [buenas prácticas](../desarrollo/buenas-prac
 
 ## Verificar el paquete
 
-Cada Release publica el `.deb`, su suma en `SHA256SUMS` y una **atestación de
+Cada Release publica el `.tar.gz`, su suma en `SHA256SUMS` y una **atestación de
 procedencia** de GitHub: prueba que el paquete se construyó en el workflow de este
 repositorio a partir de un commit concreto.
 
 ```bash
 sha256sum -c SHA256SUMS
-gh attestation verify appforge_<versión>_amd64.deb --repo isidro-rodriguez/appforge
+gh attestation verify appforge-<versión>-linux-x86_64.tar.gz --repo isidro-rodriguez/appforge
 ```
 
 ## Descargas de las recetas

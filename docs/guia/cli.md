@@ -57,5 +57,4 @@ appforge validate -d ~/mis-recetas     # otro directorio
 ![Salida de appforge validate con una receta rota](../assets/images/screenshots/cli-validate.svg){ .af-shot }
 
 La línea de comandos usa los colores de AppForge en una terminal y respeta
-`NO_COLOR`. Los errores de uso van a la salida de error. `man appforge` resume todo
-esto.
+`NO_COLOR`. Los errores de uso van a la salida de error.

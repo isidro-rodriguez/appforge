@@ -1,24 +1,27 @@
 # Primeros pasos
 
-## 1. Instala el paquete
+## 1. Descarga y extrae
 
-Descarga `appforge_<versión>_amd64.deb` de
-[Releases](https://github.com/isidro-rodriguez/appforge/releases) e instálalo:
+Descarga `appforge-<versión>-linux-x86_64.tar.gz` de
+[Releases](https://github.com/isidro-rodriguez/appforge/releases) y extráelo en `/opt`:
 
 ```bash
-sudo apt install ./appforge_<versión>_amd64.deb
+sudo tar -xzf appforge-<versión>-linux-x86_64.tar.gz -C /opt
 ```
 
-| Ruta | Qué es |
-|---|---|
-| `/etc/appforge/config.toml` | Configuración |
-| `/etc/appforge/entries/` | Recetas: las de ejemplo y las que añadas |
-| `/var/log/appforge/appforge.log` | Registro de ejecuciones |
-| `/opt/appforge/appforge` | El programa (`/usr/bin/appforge` enlaza a él) |
+Todo AppForge queda en una carpeta:
 
-Las recetas de ejemplo ([Ollama](ollama.md) y [fuentes](fuentes.md)) son eso, ejemplos:
-úsalas, cámbialas, bórralas o escribe [las tuyas](../desarrollo/nueva-entrada.md). Al
-actualizar el paquete, `apt` respeta lo que hayas cambiado en `/etc/appforge`.
+```text
+/opt/appforge/
+├── appforge        # el programa
+├── config.toml     # configuración
+├── entries/        # recetas: las de ejemplo y las que añadas
+└── logs/           # registro de ejecuciones (se crea al usarlo)
+```
+
+Las recetas de ejemplo ([Ollama](ollama.md) y [fuentes](fuentes.md), entre otras) son
+eso, ejemplos: úsalas, cámbialas, bórralas o escribe
+[las tuyas](../desarrollo/nueva-entrada.md).
 
 Para comprobar que el paquete procede del proyecto, mira
 [Seguridad](../avanzado/seguridad.md#verificar-el-paquete).
@@ -28,11 +31,14 @@ Para comprobar que el paquete procede del proyecto, mira
 AppForge solo funciona como superusuario:
 
 ```bash
-sudo appforge
+sudo /opt/appforge/appforge
 ```
 
-También está en el menú de aplicaciones (**AppForge**): abre una terminal y `sudo`
-pide ahí la contraseña.
+Si prefieres escribir solo `sudo appforge`, enlázalo en tu `PATH`:
+
+```bash
+sudo ln -s /opt/appforge/appforge /usr/local/bin/appforge
+```
 
 El resto del recorrido usa la receta de Ollama. Ningún paso cambia nada en tu sistema
 hasta el de instalar, y ese es opcional.

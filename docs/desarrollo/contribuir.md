@@ -46,7 +46,7 @@ Con [Poe the Poet](https://poethepoet.natn.io/) instalado globalmente hay atajos
 |---|---|
 | `poe check` | Formato, lint, tipos y tests |
 | `poe fix` | `ruff format` + `ruff check --fix` |
-| `poe build` | Binario y `.deb` en `dist/` (en Debian) |
+| `poe build` | Binario, `config.toml` y `entries/` en `dist/` (carpeta y `.tar.gz`) |
 | `poe screenshots` | Capturas de la TUI para esta web |
 | `poe docs` | Vista previa de la web |
 | `poe backup` | `git bundle` del repositorio |
