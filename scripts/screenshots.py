@@ -1,7 +1,8 @@
 """Genera las capturas SVG de la TUI para la documentación.
 
-Usa la entrada real ``ollama`` y varias entradas de demostración que solo hacen
-``echo``/``sleep`` en un directorio temporal: no toca el sistema. También
+Usa solo las recetas reales del repositorio, copiadas a un directorio temporal.
+Nada se instala: las capturas de progreso son *dry-run* y la confirmación se
+cancela. Las comprobaciones (``[check]``) sí se ejecutan, y son de solo lectura. También
 captura la ayuda y la salida de ``appforge validate``. Las capturas quedan en
 ``docs/assets/images/screenshots/``.
 
@@ -22,55 +23,20 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "assets" / "images" / "screenshots"
 SIZE = (120, 34)
 
-# id: (nombre, categoría, descripción, ¿aplicada?)
-DEMO = {
-    "docker": (
-        "Docker Engine",
-        "Desarrollo",
-        "Docker desde el repositorio oficial",
-        False,
-    ),
-    "firefox": ("Firefox", "Navegadores", "Navegador web de Mozilla", True),
-    "vlc": ("VLC", "Multimedia", "Reproductor multimedia", False),
-    "steam": ("Steam", "Juegos", "Cliente de Steam", False),
-    "wireguard": ("WireGuard", "Red", "Túnel VPN con clave propia", False),
-}
-
-
-def _demo_entry(entry_id: str, fields: tuple[str, str, str, bool], marks: Path) -> str:
-    """TOML de una entrada de demostración inofensiva (escribe en ``marks``)."""
-    name, category, description, applied = fields
-    marker = marks / entry_id
-    if applied:
-        marks.mkdir(parents=True, exist_ok=True)
-        marker.touch()
-    return f'''name = "{name}"
-category = "{category}"
-description = "{description}"
-details = "Entrada de demostración para las capturas de la documentación."
-[check]
-run = "test -f {marker}"
-[[step]]
-title = "Añadir repositorio"
-run = "echo descargando clave del repositorio; sleep 0.4; echo repositorio añadido"
-[[step]]
-title = "Instalar paquete"
-run = "echo instalando {name}; sleep 0.8; mkdir -p {marks}; touch {marker}; echo listo"
-[remove]
-run = "rm -f {marker}"
-'''
+ENTRIES = "appforge-entries"  # como en el paquete
+# Receta que protagoniza la portada (escribir, revisar, aplicar): usa parámetros,
+# plantilla, scripts, comprobación y eliminación.
+FEATURED = "ssh-server"
+BATCH = {"firewall", "incus", "docker"}
 
 
 def _make_home(base: Path, ui: bool) -> Path:
-    """Directorio de AppForge con la entrada ollama y las de demostración."""
+    """Directorio de AppForge con las recetas reales del repositorio."""
     home = base / ("ui" if ui else "plain")
-    shutil.copytree(ROOT / "entries", home / "entries")
-    for entry_id, fields in DEMO.items():
-        text = _demo_entry(entry_id, fields, home / "marks")
-        (home / "entries" / f"{entry_id}.toml").write_text(text, encoding="utf-8")
+    shutil.copytree(ROOT / "entries", home / ENTRIES)
     flag = "true" if ui else "false"
     (home / "config.toml").write_text(
-        f'entries_dirs = ["entries"]\n[ui]\nsearch = {flag}\ncategories = {flag}\n',
+        f'entries_dirs = ["{ENTRIES}"]\n[ui]\nsearch = {flag}\ncategories = {flag}\n',
         encoding="utf-8",
     )
     for p in [home, *home.rglob("*")]:
@@ -88,10 +54,16 @@ async def _wait(pilot: object, condition: Callable[[], bool]) -> None:
 
 async def _capture(base: Path) -> None:
     """Recorre la TUI y guarda cada pantalla."""
-    from textual.widgets import Input, ListView
+    from textual.widgets import Button, Input, ListView
 
     from appforge.config import load_config
-    from appforge.tui import AppForgeApp, DetailScreen, ParamsScreen, ProgressScreen
+    from appforge.tui import (
+        AppForgeApp,
+        ConfirmScreen,
+        DetailScreen,
+        ParamsScreen,
+        ProgressScreen,
+    )
 
     def save(app: AppForgeApp, name: str) -> None:
         app.save_screenshot(filename=f"{name}.svg", path=str(OUT))
@@ -100,29 +72,48 @@ async def _capture(base: Path) -> None:
         ids = [e.id for e in app.visible_entries()]
         app.query_one("#apps", ListView).index = ids.index(entry_id)
 
-    app = AppForgeApp(load_config(_make_home(base, ui=True)))
-    async with app.run_test(size=SIZE) as pilot:
-        await pilot.pause(0.5)
-        await app.workers.wait_for_complete()
-        app.marked = {"docker", "vlc", "steam"}
-        app._repaint()
-        highlight(app, "steam")
-        await pilot.pause(0.3)
-        save(app, "catalogo")
-
-        await pilot.press("v")
-        await _wait(pilot, lambda: isinstance(app.screen, DetailScreen))
-        await pilot.pause(0.3)
-        save(app, "detalle-demo")
-        await pilot.press("escape")
-
-        highlight(app, "ollama")
+    async def detail(app: AppForgeApp, entry_id: str, name: str) -> None:
+        highlight(app, entry_id)
         await pilot.pause(0.2)
         await pilot.press("v")
         await _wait(pilot, lambda: isinstance(app.screen, DetailScreen))
         await pilot.pause(0.3)
-        save(app, "detalle")
+        save(app, name)
         await pilot.press("escape")
+
+    async def until(app: AppForgeApp, target: type) -> None:
+        """Acepta los parámetros por defecto hasta llegar a ``target``."""
+        for _ in range(100):
+            if isinstance(app.screen, target):
+                await pilot.pause(0.3)
+                return
+            if isinstance(app.screen, ParamsScreen):
+                app.screen.query_one("#ok", Button).press()
+            await pilot.pause(0.1)
+        raise RuntimeError(f"no se llegó a {target.__name__} ({app.screen})")
+
+    async def dry_run(app: AppForgeApp, marked: set[str]) -> None:
+        """Dry-run de ``marked`` con los parámetros por defecto."""
+        app.marked = set(marked)
+        app._repaint()
+        await pilot.press("d")
+        await until(app, ProgressScreen)
+        screen = app.screen
+        await _wait(pilot, lambda: not getattr(screen, "running", True))
+        await pilot.pause(0.3)
+
+    app = AppForgeApp(load_config(_make_home(base, ui=True)))
+    async with app.run_test(size=SIZE) as pilot:
+        await pilot.pause(0.5)
+        await app.workers.wait_for_complete()
+        app.marked = set(BATCH)
+        app._repaint()
+        highlight(app, FEATURED)
+        await pilot.pause(0.3)
+        save(app, "catalogo")
+
+        await detail(app, FEATURED, "detalle")
+        await detail(app, "ollama", "detalle-ollama")
 
         app.marked = {"ollama"}
         app._repaint()
@@ -133,18 +124,20 @@ async def _capture(base: Path) -> None:
         save(app, "parametros")
         await pilot.press("escape")
 
-        app.marked = {"docker", "vlc", "steam"}
+        app.marked = set(BATCH)
         app._repaint()
         await pilot.press("i")
-        await pilot.pause(0.3)
+        await until(app, ConfirmScreen)
         save(app, "confirmar")
-        await pilot.press("y")
-        await _wait(pilot, lambda: isinstance(app.screen, ProgressScreen))
-        await pilot.pause(2.6)
-        save(app, "progreso")
-        screen = app.screen
-        await _wait(pilot, lambda: not getattr(screen, "running", True))
+        await pilot.press("n")
         await pilot.pause(0.2)
+
+        await dry_run(app, {FEATURED})
+        save(app, "progreso")
+        await pilot.press("escape")
+        await pilot.pause(0.2)
+
+        await dry_run(app, BATCH)
         save(app, "progreso-final")
 
     app = AppForgeApp(load_config(_make_home(base, ui=False)))
@@ -153,19 +146,6 @@ async def _capture(base: Path) -> None:
         await app.workers.wait_for_complete()
         await pilot.pause(0.2)
         save(app, "catalogo-simple")
-
-
-# Una entrada rota para la captura de ``appforge validate``.
-BROKEN = """name = "Docker Engine"
-description = "Docker desde el repositorio oficial"
-category = "Desarrollo"
-[check]
-run = "command -v docker"
-[[step]]
-title = "Repositorio"
-copy = "docker.list"
-dest = "/etc/apt/sources.list.d/docker.list"
-"""
 
 
 def _terminal_theme() -> object:
@@ -225,18 +205,18 @@ def _capture_cli(base: Path) -> None:
         str(OUT / "cli-ayuda.svg"), title="appforge validate --help", theme=theme
     )
 
-    # validate: la entrada ollama, git-alias y una rota en un directorio de prueba.
-    entries = base / "validate" / "entries"
+    # validate: las recetas reales, con un script de firewall borrado a propósito.
+    entries = base / "validate" / ENTRIES
     shutil.copytree(ROOT / "entries", entries)
-    (entries / "docker.toml").write_text(BROKEN, encoding="utf-8")
+    (entries / "firewall" / "configure-ufw.sh").unlink()
     for p in [entries.parent, *entries.parent.rglob("*")]:
         p.chmod(p.stat().st_mode & ~0o022)
     out = recorder(theme=RICH_THEME, highlight=False)
     cli.make_consoles = lambda: (out, out)  # type: ignore[assignment]
     cwd = Path.cwd()
-    os.chdir(entries.parent)  # la salida muestra la ruta tal cual: "entries"
+    os.chdir(entries.parent)  # la salida muestra la ruta tal cual
     try:
-        cli.main(["validate", "--dir", "entries"])
+        cli.main(["validate", "--dir", ENTRIES])
     finally:
         os.chdir(cwd)
     out.save_svg(str(OUT / "cli-validate.svg"), title="appforge validate", theme=theme)  # type: ignore[arg-type]
@@ -255,8 +235,24 @@ def _show_installed_paths(base: Path) -> None:
         return text
 
     tui._home_short = short  # type: ignore[assignment]
+
+    # Las rutas de los scripts en el registro del dry-run, también como en /opt.
+    from appforge.engine import Runner
+
+    mask = Runner.mask
+
+    def short_mask(self: Runner, text: str) -> str:
+        for name in ("ui", "plain"):
+            text = text.replace(str(base / name), "/opt/appforge")
+        return mask(self, text)
+
+    Runner.mask = short_mask  # type: ignore[method-assign]
     # Usuario genérico en la confirmación, sea quien sea quien genera las capturas.
-    tui.invoking_user = lambda: ("usuario", "/home/usuario")  # type: ignore[assignment]
+    from appforge import engine
+
+    generic = lambda: ("usuario", "/home/usuario")  # noqa: E731
+    tui.invoking_user = generic  # type: ignore[assignment]
+    engine.invoking_user = generic  # type: ignore[assignment]
 
 
 def main() -> None:

@@ -199,7 +199,8 @@ every task must also run with plain `uv run`. Keep tasks thin wrappers.
   and contributors). `docs/changelog.md` includes `CHANGELOG.md` via snippets.
 - The site theme mirrors `theme.py` in `docs/assets/stylesheets/appforge.css`.
 - Screenshots in `docs/assets/images/screenshots/` come from `scripts/screenshots.py`
-  (harmless demo entries); never edit them by hand.
+  and only show the real repo entries (no placeholder entries): progress screens are
+  dry-runs and the install confirmation is cancelled. Never edit them by hand.
 - **No personal data** in docs, examples, tests or screenshots: use placeholders
   (`usuario`, `$USER`). The only exception is the repository URL
   (`github.com/isidro-rodriguez/appforge` and its Pages site).
