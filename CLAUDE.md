@@ -145,7 +145,7 @@ uv run --group docs zensical build            # docs site in site/
 - One `uv.lock` and one venv at the root. Run tools from the root.
 - Add dependencies with `uv add <pkg>` / `uv add --dev <pkg>` and justify them.
 - The `docs` dependency group (`zensical`, `mkdocstrings-python`) is only for the site.
-- `acodo` is the utility library (`acodo>=0.3,<1`); prefer its helpers (`get_env`,
+- `acodo` is the utility library (`acodo>=0.4,<1`); prefer its helpers (`get_env`,
   `to_path`, ...) over ad-hoc code. The other runtime dependencies are `textual` (TUI)
   and `typer` (CLI).
 

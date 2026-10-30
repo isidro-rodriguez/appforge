@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "acodo>=0.3,<1",
+    "acodo>=0.4,<1",
     "textual>=8,<9",
     "typer>=0.20,<1",
 ]
