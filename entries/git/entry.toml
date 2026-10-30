@@ -5,6 +5,7 @@ category = "Desarrollo"
 [[param]]
 name = "user_name"
 prompt = "Nombre para los commits (user.name)"
+type = "text"
 
 [[param]]
 name = "user_email"
@@ -14,11 +15,13 @@ type = "email"
 [[param]]
 name = "default_branch"
 prompt = "Rama inicial de los repositorios nuevos"
+type = "text"
 default = "main"
 
 [[param]]
 name = "editor"
 prompt = "Editor de git (core.editor; - = no cambiar)"
+type = "text"
 default = "-"
 
 [check]

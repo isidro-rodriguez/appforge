@@ -5,6 +5,7 @@ category = "Escritorio"
 [[param]]
 name = "nerd_version"
 prompt = "Versión de Nerd Fonts (etiqueta de GitHub)"
+type = "text"
 default = "v3.4.0"
 link = "https://github.com/ryanoasis/nerd-fonts/releases"
 

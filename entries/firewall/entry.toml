@@ -5,11 +5,13 @@ category = "Red"
 [[param]]
 name = "allow"
 prompt = "Excepciones de entrada, separadas por espacios (p. ej. 22/tcp 443; - = ninguna)"
+type = "text"
 default = "-"
 
 [[param]]
 name = "allow_from"
-prompt = "Red de confianza, todo permitido (p. ej. 192.168.1.0/24; - = ninguna)"
+prompt = "Red de confianza, todo permitido (p. ej. 192.168.1.0/24; vacío = ninguna)"
+type = "cidr"
 default = "-"
 
 [check]

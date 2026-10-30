@@ -12,7 +12,7 @@ con esta política:
   o `60000:61000/udp` (los rangos llevan protocolo). También nombres de servicio
   de `/etc/services` (`ssh`, `https`). `-`: ninguna.
 - **Red de confianza**: una red desde la que se permite todo, p. ej.
-  `192.168.1.0/24`. `-`: ninguna.
+  `192.168.1.0/24`; déjala vacía para ninguna.
 
 Todas las excepciones se validan antes de cambiar nada; si una no es válida, la
 receta falla sin tocar el cortafuegos. Reaplicar no duplica reglas, pero tampoco
