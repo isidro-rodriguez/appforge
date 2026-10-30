@@ -40,7 +40,7 @@ Debian stable (13). It **only runs as root**: no sudo handling in the engine, no
 ├── scripts/
 │   ├── backup.py           # git bundle
 │   ├── build.py            # PyInstaller --onefile → dist/appforge/ + .tar.gz + SHA256SUMS
-│   ├── dist/config.toml    # config.toml shipped in the package
+│   ├── package-config.toml # config.toml shipped in the package
 │   ├── screenshots.py      # TUI and CLI SVG screenshots for the docs
 │   └── try-entry.sh        # try an entry in a disposable incus VM/container
 ├── src/appforge/

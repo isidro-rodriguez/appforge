@@ -3,7 +3,7 @@
 Deja en ``dist/``:
 
 - ``appforge/``: el binario (``--onefile``), ``config.toml`` (de
-  ``scripts/dist/``), ``appforge-entries/`` (las recetas de ``entries/``),
+  ``scripts/package-config.toml``), ``appforge-entries/`` (las recetas de ``entries/``),
   ``custom-entries/`` vacío y ``.manifest.json`` (versión y suma de cada
   fichero, para ``appforge update``), lista para ``/opt/appforge``.
 - ``appforge-<versión>-linux-<arquitectura>.tar.gz``: esa carpeta empaquetada,
@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
 DIST = ROOT / "dist"
 OUT = DIST / "appforge"
-DIST_CONFIG = ROOT / "scripts" / "dist" / "config.toml"
+DIST_CONFIG = ROOT / "scripts" / "package-config.toml"
 
 
 def _version() -> str:

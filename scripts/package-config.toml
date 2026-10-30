@@ -1,0 +1,12 @@
+# Configuración de AppForge. Rutas relativas a esta carpeta (/opt/appforge).
+
+# Directorios de recetas, en orden. Si una receta (mismo nombre de fichero) está en
+# varios, vale la del último: pon en custom-entries/ una con el mismo nombre para
+# sustituir una de ejemplo sin tocarla.
+#   appforge-entries/  recetas de ejemplo; `appforge update` las actualiza
+#   custom-entries/    las tuyas; `appforge update` nunca las toca
+entries_dirs = ["appforge-entries", "custom-entries"]
+
+[ui]
+search = true      # buscador sobre la lista de aplicaciones
+categories = true  # panel de categorías (clave `category` de cada receta)
